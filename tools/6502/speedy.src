@@ -1,0 +1,235 @@
+; 1050 speedy test program
+
+	.INCLUDE "eq1050.inc"
+	.INCLUDE "eqspeedy.inc"
+
+	* = $8000
+
+	JMP SETREFS
+	JMP SCAN
+	JMP READSC
+
+; set the reference sector from daux1 (sector id) and daux2 (track no)
+
+SETREFS	lda daux1
+	sta refsec
+	lda daux2
+	sta reftrk
+	jsr send43
+	jmp finish
+
+
+; scan a track and send sector IDs and delay time
+
+SCAN	lda #0
+	tax
+clrlp	sta buf,x
+	inx
+	bne clrlp
+	sta seccnt
+
+	jsr moton
+	jsr seek0
+
+	lda daux1
+	sta track
+
+; check if we need to align to a sector on track 0
+	lda refsec
+	beq noalign
+
+	jsr waitref
+
+noalign	lda rint
+
+	ldx track
+	jsr stepin
+
+	lda rint
+	lda #trktim
+	sta stim2
+scanlp	jsr rdhead
+	bcs xit
+	lda hdrbuf
+	cmp track
+	bne scanlp
+	ldx seccnt
+	lda hdrbuf+2
+	sta secid,x
+	lda rtim
+	sta sectim,x
+	lda fdcsta
+	sta secstat,x
+	inc seccnt
+	txa
+	bne nos0
+	lda #trkrem
+	sta stim2
+nos0	cpx #31
+	bne scanlp
+
+xit	jsr fdcres
+	lda #trktim
+	sta trkt1
+	lda #trkrem
+	sta trkt2
+	jsr send43
+	lda #128
+	ldx #<buf
+	ldy #>buf
+	jsr sendbuf
+	jmp finish
+
+; read next sector header to hdrbuf. carry set if timeout
+
+RDHEAD	lda #$c0
+	sta fdccmd
+	ldx #0
+hdlp	bit porta
+	bmi hdata
+	bvs hdlp
+	sec
+	rts
+hdata	lda fdcdat
+	sta hdrbuf,x
+	inx
+	cpx #6
+	bne hdlp
+	lda #1
+hdfin	bit fdcsta
+	bne hdfin
+	clc
+	rts
+
+; scan the current track for the reference sector
+
+.local
+WAITREF	lda rint
+	lda #trktim
+	sta stim2
+?reflp	jsr rdhead
+	bcs ?rherr
+	lda hdrbuf
+	cmp reftrk
+	bne ?reflp
+	lda hdrbuf+2
+	cmp refsec
+	bne ?reflp
+	lda fdcsta
+	bne ?reflp
+?rherr	rts
+
+; reset FDC
+
+FDCRES	lda #$d0
+	sta fdccmd
+	ldx #7
+reslp1	dex
+	bne reslp1
+	lda #1
+reslp2	bit fdcsta
+	bne reslp2
+	rts
+
+; step X tracks out (towards track 0)
+
+.local
+STEPOUT	txa
+	asl
+	tax
+	beq ?endstp
+	lda #$3D
+	sta ddrb
+?steplp	lda #steptim
+	sta stim1
+	sta stim1
+	lda portb
+	and #$20
+	bne ?nocyc
+	lda #$24
+	bne ?nxt
+?nocyc	lda portb
+	asl
+	ora #4
+	eor portb
+	and #$3c
+?nxt	eor portb
+	sta portb
+?wt	bit porta
+	bvs ?wt
+	lda rint
+	dex
+	bne ?steplp
+	jmp settle
+?endstp	rts
+
+; step X tracks in (towards track 39)
+
+.local
+STEPIN	txa
+	asl
+	tax
+	beq ?endstp
+	lda #$3D
+	sta ddrb
+?steplp	lda #steptim
+	sta stim1
+	sta stim1
+	lda portb
+	and #4
+	bne ?nocyc
+	lda #$24
+	bne ?nxt
+?nocyc	lda portb
+	lsr
+	ora #$20
+	eor portb
+	and #$3c
+?nxt	eor portb
+	sta portb
+?wt	bit porta
+	bvs ?wt
+	lda rint
+	dex
+	bne ?steplp
+	jmp settle
+?endstp	rts
+
+.local
+SETTLE	lda rint
+	lda #SETLTIM
+	sta stim2
+?stlp	bit porta
+	bvs ?stlp
+	lda rint
+	rts
+
+READSC	jmp finish
+
+; current track number
+TRACK	.byte 0
+
+; temporary buffer for scan track and scan for reference sector
+HDRBUF	.dc 6 0
+
+; reference sector and track
+REFSEC	.byte 0
+REFTRK	.byte 0
+
+END	= *
+
+	.INCLUDE "speedy.inc"
+
+BUF	= *
+secid	= buf
+secstat	= buf+$20
+sectim	= buf+$40
+
+seccnt	= buf+$60
+trkt1	= seccnt+1
+trkt2	= seccnt+2
+
+	.IF (*&127)<>0
+	.DC (128-(*&127)) 0
+	.ENDIF
+

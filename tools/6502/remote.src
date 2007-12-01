@@ -1,0 +1,207 @@
+;  remote - atariserver remote console
+;
+;  Copyright (C) 2005 Matthias Reichl <hias@horus.com>
+;
+;  This program is free software; you can redistribute it and/or modify
+;  it under the terms of the GNU General Public License as published by
+;  the Free Software Foundation; either version 2 of the License, or
+;  (at your option) any later version.
+;
+;  This program is distributed in the hope that it will be useful,
+;  but WITHOUT ANY WARRANTY; without even the implied warranty of
+;  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;  GNU General Public License for more details.
+;
+;  You should have received a copy of the GNU General Public License
+;  along with this program; if not, write to the Free Software
+;  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+
+	.include "cio.inc"
+
+; sparta dos memory locations / ofssets
+COMTAB	= 10
+ZCRNAME	= 3
+BUFOFF	= 10
+CMDLINE	= 63
+
+
+	START = $2800
+	* = START
+
+; check for presence of SpartaDos / RealDos
+	LDA $0700
+	CMP #'S
+	BEQ SPARTA
+	CMP #'R
+	BEQ SPARTA
+	JMP MAIN
+
+; scan command line for first blank (to get the parameters)
+
+SPARTA	LDY #CMDLINE
+CMDLP1	LDA (COMTAB),Y
+	CMP #32
+	BEQ CMDCOP
+	CMP #155
+	BEQ MAIN
+	INY
+	CPY #CMDLINE+64
+	BNE CMDLP1
+	JMP MAIN
+
+CMDCOP	LDX #0
+	INY
+	CPY #CMDLINE+64
+	BEQ MAIN
+
+CMDLP2	LDA (COMTAB),Y
+	CMP #155
+	BEQ CMDCOP2
+	STA BUFFER,X
+	INX
+	INY
+	CPY #CMDLINE+64
+	BNE CMDLP2
+
+CMDCOP2	CPX #0
+	BEQ MAIN
+	LDA #155
+	STA BUFFER,X
+	INX
+	STX ICBLL
+	JMP DOCMD
+
+MAIN	JSR GR0
+	LDA #0
+	STA 82
+	STA 710
+	BPUT 0, TLEN, TITLE 
+
+LOOP	PUT 0, '>
+	INPUT 0, BUFFER
+	BMI DOXIT
+	JSR DOCMD
+	JMP LOOP
+
+DOXIT	JMP GR0
+
+DOCMD	JSR SETSIO
+
+	LDA ICBLL
+	BNE DOCMD1
+	RTS
+
+DOCMD1	SEC
+	SBC #1
+	STA $308
+	STA $30A
+	BEQ IMM
+	LDA #$80
+	STA $303
+IMM	JSR $E459
+	BPL CMDOK
+	CPY #144
+	BEQ CMDOK
+
+ERROR	TYA
+	LSR
+	LSR
+	LSR
+	LSR
+	TAX
+	LDA HEXTAB,X
+	STA ERRCOD
+	TYA
+	AND #$0F
+	TAX
+	LDA HEXTAB,X
+	STA ERRCOD+1
+	PRINT 0, ERRTXT
+	RTS
+
+CMDOK	LDA #$53
+	STA $302
+	LDA #4
+	STA $308
+	LDA #$40
+	STA $303
+	JSR $E459
+	BMI ERROR
+	LDA BUFFER+2
+	STA RESLEN
+	LDA BUFFER+3
+	STA RESLEN+1
+	ORA RESLEN
+	BNE RES1
+	RTS
+
+RES1	LDA #$52
+	STA $302
+	LDA #0
+	STA $30A
+	STA $30B
+RESLP	LDA RESLEN
+	ORA RESLEN+1
+	BEQ ENDRES
+	LDA #$80
+	STA $308
+	LDA #$40
+	STA $303
+	JSR $E459
+	BPL RES2
+	JMP ERROR
+RES2	LDA RESLEN+1
+	BNE RES3
+	LDA RESLEN
+	BMI RES3
+	STA $308
+RES3	BPUT2 0, $308, BUFFER
+	SEC
+	LDA RESLEN
+	SBC $308
+	STA RESLEN
+	BCS RES4
+	DEC RESLEN+1
+RES4	INC $30A
+	BNE RESLP
+	INC $30B
+	BNE RESLP
+
+ENDRES	JSR SETSIO
+	JMP $E459
+
+SETSIO LDX #$0B
+SETSIO1	LDA SIOTAB,X
+	STA $300,X
+	DEX
+	BPL SETSIO1
+	RTS
+
+SIOTAB	.BYTE $61, 1, $43, 0
+	.WORD BUFFER
+	.BYTE 20, 0
+	.WORD 0, 0
+
+TITLE	.BYTE 125
+	.BYTE "atariserver remote console", 155
+	.BYTE "press <break> to exit", 155, 155
+TLEN	= * - TITLE
+
+ERRTXT	.BYTE 253, "ERROR $"
+ERRCOD	.BYTE "00", 155
+
+GR0	CLOSE 0
+	OPEN 0,12,0,EDITOR
+	RTS
+
+HEXTAB	.BYTE "0123456789ABCDEF"
+
+EDITOR	.BYTE "E:", 155
+
+RESLEN	.WORD 0
+
+	BUFFER = *
+
+	* = $2E0
+	.WORD START
+

@@ -1,0 +1,952 @@
+AtariSIO driver and utilities V0.30
+
+Copyright (C) 2002-2007 Matthias Reichl <hias@horus.com>
+
+This program is proteced under the terms of the GNU General Public
+License, version 2. Please read LICENSE for further details.
+
+Visit http://www.horus.com/~hias/atari/ for new versions of AtariSIO.
+
+
+Installation
+============
+
+Please read the file "INSTALL".
+
+
+About Atarisio
+==============
+
+AtariSIO basically consists of two parts:
+- a kernel module to handle the low-level part of the Atari SIO
+  protocol, and
+- a set of utilities (atarserver emulates Atari floppy disk
+  drives, atarixfer can read/write floppy disks from/to a
+  floppy drive connected to the PC)
+- a set of utilities to handle ATR (and other) disk images
+  (adir to list the directory of an image and dir2atr to
+  create a disk image from a directory of files on your PC)
+
+AtariSIO supports the following interfaces:
+- one chip SIO2PC (with MAX232), command connected to RI
+- one chip SIO2PC, command connected to DSR
+- one chip SIO2PC, command connected to RTS
+- 1050-2-PC (with MAX232), command connected to RTS
+- Ape ProSystem cable (with 14C89), command connected to DTR
+   
+The old two-chip SIO2PC interface (with a MAX232 and an LS368)
+is NOT supported, and probably never will be.
+
+At the moment atariserver supports 3 (and a half :-) different
+SIO speeds:
+- standard 19200 bit/sec
+- 38400 bit/sec in XF551 compatibility mode
+- 57600 bit/sec
+- 57600 bit/sec with short pauses between bytes
+
+The 57600 bit/sec speed is usually called "high speed SIO". This
+speed is supported by most high speed SIO routines.
+
+The 57600 bit/sec speed with pauses is only needed if the
+high-speed SIO routine of your Atari reacts slightly too slow,
+resulting in sporadic (sometimes also frequent) "hangs".
+
+38400 bit/sec is only available if the XF551 compatibility mode
+is enabled in atariserver. When enabling this mode, most highspeed
+SIO routines will autodetect atariserver as an XF551 and therefore
+limit the data transfer rate to 38400 bit/sec. To use 57600 bit/sec
+the XF551 mode has to be turned off.
+
+
+Utilities
+=========
+
+Starting with version V0.20 both atariserver and atarixfer support
+reading and writing of DCM, DI and XFD images, in addition to the
+standard ATR images. Furthermore, transparent compression and
+decompression is supported if you compile AtariSIO with zlib support.
+This means, for example, that you can directly read and write from/to
+an .atr.gz file without needing to (de)compress it by hand.
+
+The file type is determined by examining the file-extension.
+Recognized extensions are .atr, .atr.gz, .dcm, .dcm.gz, .xfd, .xfd.gz
+(which are not case-sensitive, so .ATR.gz will also work).
+
+In case the image-file has a non-recognized extension (eg. .exe),
+an ATR image containing the file is created on the fly. This allows
+you to directly load .COM/.EXE/.BAS/... files.
+
+Starting with version V0.30 AtariSIO supports multiple interfaces
+on a single computer. This feature can be used it you want, for example,
+to permanently connect a SIO2PC interface to your first serial port
+and a 1050-2-PC interface to your second serial port. Or you could
+connect 2 SIO2PC interfaces, run 2 atariserver instances on your PC
+to emulate peripherals for 2 Ataris.
+
+Although this feature seems to be very nice at the first sight, there's
+a slight drawback: The SIO protocol is extremely timing critical, so
+having 2 atariserver instances running in parallel on the same machine will
+most certainly fail (since both instances are fighting about CPU cycles).
+It might work on a multiprocessor system (if each atariserver process is
+able to run on a separate, physical CPU core), but I haven't tested it yet.
+So, at the moment, don't expect this to work reliably. But, if you pay
+a little attention and make sure that both Ataris aren't doing SIO
+communications at the same time, it should work just fine.
+
+
+Using atarixfer
+===============
+
+atarixfer is used to read/write disk images from/to a Atari drive
+connected to your Linux box with an 1050-2-PC cable. An APE
+ProSystem cable  will also work, but you have to add the
+command-line switch "-p".
+
+If you want to write a disk image to a floppy disk, simply
+type "atarixfer -w filename.atr".
+
+If you want to read a disk inserted into your 1050 and create
+a disk image from it, type "atarixfer -r filename.atr".
+
+By default atarixfer uses /dev/atarisio0 (the first, and in most
+cases only, interface). If you configured the kernel driver to
+support multiple interfaces and want to use another interface
+either set the environment variable ATARIXFER_DEVICE (eg.
+to /dev/atarisio1) or add the option "-f /dev/atarisio1" to
+your command line. Please note: this must be the very first
+command line option! You can also use the command line option
+to override the settings of the environment variable.
+
+That's it - currently there are no more options in atarixfer :-)
+
+
+Using atariserver
+=================
+
+atariserver is an SIO-server, like SIO2PC or APE for MSDOS-machines.
+
+Starting with V0.30 atariserver comes with a new curses frontend.
+The old atariserver (with the text-only frontend) is still included
+in this package but has to be built and installed separately
+(read "INSTALL" for details).
+
+1. Command line options
+
+-h           display help
+-f device    use alternative AtariSIO device (default: /dev/atarisio0)
+-c           use alternative SIO2PC cable (command=DSR)
+-C           use alternative SIO2PC/nullmodem cable (command=CTS)
+-m           monochrome mode
+-o file      save trace output to <file>
+-p           write protect the next image
+-s           slow mode - disable highspeed SIO
+-S           high speed SIO mode with pauses
+-X           enable XF551 commands
+-t           increase SIO trace level (default:0, max:3)
+-1..-8       set current drive number (default: 1)
+-V dens dir  create virtual drive of given density, the second parameter
+             specifies the directory. dens is s|e|d|(<number>s|d)|S|D
+-P conv path install printer handler
+             conv is EOL conversion: r=raw(no conversion), l=LF, c=CR+LF
+             path is either a filename or |print-command, eg |lpr
+<filename>   load <filename> into current drive number, and then
+             increment drive number by one
+
+-h just prints the above help screen.
+
+-f sets the AtariSIO device. This option is only needed if you
+   configured the kernel driver to support more than one interface.
+   Note: this must be the very first command line option, otherwise
+   it will be ignored!
+   Without that option atariserver will check if the environment
+   variable ATARISERVER_DEVICE is set, if not the default device
+   /dev/atarisio0 will be used.
+
+-c tells AtariSIO that your Atari is connected via an alternative
+   SIO2PC cable. The standard SIO2PC cable uses the RI pin for
+   command line input. Some Windows SIO emulators use a slightly
+   modified SIO2PC cable, using DSR instead of RI. If you are not
+   sure what kind of SIO2PC cable you have, just try starting
+   atariserver with and without the "-c" switch and test if your
+   Atari can boot from atariserver.
+   BTW: there's no performance benefit using the DSR line instead
+   of the RI line, both cables work identically with AtariSIO.
+
+-C is similar to '-c' except that the CTS pin is used. This is
+   quite useful for testing purposes: connect two PCs with a
+   nullmodem-cable, start atariserver with '-C' on one machine
+   and atarixfer with '-p' on the other.
+
+-m monochrome mode: disable colors, even if your terminal
+   reports color support.
+
+-o set trace file: all output displayed in the log-window will
+   also be saved to the specified file.
+
+-p loads the next image with "write protect" enabled. This
+   option is only valid for the next image, if you want to load
+   multiple write protected images, you have to specify this
+   options before each filename.
+
+-s disables high speed (57600 bit/sec) SIO support. It sets
+   the baudrate to fixed 19200 bit/sec and also disables several
+   special commands like "get ultraspeed byte" or "flush disk"
+   that are only supported by high-speed drives like the
+   1050 speedy. Read the list of SIO commands at the end of this
+   README for more details.
+
+-S high speed (57600 bit/sec) mode with pauses between bytes.
+   This is needed for some high speed SIO routines which are too
+   slow to handle sustained 57600 bit/sec transfers. The effective
+   speed will be approx. 48000 bit/sec.
+
+-X enable XF551 compatibility mode: In XF551 mode atariserver
+   reacts on commands with the 7th bit set and automatically
+   switches to 38400 bit/sec transfer mode. Additionally, the
+   GetStatus command sets both bit 7 and 6 in case of an QD
+   (double sided, double density, 1440 sectors) disk, just like
+   the XF551.
+
+-t increases the trace level. You may use this option up to
+   three times if you want more output. Read below for a
+   description of the various trace levels
+
+-V dens dir: create virtual drive using the specified directory.
+   The density can be one of the following:
+   s, e, d : standard single/enhanced/double density format
+   <number>s, <number>d : create drive in SD/DD format (128/256
+   bytes per sector) using the specified number of sectors
+   S, D : SD/DD format, the number of sectors needed to store
+   all files is automatically calculated
+
+-P conv path: install printer handler. To use the standard unix
+   print service, use: -P l "|lpr"
+   Read the section about printer support for more information.
+
+
+To load several images you could start atariserver with
+the following options (for example):
+
+atariserver dos.atr -3 -p data1.atr -V d filedir
+
+This will load dos.atr into D1:, data1.atr into D3: and create
+a virtual drive in double density (720 sectors) out of the
+directory filedir. Forthermore, D1: and D4: will be writeable,
+whereas D3: will be write protected.
+
+If you set the environment variable ATRPATH atariserver will look
+for image files in the specified (colon separated) directories
+if the image can't be found in the current working directory.
+ATRPATH works both on the command line and in the user interface.
+For example:
+
+export ATRPATH=/home/atari/dos:/data/xl/magazines
+
+or (for csh users):
+setenv ATRPATH /home/atari/dos:/data/xl/magazines
+
+
+2. The user interface
+
+The atariserver screen is divided into several regions:
+
+The topmost line show the program version and the current
+working directory (or the image name if you display the directory
+of an Atari disk image, or some other information about the
+currently displayed information).
+
+The window below is the drive status window. It contains the
+status of the 8 disk slots. From left to right the following
+information is displayed:
+- the slot number (D1: to D8:)
+- the size of the loaded image in sectors
+- the density of the image ('S' = SD, 'D' = DD)
+- the write protect status ('W' = writable, 'P' = write protected)
+- the modification status (<blank> = unchanged, 'C' = changed since
+  last load/write/create operation)
+- the full path and filename of the image
+
+Below the drive status window is the current status line.
+It displays the currently selected cable type, SIO speed mode,
+and trace level.
+
+Next comes the log window. All warning, error, debugging, and
+status information will be shown in there.
+
+Below the log window a help line is displayed. It contains some
+hints about what input atariserver wants from you.
+
+The input line is located at the very bottom of the screen. All
+user input is displayed there.
+
+Some commands (like the 'display directory' command or the file
+selection screen) show a big window instead of the drive status
+window, the status line, and the log window.
+
+
+3. User interface commands
+
+You can always abort the current command by pressing '^G' (control-G).
+
+The key-assignment of the user interface was greatly inspired by
+SIO2PC. So if you are already familiar with SIO2PC, you'll find
+atariserver easy to use :-)
+
+Here's an overview about the currently supported commands:
+
+'q'   Quit atariserver. 
+
+'l'  load a disk image file (ATR/DCM/DI/XFD) into a drive slot.
+     The drive slot must be empty or contain an unchanged disk
+     image (in which case it will be automatically unloaded),
+     otherwise you have to unload it first.
+     If you want to create a new virtual drive from a directory,
+     enter the directory and press '^V'. You will then be asked
+     about the drive size, just like when creating an empty image.
+     When using a custom SD/DD image, atariserver calculates the
+     space needed to store all files and presents this value as a
+     default for the number of sectors. If you use 'S' or 'D'
+     (instead of 's', 'd') the size calculation is disabled.
+     If the file extension is not one of .atr/.dcm/.di/.xfd,
+     an ATR image containing the file will be created on the fly.
+
+'w'  write the image of a disk drive into a disk image file.
+     You may either specify a single drive number (1-8) or 'a' for
+     'all changed' disks, to quickly write back all images that
+     have been changed.
+
+The filename input routine used for both 'l' and 'w' commands
+supports filename completion (with the '<TAB>' key), quick access
+to your home directory using '~/' at the beginning of a filename,
+and a built-in history (accessible with '<cursor-up>' and
+'<cursor-down>' keys). You can position the cursor within the line
+with '<cursor-left>', '<cursor-right>', '<home>' or '^A' for start
+of line, '<end>' or '^E' for end of line. Delete characters either
+with '<backspace>' or '<delete>' keys. '^U' clears the whole
+input field. If the first key pressed in file input is a standard
+(alphanumeric) key, the input field will be cleared.
+
+If you press '^F' or don't enter a filename (eg just press 'l'
+'1' 'return'), the full-screen file selection mode is started:
+In this mode the contents of the currently selected directory will
+be listed on screen, use '<cursor-up>', '<cursor-down>', '<page-up>'
+'<page-down>', '<home>' / '^A', '<end>' / '^E' to navigate through the
+list. You can also search through the list by pressing the first
+letter(s) of a filename. If you press '<TAB>' the next matching file
+will be selected. Note: this search is case-insensitve.
+
+Note: If the '<home'> and '<end>' keys don't work most likely
+your terminal settings (the TERM environment variable) aren't right
+or your ncurses library / terminfo settings are broken. In this
+case either fix it or use the '^A' / '^E' keys.
+
+Any time you have positioned the cursor over an Atari disk image
+file you can view it's DOS2.x directory by pressing '^D'.
+
+'c'  creates an empty image. You have to specify the drive slot
+     in which the image should be created and the size. Just enter
+     any (empty) drive number and then choose from the following
+     image sizes:
+
+     '1' is 90k SD (720 sectors, 128 bytes per sector)
+     '2' is 130k SD (1040 sectors, 128 bytes per sector)
+     '3' is 180k DD (720 sectors, 256 bytes per sector)
+     '4' is 360k QD (1440 sectors, 256 bytes per sector)
+
+     'S' is 1-65535 SD sectors (128 bytes per sector)
+     'D' is 1-65535 DD sectors (256 bytes per sector)
+
+     If you entered 'S' or 'D' you'll get asked how many sectors
+     you'd like to have in the image. This input routine also supports
+     cursor-movement and a history (like the filename input routine),
+     but of course no filename-completion or file-selection mode :-)
+
+'u'  unload (free) a disk drive.
+     Specify a drive number to unload, or 'a' for all drives.
+
+'x'  exchange two disk drive numbers.
+
+'p','P' write-(un)-protect a disk drive
+     Specify a drive number to (un)protect, or 'a' for all drives.
+     If you save a drive to an ATR image, the write protect
+     flag will also be saved. So this is a simple solution if you
+     want a certain image to be write protected permanently.
+     Note: this does not work with DCM, DI and XFD images, since these
+     image formats don't support a write protect flag!
+
+'d'  display the (DOS2.x) directory of an image.
+     Please note that this function only works with DOS2.x compatible
+     disk formats (like DOS2.x, MyDOS, Turbo-DOS, ...), but _not_
+     with Sparta-DOS disks!
+
+'t'  set trace level
+
+'s'  set SIO speed (slow, high, high with pauses)
+
+'C'  set SIO2PC cable type
+
+'a','A' activate/deactivate disk drives, printer or remote control
+     Use this feature if you want to (temporarily) deactivate a
+     device, eg if you want to access a real disk drive or printer.
+     All configuration settings for deactivated devices are kept,
+     but atariserver won't respond to commands for these devices
+     until they are activated again.
+
+'r'  reload virtual drive
+     atariserver will rescan the directory and add new files to
+     the virtual drive. Use this function if you copied some files
+     to a directory that is currently used as a virtual drive
+     (new files don't show up automatically on virtual drives,
+     the directory is only scanned when creating a virtual drive).
+
+
+4. SIO trace levels
+
+By default (in debug level 0) atariserver will only print warnings
+and error messages related to user input.
+
+In trace level 1 atariserver will output all processed commands
+in user readable form.
+
+In trace level 2 atariserver will output all received command
+frames in hex, together with the command result.
+
+In trace level 3 atariserver will (in addition to level 2) also
+dump the contents of the transmitted data blocks.
+
+
+5. Virtual drives
+
+Virtual drive support in atariserver is somewhat similar to the "PC mirror"
+feature of APE. It allows you to directly access files on your harddisk
+(without fist creating an ATR image) and also to store new files on
+your harddisk by simply writing to a virtual drive.
+
+When you load a virtual drive atariserver internally creates a disk image
+of the specified directory on the fly. This is also the reason why you
+need to specify the number of sectors and the density. If you use one of
+the standard disk formats (s/e/d), the image will be in standard DOS 2.x
+format. If you manually enter the number of sectors the image will be
+created in MyDOS format and subdirectories are enabled, too.
+
+If you add files (on your PC) to the specified directory after you
+loaded a virtual drive, they won't be visible from your Atari. You'll
+have to unload a virtual drive an then load it again since atariserver
+only examines the directory at the time when you load a virtual drive.
+
+If you write files to a virtual drive (from you Atari), atariserver
+examines the written data and looks for changes made to the directory
+sectors. When writing files to a disk Atari DOSes first set the
+file status to "open for write", then write the file data, and then
+clear the "open for write" flag when the file is closed. Whenever
+the "open for write" flag is cleared, atariserver will write the
+newly created/changed file back to harddisk.
+
+You can also create new directories from MyDOS or delete files. You
+may even format a virtual drive. But atariserver is quite careful
+about these operations: If you delete a file, it won't be deleted on
+your PC. If you format a virtual drive, no changes are made to the
+files on your PC. Just file writes are handeled. So the virtual drive
+feature should be quite safe to use.
+
+Virtual drives offer another feature: they contain special boot code
+which load MyPicoDos from atariserver (MyPicoDos is a "gamedos" which
+supports COM/EXE/BIN/BAS files). Additionally the original (long)
+filenames are stored in a file named "PICONAME.TXT" so that MyPicoDos
+can display the original filename instead of the (most likely) shortened
+8.3 filename.
+
+MyPicoDos itself is not stored on the virtual drive, it is loaded directly
+from atariserver using the special SIO command $6D.
+
+
+6. Printer support
+
+Atariserver now also supports emulation of a printer. The printer
+data can either be saved to a file or be sent to an external program
+(like lpr). If the destination file starts with the pipe character "|",
+the following characters specify the external program.
+
+When atariserver receives printer data the first time the external
+program is spawned and data is sent to its standard input. The status
+window will show an "S" before the printer filename to indicate that
+the external program is running.
+
+If atariserver doesn't receive any SIO frames for 15 seconds the external
+program is closed and the printer job is finished. As soon as new printer
+data arrives, the external program will be started again.
+
+When atariserver closes the external program it will wait until it has
+finished. During this time atariserver won't respond to command frames
+or user input.
+
+You can close the external program manually any time using the 'F'
+key (flush printer data), so you don't have to wait 15 seconds.
+
+The EOL conversion specifies how the ATASCII EOL character (155)
+should be handled. In raw mode no conversion is applied. If conversion
+is set to 'LF', a linefeed (character code 10) is sent to the file/
+external program instead of 155. If set to 'CR+LF' a carriage return
+followed by a linefeed (13+10) is sent.
+
+
+7. Remote control support
+
+Atariserver can be fully controlled from the Atari using a very simple
+protocol. A separate SIO device ID ($61) is used, therefore the remote
+control feature does not depend on any loaded disk images or the like.
+
+The easiest way to remotely control atariserver is to use the 'remote.com'
+program from the tools/6502/ directory in the source tree. This program
+supports reading the SpartaDos command line so that you can quickly
+configure atariserver from a batch file or SpartaDos config.sys. If
+you load this program from other DOSes or use an empty command line
+it runs in interactive mode.
+
+Note: Real.Dos by Steve Carden automatically converts the whole
+command line to upper case which breaks all commands that deal with
+case-sensitive options (eg loading a file or running shell commands).
+I'm not sure if this is true for all versions of Real.Dos but at least
+this was the case with the one version I tested.
+
+Here's a list of the currently supported commands plus their parameters:
+
+CMD parameters
+
+st
+print status
+
+xc  <drv1> <drv2>
+exchange drive <drv1> with drive <drv2>
+
+lo  <drv> <filename>
+load <filename> into drive <drv>
+
+lv  <drv> <dens> <dir>
+load virtual drive <drv> from directory <dir> with density <dens>. The density
+is specified in the same format like in the -V command line option.
+
+cr  <drv> <dens>
+create new drive <drv> with density <dens>
+
+un  <drv>
+unload drive <drv>
+
+wr  <drv> [<filename>]
+write drive <drv> to a file. If no <filename> is given, the current
+filename of the image will be used
+
+wc
+write back all changed images
+
+wp  <drv> <prot>
+set write protect of drive <drv>. If <prot> is '0', write protect is
+turned off, if it is '1', write protection is enabled.
+
+pr  0
+uninstall printer handler
+
+pr  1 <eol> <filename>
+install printer handler. <eol> specifies the EOL conversion. It can be either
+'r', 'l', 'c' or 'b'
+
+pr  f
+flush printer data
+
+sp  <speed>
+set SIO speed. '0' is slow, '1' is high, '2' is 'high with pauses'
+
+xf  <on>
+Enable (if <on> = '1') or disable (if <on> = '0') XF551 mode
+
+cd  <dir>
+change current working directory to <dir>
+
+ls  <dir>
+list files in directory <dir>
+
+sh  <command>
+execute a shell command on the Linux PC. <command> can be any valid
+command line. Note: to prevent atariserver from waiting forever
+the spawned command will be terminated after 5 seconds.
+
+ad  <dev> <on>
+Activate (if <on> = '1') or deactivate (if <on> = '0') a device.
+<dev> is either a drive number (1-8), 'a' for all drives or 'p' for printer. 
+
+pl text...
+display a line of text in the log window.
+
+Note: all spaces between the command an the parameters may be omitted.
+'lv 1 2880d /tmp/foo' is identical to 'lv12880d/tmp/foo'.
+
+
+Description of the remote control protocol:
+
+Atariserver accepts remote control commands at the SIO device id $61.
+You have to set DDEVIC to $61 and DUNIT to $01.
+
+To send a command to atariserver, set DCOMND to $43, DSTATS to $80,
+point DBUF to the buffer containing the ascii string and set both
+DBYT and DAUX to the length of the string. This way command strings
+of (almost) arbitrary length are supported. Set DTIMLO to 7. If you
+are using a slow computer and want to execute commands that might
+take longer than approx. 7 seconds (eg when loading a big virtual
+drive) you might consider setting DTIMLO to a higher value (30 or so).
+
+Atariserver also supports a "NOP" command. You can use this to check
+if there's an atariserver attached to your Atari. Just set DBYT,
+DAUX and DSTATS to $00 (this is an "immediate" SIO command without
+a data frame).
+
+If the command succeeds, the SIO routine will return with a status
+value of 1. In case of an invalid command or if the command failed
+status 144 is returned. If you get an error 138, no atariserver was
+listening. In case of any other errors something else went wrong.
+
+Now check the status of the last operation:
+Set DCOMND to $53, DSTATS to $40, DBYT to 4 and point DBUF to a
+4 byte buffer. After the SIO call these 4 bytes contain the following
+information:
+Byte 0: Status of last command (1 is OK, >=128 means error)
+Byte 1: unused
+Byte 2/3: length of the (additional) response (LO/HI). If the length
+is 0 this means there's no additional response available.
+
+If the response length is 1 or greater, you can read it in blocks of 128
+bytes:
+
+Set DCOMND to $52, DSTATS to $40, DBYT to $80 and point DBUF to a 128
+byte buffer. To read the first 128 bytes, set DAUX to 0, then set it
+to 1 to read the second 128 byte block, then to 2, ... until you read
+the whole response.
+
+Note: if the response length is not a multiple of 128, the last block
+will contain some additional (unused) bytes. Just ignore them, only
+the number of bytes reported by the status command are valid!
+
+You may read the response blocks in any order and you may also read it
+multiple times (if you like). The response will be available until you
+send the next command to atariserver.
+
+It is a good idea to transmit a NOP command (DBYT, DAUX, DSTATS set to 0)
+to atariserver after reading the response so that the response buffer
+will be freed immediately.
+
+
+ATP format support
+==================
+
+Starting with V0.30, AtariSIO contains preliminary support for the
+ATP format, version 1.6. The ATP format is an attempt to design an
+open disk format suitable for storing copy protected disks (similar
+to the APE .pro format).
+
+At the moment the base classes for handling ATP images are already
+implemented, and atariserver contains some code to emulate the
+Atari 1050 timing. Please note that this code has not been tested
+too well, because there is no application to create an ATP
+image of a copy-protected disk yet. For now, all you can do is
+create an ATP image completely by hand, or convert an (unprotected,
+of course) ATR image into an ATP image and then start playing around
+with it.
+
+Currently, there are two small tools to start with:
+- atr2atp creates and ATP image from an ATR image and
+- atpdump dumps the internal structure and timing/status information
+          of an ATP image.
+
+If you are interested in the details of the ATP format and/or want
+to help creating an application to create ATP images of "real" Atari
+disks, please visit the Atari Preservation Project homepage:
+
+http://www.abbuc.de/app/
+
+
+Troubleshooting
+===============
+
+In case you experience troubles with AtariSIO you might consider
+enabling debugging output:
+
+At the moment the userspace utilities have debugging enabled by
+default. If you (or someone else :-) switched it off, re-enable
+it by setting -DATARISIO_DEBUG in the CXXFLAGS and CFLAGS
+settings in the Makefile.
+
+The kernel module supports three different debugging levels
+(standard: only warnings, noisy, and very noisy) both for the
+atarisio driver and the interrupt routine. You can enable
+the debugging stuff by setting the "debug=x" and/or "debug_irq=x"
+module parameters (default is '0', maximum is '3'). I'd recommend
+you start with level '1' and enable the higher levels later.
+Please note: debug level '3' is extremely noisy and may itself
+cause troubles on slower PCs that can't handle the huge amount
+of printk()s, especially in the irq handler!
+
+If you are using Linux kernel 2.6.x (or newer) with sysfs support
+you can also tune the debug settings of the kernel module anytime
+via the /sys filesystem. The kernel module parameters can be
+found in /sys/module/atarisio/parameters/, "debug" and "debug_irq"
+can be modified by root. For example:
+
+echo "2" > /sys/module/atarisio/parameters/debug
+
+
+Behind the scenes
+=================
+
+Atariserver emulates almost all commands of an enhanced 1050 drive.
+It supports standard (19200 bit/sec) and high-speed (57600 bit/sec)
+SIO. High-speed SIO even works on slower PC (like for example my
+old 486SX/33).
+
+Speaking of performance: When writing this document the Linux kernel
+threads are still non-preemptable. Kernel 2.6 should support this,
+but this feature still causes troubles.  Normally, the PC should be
+able to respond to a received command frame within some 10mSec. If
+another process is running, this process will be interrupted immediately
+(due to the use of realtime scheduling priorities). But if a kernel
+thread (like the kernel update daemon) is running, it won't get
+preempted and atariserver is not able to respond quickly enough. Usually
+this is not too bad, since the Atari will retry each command some 14
+times, so there's a good chance at least one of those retries will
+succeed. But under very bad circumstances the command may still
+fail and the Atari will get a timeout error (error 138). So, if
+you experience performance and/or reliability problems, try to shut
+down as many background processes as you can.
+
+Another source of performance problems are ATA harddisks (especially
+old, slow ones) in PIO mode. If possible, enable the (U)DMA mode.
+If DMA support doesn't work with your chipset, try to use
+'hdparm -u' to enable interrupt-unmasking. Read the hdparm manpage
+for more details.
+
+Compared to SIO2PC and APE, atariserver uses a slightly different
+philosophy when dealing with disk images. SIO2PC and APE both use
+a "harddisk type" philosophy: if you loaded a, lets say,
+130k (enhanced density) image, the disk will always be a 130k disk
+from the Atari's point of view - the Atari cannot change this,
+just like you are not able to format a 10MB harddisk with 8MB or
+with 20MB.
+
+Atariserver uses a "floppy disk type" philosophy. When you insert
+a disk into your 1050, you may choose to format it either with
+90k (SD), with 130k (ED) or even with 180k (DD). The floppy disk
+itself may store up to 360k (if you have a double-sided drive like
+the XF551), so there's no reason why you should be limited to a
+single density that you selected a long time ago.
+
+Whenever atariserver receives a "format disk" command, it automatically
+creates an image matching the selected format (i.e.: matching the
+format the Atari sent via the "percom put" command). This makes
+copying disks really easy: just fire up your favourite sector copier
+on your Atari, and be sure any image is loaded into a disk drive.
+When the sector copier finishes, just write the image to an image
+file and copy the next disk.
+
+At the moment atariserver only supports memory images. This means,
+any changes (eg. writes / format disk) are stored in RAM. Be sure
+to write back the changes using the 'w' or 'W' command if you don't
+want to loose them!
+
+If you want to write programs using the atarisio kernel driver by
+yourself, here's a short introduction:
+
+Most of the "dirty work", like handling timing constraints,
+calculating and comparing checksums is already done in the
+kernel driver. This means, you don't need to care about it when
+writing a user space application.
+
+The atarisio character device driver only supports two types
+of operations (besides open/close): select/poll for waiting
+for a new command frame, and IOCTLs for all other tasks.
+atarisio doesn't support read/write IO (which wouldn't be
+too useful anyway).
+
+You can either use the ioctls (as defined in atarisio.h)
+or you may use the C++ wrapper SIOWrapper.{cpp,h}.
+
+If you want to do kind of a 1050-2-PC communication with a
+connected disk drive, just look into the source of atarixfer.
+It's not too complicated at all, in fact the interface is
+quite similar to the Atari SIO call $E459.
+
+In sioserver mode, you have to poll for the receipt of a command
+frame, and then implement the rest of the SIO protocol 'by hand'.
+Have a look at the source code (AtrSIOHandler) and try to get
+the SIOspecs.pdf from the 'net.
+
+******************** IMPORTANT NOTICE: *********************
+* If you want to modify atariserver, either test it as     *
+* a normal user (to disable realtime scheduling), or take  *
+* the necessary precautions! Otherwise an endless loop     *
+* might completely lock up your computer and you'll have   *
+* to do a hard reset!                                      *
+* A simple, but very effective solution for this problem   *
+* is to un-comment the three lines of code in the          *
+* set_realtime_scheduling function in atariserver.cpp that *
+* will install an ALARM handler. This will shut down       *
+* atariserver 5 minutes after startup. So if your PC locks *
+* up, just wait a few minutes and everything will be fine. *
+************************************************************
+
+Finally, here's a list of the currently supported SIO commands.
+The commands marked with an asterisk (*) are only available when
+the high speed mode is activated. XF551 commands are only available
+if XF551 compatibility mode is enabled.
+
+Disk commands (devices $31-$38):
+
+$20 - (*) format disk automatically (Speedy command)
+$21 - format disk (uses percom config)
+$22 - format enhanced
+$3f - (*) get ultra speed byte (returns 8 in high-speed mode)
+$4e - percom get
+$4f - percom put
+$50 - put sector
+$52 - read sector
+$53 - get status
+$57 - write sector (that's handled identically to put sector)
+$68 - (*) get SIO code length in bytes
+$69 - (*) get high speed SIO code, relocated to address found in
+      AUX1 and AUX2
+$6d - read MyPicoDos code
+$93 - ApeTime
+$a1 - XF551 format disk
+$a2 - XF551 format enhanced
+$ce - XF551 percom get
+$cf - XF551 percom put
+$d0 - XF551 put sector
+$d2 - XF551 read sector
+$d3 - XF551 get status
+$d7 - XF551 write sector
+
+The following commands are just ACK'ed, but don't do anything:
+$44 - (*) configure drive (Speedy)
+$4b - (*) slow/fast config (Speedy)
+$51 - (*) flush drive cache (Speedy)
+
+Printer commands (device $40):
+
+$53 - get status
+$57 - write data
+
+Remote control commands (device $61):
+
+$43 - execute command
+$52 - read response
+$53 - get last command status and response length
+
+
+Using adir
+==========
+
+'adir' lists the DOS 2.x directory of an image. By default the output
+is similar to what you get when doing a directory listing from within
+DOS 2.x. Filenames plus their sector size is output in 4 columns.
+
+-c <num> set number of columns. eg: 'adir -c 1 dos.atr'
+
+-t enable 'tree mode', recurse into (MyDOS) subdirectories
+
+-r enable raw debugging output:
+   The first number is the file-slot within a directory sector (0-7).
+   The second number is the file attribute (in hex).
+   After the filename the starting sector and the number of sectors
+   (both in decimal) are shown.
+
+  
+Using dir2atr
+=============
+
+With 'dir2atr' you can create a disk image from a directory on your PC.
+Usually you specify the image size (in numbers of sectors), the target
+image filename and the source directory. If you want to create a
+double density image, just add the '-d' option. For example:
+
+dir2atr -d 720 my_files.atr my_files_directory
+
+will create a 180k (720 sectors double density) disk image from the
+files in 'my_files_directory'.
+
+If the image size is 720 sectors (either SD or DD) or if it's 1040
+sectors in SD (the 1050 "enhanced" density format), the disk image
+will be created using standard DOS 2.x format.
+
+If you use any other image size or if you omit the number of sectors
+(in this case dir2atr will calculate the image size automatically),
+the image will be initalized in MyDOS format and subdirectories will
+be added recursively.
+
+The '-p' option tells dir2atr to automatically create a 'PICONAME.TXT'
+file in each directory containing the original (long) filenames. This
+is a plain text file (in ATASCII format) and is used by MyPicoDos when
+displaying the contents of a directory. Have a look at the MyPicoDos
+docs for further details.
+
+The '-b' option can be used to create bootable disks. If you use one
+of the MyPicoDos modes, dir2atr will include the PICODOS.SYS file in
+the disk image and also write the bootsectors. This is more or less
+identical to initializing the disk using the 'myinit.com' program
+on your Atari.
+
+MyPicoDos403 is the (old) 4.03 version without highspeed SIO support,
+MyPicoDos403HS is the 4.03 version with highspeed SIO. These modes
+are basically just here because I already implemented them, in general
+I'd recommend using the most recent MyPicoDos 4.04 modes
+(MyPicoDos404, MyPicoDos404N, MyPicoDos404R, MyPicoDos404RN, MyPicoDos404B):
+
+The 'R'-versions are a little bit larger and also include an atariserver
+remote console. The 'N' versions have highspeed SIO disabled by default.
+This can be useful if you want to create images for harddrives that aren't
+connected to the SIO bus. With both 'N' and non-'N' versions you may
+enable/disable the highspeed SIO with a keystroke. The 'B'-version
+("barebone") contains neither highspeed SIO support nor the remote
+console.
+
+For example:
+
+dir2atr -d -b MyPicoDos404R -p games.atr my_games
+
+creates a bootable double density image with MyPicoDos 4.04R
+(in highspeed SIO mode) and MyPicoDos long filename information
+stored in PICONAME.TXT.
+
+If you use any of the other '-b' modes, you must include the DOS.SYS
+file in the directory and use the appropriate '-b' option. Note: dir2atr
+doesn't check if the mode matches the DOS.SYS file, it just checks for
+the presence of DOS.SYS!
+
+Currently the following boot sector modes are supported:
+Dos20 (DOS 2.0), Dos25 (DOS 2.5), MyDos453 (MyDos 4.53),
+TurboDos21 (TurboDos 2.1) and TurboDos21HS (TurboDos 2.1 HS)
+
+
+Credits
+=======
+
+Thanks to:
+
+Atari Bit Byter User Club (ABBUC) for the 6502 highspeed SIO code.
+
+Jindroush for the DCM codec and DI format documentation.
+
+Bill Kendrick, Christopher Lang, Thomas Havemeister, Ryan Underwood,
+Bohdan Milar, Steven Sheppard and many others for testing &
+submitting bugreports!
+
+Freddy Offenga, Stephan Dorndorf and all other members of the
+Atari Preservation Project for their work on the ATP format.
+
+
+You have reached the end of the document
+========================================
+
+If you still have any problems, found a bug, have some ideas for
+future versions, or if you just want to talk to me, feel free to
+contact me by email at <hias@horus.com>.
+
+so long,
+
+Hias

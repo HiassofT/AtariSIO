@@ -1,0 +1,157 @@
+;  MyPicoDos bootloader for AtariSIO
+;
+;  Copyright (C) 2004 Matthias Reichl <hias@horus.com>
+;
+;  This program is free software; you can redistribute it and/or modify
+;  it under the terms of the GNU General Public License as published by
+;  the Free Software Foundation; either version 2 of the License, or
+;  (at your option) any later version.
+;
+;  This program is distributed in the hope that it will be useful,
+;  but WITHOUT ANY WARRANTY; without even the implied warranty of
+;  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;  GNU General Public License for more details.
+;
+;  You should have received a copy of the GNU General Public License
+;  along with this program; if not, write to the Free Software
+;  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+
+DBUF	= $0304
+DBYT	= $0308
+DSEC	= $030A
+
+BSTART	= $4000
+
+	* = $4000
+
+	.BYTE 0
+	.BYTE (BEND-BSTART+127)/128
+	.WORD BSTART
+	.WORD XRTS
+
+	JMP START2
+CAUTORUN	.BYTE 0
+
+START2	= *
+	; check if we are connected with AtariSIO
+
+	LDX #0
+	STX DBYT+1
+	STX DSEC+1
+	INX
+	STX DSEC
+	STX $301
+	LDA #128
+	STA DBYT
+
+	LDA #$31
+	STA $300
+	
+	LDA #$6D
+	STA $302
+	LDA #7
+	STA $306
+
+	LDA #<BUF
+	STA DBUF
+	LDA #>BUF
+	STA DBUF+1
+
+	LDA #$40
+	STA $303
+	JSR $E459
+	BPL XOK
+	SEC
+XRTS	RTS
+
+; now check for highspeed SIO code
+
+XOK	LDA #<DBYT
+	STA DBUF
+	LDA #>DBYT
+	STA DBUF+1
+	LDA #$68
+	STA $302
+	LDA #2
+	STA DBYT
+	LDA #$40
+	STA $303
+	JSR $E459
+	BMI NOHI
+
+	LDA #<HIGHSIO
+	STA DBUF
+	STA DSEC
+	LDA #>HIGHSIO
+	STA DBUF+1
+	STA DSEC+1
+	INC $302
+	LDA #$40
+	STA $303
+	JSR $E459
+	BMI NOHI
+	LDA #<HIGHSIO
+	STA XSIO+1
+	LDA #>HIGHSIO
+	STA XSIO+2
+
+NOHI	CLC
+	LDA BUF+2
+	STA DBUF
+	ADC #6
+	STA STRT+1
+	LDA BUF+3
+	STA DBUF+1
+	ADC #0
+	STA STRT+2
+
+	CLC
+	LDA STRT+1
+	ADC #4
+	STA ARUN+1
+	LDA STRT+2
+	ADC #0
+	STA ARUN+2
+
+	LDX #0
+	STX DBYT+1
+	STX DSEC+1
+	INX
+	STX DSEC
+	LDA #128
+	STA DBYT
+	LDA #$6D
+	STA $302
+
+LOAD	LDA #$40
+	STA $303
+XSIO	JSR $E459
+	BMI LOAD
+
+	INC DSEC
+	CLC
+	LDA DBUF
+	ADC #128
+	STA DBUF
+	BCC NB1
+	INC DBUF+1
+NB1	DEC BUF+1
+	BNE LOAD
+
+	LDA CAUTORUN
+ARUN	STA $1234
+STRT	JMP $1234
+
+	.IF (*&127)<>0
+       	.DC (128-(*&127)) 0
+	.ENDIF
+
+BEND	= *
+
+BUF	= *
+HIGHSIO	= * + 128
+
+	* = (BSTART+383)
+	.BYTE 0
+
+

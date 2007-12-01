@@ -1,0 +1,130 @@
+AtariSIO changelog:
+
+* V0.10 alpha, released 02/12/2003
+
+  initial release containing:
+  - atarisio kernel driver V0.2 alpha
+  - atariserver V0.10 alpha
+  - atarixfer V0.01 alpha
+
+* V0.10a alpha, released 02/18/2003
+
+  - fixed gcc-3.x compilation problems:
+    - Makefile: use CXX instead of CC for linking
+    - SIOTracer.C: removed default initializer for "prefix" in
+      TraceDecodedPercomBlock method (line 79)
+    - SIOWrapper.C: included <stdlib.h> so that exit() is defined
+
+  - added troubleshooting section to README
+
+* V0.10b alpha, released 02/19/2003
+
+  - Added note on gcc versions to README
+  - Updated Makefile
+  - minor cosmetic changes in atariserver and atarixfer
+
+* V0.11 beta, released 04/09/2003
+  - Changed project status from "alpha" to "beta"
+  - Added loadable high speed SIO code to atariserver
+    (thanks to ABBUC and Erhard Puetz!)
+  - Added "print DOS2.x directory" function to atariserver
+  - Fixed GetStatus command in atariserver
+  - Added disk density to atariserver status output
+  - Changed ioctl return error to standard errno style
+    (ioctl returns -1 on error and the error code is stored in errno)
+  - Added alias line (for kernel module autoloader) to
+    modutils templates modutils-ttySx
+
+* V0.20 beta, released 05/22/2003
+  - Updated Makefile
+  - Added devfs support to kernel driver and modutils templates
+  - Fixed error reporting of 'input type' sio commands
+    (eg format, read sector) in atarisio
+  - Added support for DSR-type SIO2PC cables in atarisio
+  - Added support for DCM, DI, and XFD images to atariserver and atarixfer
+  - Added zlib (transparent .gz file access) support
+  - Added "all" option to (un)protect and write image functions
+  - atarixfer now also uses realtime scheduling
+  - Reworked AtrImage code
+
+* V0.30-pre1 beta
+  - atarisio: Reworked kernel driver code to improve robustness
+  - atarisio: Added support for linux 2.6.x kernel
+  - atarisio: Added module parameter to set name of serial device
+    (instead of old io/irq numbers) - making the 'pre install'
+    and 'post remove' setserial stuff (partially) obsolete.
+  - atariserver: Added preliminary support for ATP 1.6 images
+  - Added new userspace tools:
+    * atr2atp converts an SD or ED ATR/DCM/DI/XFD image into the ATP format
+    * atpdump dumps the internal structure of an ATP image
+    * adir prints the directory of an ATR/DCM/DI/XFD image
+  - Reworked large parts of the user space code
+  - atariserver: Added new 'CTS' SIO2PC cable type
+  - atarisio: Added new 'high speed SIO with inter-byte pauses' mode to
+    fix compatibility problems with some slow high-speed-SIO routines
+  - atariserver: Added completely new curses frontend with many new features
+  - atariserver: Fixed "GetStatus" bug - setting drive density from
+    MyDos now works correctly
+  - atarixfer: Added support for reading non-standard sized disks
+  - atarixfer: Implemented XF551-compatible format recognition
+  - atarixfer: Added support for writing quad-density disks
+  - atarisio: Speedy 1050 workaround in 1050-2-PC/ProSystem mode.
+    'ACK' instead of 'COMPLETE' is now allowed, too
+  - atarisio: debugging level can now be set using module parameters
+    'debug' and 'debug_irq'
+
+* V0.30-pre2 beta
+  - atarixfer: fixed writing of ED (130k) and QD (360k) images
+  - atarisio: removed modversions.h include for 2.6.x kernels
+  - atarisio: fixed crash if no module parameters were given
+
+* V0.30-pre3 beta
+  - atariserver: added "virtual drive" functionality to transparently
+    access files on the PC
+  - atariserver: implemented search path for loading disk images
+  - atariserver: added special "load MyPicoDos" (BIN/BAS/COM file
+    loader) command 0x6d
+  - atariserver: virtual drives now contain boot code to load MyPicoDos
+    from atariserver
+  - atariserver: implemented printer support
+  - atarisio: the case when the PC was too slow to react on received bytes
+    and more bytes than expected were received is now handled correctly
+  - atarisio: increased delay between command ACK and complete to
+    fix problems with QMEG OS
+  - dir2atr: added optional boot-sectors for Dos 2.0, 2.5, TurboDos2.1
+    and MyPicoDos (4.03 and 4.04)
+  - atariserver, dir2atr: added on-the-fly calculation of image size
+  - atarisio, atariserver: added XF551 compatible 2xSIO transfer mode
+  - atariserver: added "remote control" protocol
+  - added on-the-fly creation of an ATR image if one loads an "image"
+    with an unrecognized extension
+  - atarisio: support for multiple interfaces
+  - atariserver: support for "apetime" command in disk handler
+  - atariserver: support for "get time" in remote control handler
+    (command $54, 6 bytes data, identical to "apetime")
+  - atariserver: new "pl" - "print log entry" command to display
+    some text in the atariserver log window
+  - atariserver: support for proprietary "get image name" and
+    "get APE version" APE commands in disk handler
+  - atariserver: support for activating/deactivating devices
+    without unloading the image or printer-handler
+  - atarisio: fixed kernel driver for AMD64 (thanks to B. Watson)
+  - changed the boot code of ATR-images that were created on the
+    fly (when loading a file with an unknown extension) so that
+    MyPicoDos autoruns the file in the image.
+  - atarisio: added support for kernel >=2.6.19
+  - added "allclean" target to clean 6502 binary files, running
+    "make clean" doesn't remove them (so people without ATasm don't
+    run into troubles)
+  - atarisio: support for autoswitching Atarimax interface
+  - atarisio: fixed module usage count for kernel 2.6.x
+  - dir2atr: automatically include PICODOS.SYS when creating a
+    MyPicoDos bootable disk
+  - atariserver: various curses frontend cleanups and fixes
+  - cleaned up debugging output
+  - atarisio: added preliminary tape functions
+  - atariserver: fixed on-the-fly creation of single file ATRs
+    larger than an ED disk
+  - atarisio: added support for kernel >= 2.6.22
+  - fixed UART lock-up after framing errors
+

@@ -1,0 +1,18 @@
+# BEGIN atarisio driver
+
+# alias for standard major-minor device
+alias char-major-10-240 atarisio
+alias char-major-10-241 atarisio
+alias char-major-10-242 atarisio
+alias char-major-10-243 atarisio
+
+# alias for devfs
+alias /dev/atarisio0 atarisio
+alias /dev/atarisio1 atarisio
+alias /dev/atarisio2 atarisio
+alias /dev/atarisio3 atarisio
+
+# serial port setup
+options atarisio port=/dev/ttyS1
+
+# END atarisio driver

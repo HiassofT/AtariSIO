@@ -1,0 +1,374 @@
+;  highspeedcode.src - relocatable 6502 high speed SIO code
+;
+;  Copyright (c) by ABBUC e.V. (www.abbuc.de) and Matthias Reichl
+;
+;  This program is free software; you can redistribute it and/or modify
+;  it under the terms of the GNU General Public License as published by
+;  the Free Software Foundation; either version 2 of the License, or
+;  (at your option) any later version.
+;
+;  This program is distributed in the hope that it will be useful,
+;  but WITHOUT ANY WARRANTY; without even the implied warranty of
+;  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;  GNU General Public License for more details.
+;
+;  You should have received a copy of the GNU General Public License
+;  along with this program; if not, write to the Free Software
+;  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+;
+;  Changes:
+;  03/27/2003 Matthias Reichl
+;    - converted to Atasm source code format
+;    - support for 8 (instead of 4) drives (*)
+;    - use SETVBV instead of setting CDTMV1 directly (*)
+;    - return 1 instead of 0 on success (*)
+;    - added relocator table (*)
+;    (*) thanks to Erhard Puetz for these fixes!
+;
+;  01/19/2004 Matthias Reichl
+;    - removed relocator table for use with MyPicoDos
+;
+;  01/22/2004 Matthias Reichl
+;    - changed all labels to local labels
+;
+;  10/03/2004 Matthias Reichl
+;    - code merge with AtariSIO
+;    - relocator table is generated if RELOCTABLE is defined
+;    - moved definition of SIOADR out of this file
+;
+;  05/23/2006 Matthias Reichl
+;    - set CRITIC flag in SIO code
+;    - disable sound if SOUNDR != 0
+;    - fix for possible problems with fast PCs
+
+	POKMSK = $10
+
+	STATUS = $30
+	CHKSUM = $31
+	BUFRLO = $32
+	BUFRHI = $33
+	BFENLO = $34
+	BFENHI = $35
+	CRETRY = $36
+	DRETRY = $37
+
+	FTYPE = $3E
+	FEOF = $3F
+
+	SOUNDR = $41
+	CRITIC = $42
+
+	CDTMV1 = $218
+	
+	CDTMA1 = $226
+	CDEVIC = $23A
+	CCOMND = $23B
+	CAUX1 = $23C
+	CAUX2 = $23D
+
+	DUNIT = $301
+	DCOMND = $302
+	DSTATS = $303
+	DBUFLO = $304
+	DBUFHI = $305
+	DTIMLO = $306
+	DBYTLO = $308
+	DBYTHI = $309
+	DAUX1 = $30A
+	DAUX2 = $30B
+
+	AUDF3 = $D204
+	AUDF4 = $D206
+	AUDC4 = $D207
+	AUDCTL = $D208
+	SKREST = $D20A
+	SERIN = $D20D
+	SEROUT = $D20D
+	IRQEN = $D20E
+	IRQST = $D20E
+	SKCTL = $D20F
+	SKSTAT = $D20F
+
+	PBCTL = $D303
+
+	SETVBV = $E45C
+
+	* = SIOADR
+
+	LDA DUNIT
+	BNE ?NOCLR
+	LDX #8
+?ABS01	STA SPEEDTB-1,X
+	DEX 
+	BNE ?ABS01
+	RTS 
+
+?NOCLR	TAX 
+?ABS02	LDA SPEEDTB-1,X
+	BNE ?DOSIO
+	LDA #$28
+?ABS03	STA SPEEDTB-1,X
+	LDY #$07
+?SAVCMD	LDA DCOMND,Y
+	PHA 
+?ABS04	LDA ?CMD3F,Y
+	STA DCOMND,Y
+	DEY 
+	BPL ?SAVCMD
+?ABS05	JSR ?DOSIO
+	LDX DUNIT
+	LDY DSTATS
+	BMI ?NOHISPD
+	LDA $01
+?ABS06	STA SPEEDTB-1,X
+?NOHISPD	LDY #$00
+?RESCMD	PLA 
+	STA DCOMND,Y
+	INY 
+	CPY #$08
+	BCC ?RESCMD
+
+?DOSIO	SEI 
+	INC CRITIC
+	TXA 
+	ORA #$30
+	STA CDEVIC
+	LDA DCOMND
+	STA CCOMND
+	LDA DAUX1
+	STA CAUX1
+	LDA DAUX2
+	STA CAUX2
+?ABS07	LDA SPEEDTB-1,X
+	STA AUDF3
+	TSX 
+	STX FEOF
+	LDA #$02
+	STA DRETRY
+?DRETLP	LDA #$07
+	STA CRETRY
+?CRETLP	LDA #$34
+	STA PBCTL
+	LDA #$00
+	STA STATUS
+	STA FTYPE
+	STA BFENHI
+	STA AUDF4
+	LDA #$3A
+	STA BUFRLO
+	LDA #$02
+	STA BUFRHI
+	ASL 
+	STA BFENLO
+?ABS08	JSR ?SENDBLK
+	LDA DBUFLO
+	STA BUFRLO
+	LDA DBUFHI
+	STA BUFRHI
+	LDA DBYTLO
+	STA BFENLO
+	LDA DBYTHI
+	STA BFENHI
+	LDA DSTATS
+	BPL ?NOSEND
+?ABS09	JSR ?SENDBLK
+?NOSEND	DEC FTYPE
+?ABS10	JSR ?SETTIM1
+	BIT DSTATS
+	BVC ?NOGET
+?ABS11	JSR ?GETBLK
+?NOGET	LDA #$A0
+	STA AUDC4
+	LDA POKMSK
+	STA IRQEN
+?ABS12	JSR ?CLRTIM1
+	LDA STATUS
+	BEQ ?ENDCMD
+	DEC DRETRY
+	BNE ?DRETLP
+?ENDCMD	DEC CRITIC
+	TAY
+	BNE ?ERRCMD
+	INY
+?ERRCMD	STY DSTATS
+	CLI 
+	RTS 
+
+?SENDBLK	LDY #$00
+?WT1	INY 
+	BNE ?WT1
+	LDA #$23
+?ABS13	JSR ?SETPOKY
+	LDA (BUFRLO),Y
+	STA CHKSUM
+	STA SEROUT
+	INY 
+	BNE ?SND2
+?SND1	LDA (BUFRLO),Y
+?ABS14	JSR ?SENDBYT
+	INY 
+	BNE ?SND2
+	INC BUFRHI
+	DEC BFENHI
+	LDX #$E0
+?WT2	INX 
+	BNE ?WT2
+?SND2	CPY BFENLO
+	BNE ?SND1
+	LDA BFENHI
+	BNE ?SND1
+	LDA CHKSUM
+?ABS15	JSR ?SENDBYT
+?WTSND	LDA IRQST
+	AND #$08
+	BNE ?WTSND
+	LDY #$03
+?ABS16	JSR ?STIMOUT
+	LDA #$C0
+	STA IRQEN
+	BNE ?RDQUIT
+
+?GETBLK	LDY #$00
+	STY CHKSUM
+?ABS17	JSR ?GETBYTE
+	STA (BUFRLO),Y
+?ABS18	JSR ?ADDSUM
+	INY 
+	BNE ?GET1
+	INC BUFRHI
+	DEC BFENHI
+?GET1	CPY BFENLO
+	BNE ?ABS17
+	LDA BFENHI
+	BNE ?ABS17
+?ABS19	JSR ?GETBYTE
+	CMP CHKSUM
+	BNE ?ERR143
+	RTS 
+?SETTIM1	LDA DTIMLO
+	ROR 
+	ROR 
+	TAY 
+	AND #$3F
+	TAX 
+	TYA 
+	ROR 
+	AND #$C0
+	TAY 
+?ABS20	JSR ?ABS23
+?RDQUIT	LDA #$13
+?ABS21	JSR ?SETPOKY
+	LDA #$3C
+	STA PBCTL
+?ABS22	JSR ?GETBYTE
+	CMP #$41
+	BEQ ?CLRTIM1
+	CMP #$43
+	BEQ ?CLRTIM1
+	CMP #$45
+	BEQ ?ERR144
+	LDA #$8B
+	BNE ?ERR
+?ERR144	LDA #$90
+	STA STATUS
+
+?CLRTIM1	LDY #$00
+?STIMOUT	LDX #$00
+?ABS23	LDA ?ABS25
+	STA CDTMA1
+?ABS24	LDA ?ABS25+1
+	STA CDTMA1+1
+;	STY CDTMV1
+;	STX CDTMV1+1
+;	RTS
+	LDA #1
+	JMP SETVBV
+
+?ABS25	.WORD ?ERR138
+
+?ERR128	LDX FEOF
+	TXS 
+	LDA #$80
+	STA STATUS
+	BNE ?ABS27
+?ERR143	LDA #$8F
+	.BYTE $2C
+?ERR138	LDA #$8A
+?ERR	STA STATUS
+	LDX FEOF
+	TXS 
+	LDA FTYPE
+	BMI ?NCRET
+	DEC CRETRY
+	BEQ ?NCRET
+?ABS26	JMP ?CRETLP
+?NCRET	LDA #$28
+	STA AUDF3
+?ABS27	JMP ?NOGET
+
+?GETBYTE	LDA IRQST
+	BPL ?ERR128
+	AND #$20
+	BNE ?GETBYTE
+	LDA #$DF
+	STA IRQEN
+	LDA #$E0
+	STA IRQEN
+	LDA SKSTAT
+	STA SKREST
+	BPL ?ERR138
+	AND #$20
+	BEQ ?ERR138
+	LDA SERIN
+	RTS 
+
+?SENDBYT	TAX 
+?WPUT	LDA IRQST
+	AND #$10
+	BNE ?WPUT
+	LDA #$EF
+	STA IRQEN
+	LDA #$D0
+	STA IRQEN
+	TXA 
+	STA SEROUT
+	LDX IRQST
+	BPL ?ERR128
+
+?ADDSUM	CLC 
+	ADC CHKSUM
+	ADC #$00
+	STA CHKSUM
+	RTS 
+
+?SETPOKY STA SKCTL
+	STA SKREST
+	LDA #$28
+	STA AUDCTL
+	LDA SOUNDR
+	BEQ ?NOSND
+	LDA #$A8
+	BNE ?DOSND
+?NOSND	LDA #$A0
+?DOSND	STA AUDC4
+	LDA #$F8
+	STA IRQEN
+	RTS 
+
+?CMD3F	.BYTE $3F,$40
+	.WORD 1,1,1
+
+SPEEDTB	.DC 8 0
+
+	.IF .DEF RELOCTABLE
+
+RELOC	.WORD ?ABS01+1,?ABS02+1,?ABS03+1,?ABS04+1,?ABS05+1,?ABS06+1,?ABS07+1,?ABS08+1
+	.WORD ?ABS09+1,?ABS10+1,?ABS11+1,?ABS12+1,?ABS13+1,?ABS14+1,?ABS15+1,?ABS16+1
+	.WORD ?ABS17+1,?ABS18+1,?ABS19+1,?ABS20+1,?ABS21+1,?ABS22+1,?ABS23+1,?ABS24+1
+	.WORD ?ABS25,?ABS26+1,?ABS27+1
+
+RLEN	.WORD *-RELOC
+
+	.ENDIF
+
+	SIOEND = *
