@@ -27,7 +27,7 @@ KDIR = /lib/modules/$(shell uname -r)/build
 # version directory by hand.
 ########################################################################
 
-VERSION = $(shell ./getver "${KDIR}")
+VERSION = $(shell ./getver.sh "${KDIR}")
 #VERSION = $(shell uname -r)
 #VERSION = 2.4.25
 
@@ -132,7 +132,7 @@ backup:
 	tools/6502/*.src tools/6502/*.inc tools/6502/*.bin \
 	windll/Makefile windll/libatarisio.cpp windll/libatarisio.h \
 	windll/buildlib.bat windll/aconv.c \
-	Makefile atarisio-ttyS* Changelog README* INSTALL* LICENSE getver
+	Makefile atarisio-ttyS* Changelog README* INSTALL* LICENSE getver.sh
 
 install:
 	$(MAKE) -C driver install
