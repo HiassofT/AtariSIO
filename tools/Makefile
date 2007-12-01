@@ -19,7 +19,7 @@ ifdef ALL_IN_ONE
 EXECUTABLES = atarisio
 CXXFLAGS += -DALL_IN_ONE
 else
-EXECUTABLES = atariserver atarixfer adir dir2atr measure-system-latency
+EXECUTABLES = atariserver atarixfer adir dir2atr measure-system-latency casinfo
 #	atariserver-nocurses
 #	ataridd smag24 
 #	speedy
@@ -34,7 +34,8 @@ endif
 
 COMMON_OBJS = DiskImage.o FileIO.o SIOTracer.o FileTracer.o Error.o
 
-ATRIMAGE_OBJS = AtrImage.o AtrMemoryImage.o DCMCodec.o
+ATRIMAGE_OBJS = AtrImage.o AtrMemoryImage.o DCMCodec.o \
+	CasBlock.o CasImage.o
 
 ATARIXFER_OBJS = atarixfer.o $(COMMON_OBJS) $(ATRIMAGE_OBJS) \
 	SIOWrapper.o MiscUtils.o Directory.o \
@@ -99,6 +100,9 @@ DIR2ATR_OBJS = dir2atr.o $(COMMON_OBJS) $(ATRIMAGE_OBJS) \
 SERIALWATCHER_OBJS = serialwatcher.o SIOTracer.o FileTracer.o Error.o \
 	MiscUtils.o Directory.o
 
+CASINFO_OBJS = $(COMMON_OBJS) CasImage.o CasBlock.o \
+	casinfo.o
+
 ALL_IN_ONE_OBJS = atarisio.o $(ATARISERVER_OBJS) atarixfer.o adir.o dir2atr.o
 
 ifdef ENABLE_ATP
@@ -136,6 +140,9 @@ dir2atr: $(DIR2ATR_OBJS)
 
 serialwatcher: $(SERIALWATCHER_OBJS)
 	$(CXX) $(LDFLAGS) -o serialwatcher $(SERIALWATCHER_OBJS)
+
+casinfo: $(CASINFO_OBJS)
+	$(CXX) $(LDFLAGS) -o casinfo $(CASINFO_OBJS) $(COMMON_LIBS)
 
 turbo: $(TURBO_OBJS)
 	$(CXX) $(LDFLAGS) -o turbo $(TURBO_OBJS) $(ATARISERVER_LIBS)
