@@ -35,7 +35,7 @@ endif
 COMMON_OBJS = DiskImage.o FileIO.o SIOTracer.o FileTracer.o Error.o
 
 ATRIMAGE_OBJS = AtrImage.o AtrMemoryImage.o DCMCodec.o \
-	CasBlock.o CasImage.o
+	CasBlock.o CasImage.o CasHandler.o
 
 ATARIXFER_OBJS = atarixfer.o $(COMMON_OBJS) $(ATRIMAGE_OBJS) \
 	SIOWrapper.o MiscUtils.o Directory.o \

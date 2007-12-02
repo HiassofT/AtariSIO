@@ -29,7 +29,6 @@ CasImage::CasImage()
 	  fNumberOfParts(0),
 	  fCasBlocks(0),
 	  fDescription(0),
-	  fCurrentBaudRate(0),
 	  fTempBuf(0)
 {
 }

@@ -33,7 +33,6 @@ public:
 
 	bool ReadImageFromFile(const char* filename);
 
-	unsigned int GetCurrentBaudRate() const;
 	unsigned int GetNumberOfBlocks() const;
 	unsigned int GetNumberOfParts() const;
 
@@ -74,15 +73,8 @@ private:
 
 	char* fDescription;
 
-	unsigned int fCurrentBaudRate;
-
 	unsigned char* fTempBuf;
 };
-
-inline unsigned int CasImage::GetCurrentBaudRate() const
-{
-	return fCurrentBaudRate;
-}
 
 inline unsigned int CasImage::GetNumberOfBlocks() const
 {
