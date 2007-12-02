@@ -29,6 +29,7 @@ CasImage::CasImage()
 	  fNumberOfParts(0),
 	  fCasBlocks(0),
 	  fDescription(0),
+	  fFilename(0),
 	  fTempBuf(0)
 {
 }
@@ -48,6 +49,10 @@ void CasImage::FreeData()
 	if (fDescription) {
 		delete[] fDescription;
 		fDescription = 0;
+	}
+	if (fFilename) {
+		delete[] fFilename;
+		fFilename = 0;
 	}
 	fNumberOfBlocks = 0;
 	fNumberOfParts = 0;
@@ -129,6 +134,8 @@ bool CasImage::ReadImageFromFile(const char* filename)
 	EBlockType blocktype;
 	unsigned int length;
 	unsigned int aux;
+
+	unsigned int partno = 0;
 	bool done = false;
 
 	list< RCPtr<CasBlock> > blocklist;
@@ -165,10 +172,10 @@ bool CasImage::ReadImageFromFile(const char* filename)
 			{
 				//ALOG("data block: gap: %d len: %d", aux, length);
 				RCPtr<CasBlock> block;
-				if (fNumberOfBlocks == 0 || aux > 5000) {
-					fNumberOfParts++;
+				if (fNumberOfBlocks > 0 && aux > 5000) {
+					partno++;
 				}
-				block = new CasBlock(baudrate, aux, length, fTempBuf, fNumberOfParts);
+				block = new CasBlock(baudrate, aux, length, fTempBuf, partno);
 				blocklist.push_back(block);
 				fNumberOfBlocks++;
 			}
@@ -177,6 +184,8 @@ bool CasImage::ReadImageFromFile(const char* filename)
 			break;
 		}
 	}
+
+	fNumberOfParts = partno + 1;
 
 	if (blocklist.size() == 0) {
 		AERROR("No data blocks in \"%s\"", filename);
@@ -196,6 +205,10 @@ bool CasImage::ReadImageFromFile(const char* filename)
 
 	fileio->Close();
 	FreeTempBuf();
+
+	fFilename = new char[strlen(filename)];
+	strcpy (fFilename, filename);
+
 	return true;
 
 exit_error:

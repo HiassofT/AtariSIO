@@ -18,8 +18,10 @@
    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
+#include "CasHandler.h"
 #include "CasImage.h"
 #include "SIOTracer.h"
+#include "SIOWrapper.h"
 #include "FileTracer.h"
 
 #include <stdio.h>
@@ -48,8 +50,12 @@ int main(int argc, char** argv)
 		return 1;
 	}
 
+	RCPtr<SIOWrapper> siowrapper;
+
+	RCPtr<CasHandler> casHandler = new CasHandler(image, siowrapper);
+
 	printf("Description: ");
-	char* desc = image->GetDescription();
+	const char* desc = image->GetDescription();
 	if (desc) {
 		printf("%s\n", desc);
 	} else {

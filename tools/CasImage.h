@@ -36,7 +36,8 @@ public:
 	unsigned int GetNumberOfBlocks() const;
 	unsigned int GetNumberOfParts() const;
 
-	char* GetDescription() const;
+	const char* GetDescription() const;
+	const char* GetFilename() const;
 
 	RCPtr<CasBlock> GetBlock(unsigned int blockno);
 
@@ -72,6 +73,7 @@ private:
 	RCPtr<CasBlock>* fCasBlocks;
 
 	char* fDescription;
+	char* fFilename;
 
 	unsigned char* fTempBuf;
 };
@@ -86,9 +88,14 @@ inline unsigned int CasImage::GetNumberOfParts() const
 	return fNumberOfParts;
 }
 
-inline char* CasImage::GetDescription() const
+inline const char* CasImage::GetDescription() const
 {
 	return fDescription;
+}
+
+inline const char* CasImage::GetFilename() const
+{
+	return fFilename;
 }
 
 #endif

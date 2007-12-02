@@ -100,7 +100,7 @@ DIR2ATR_OBJS = dir2atr.o $(COMMON_OBJS) $(ATRIMAGE_OBJS) \
 SERIALWATCHER_OBJS = serialwatcher.o SIOTracer.o FileTracer.o Error.o \
 	MiscUtils.o Directory.o
 
-CASINFO_OBJS = $(COMMON_OBJS) CasImage.o CasBlock.o \
+CASINFO_OBJS = $(COMMON_OBJS) CasImage.o CasBlock.o CasHandler.o \
 	casinfo.o
 
 ALL_IN_ONE_OBJS = atarisio.o $(ATARISERVER_OBJS) atarixfer.o adir.o dir2atr.o

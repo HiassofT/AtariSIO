@@ -36,6 +36,7 @@
 #include "Version.h"
 #include "Dos2xUtils.h"
 #include "MiscUtils.h"
+#include "CasHandler.h"
 
 CursesFrontend::CursesFrontend(RCPtr<DeviceManager>& manager, bool useColor)
 	: fDeviceManager(manager),
@@ -43,6 +44,7 @@ CursesFrontend::CursesFrontend(RCPtr<DeviceManager>& manager, bool useColor)
 	  fDirCache(new DirectoryCache),
 	  fCursorStatus(true),
 	  fAuxWindowStatus(true),
+	  fCasWindowStatus(true),
 	  fGotSigWinCh(false),
 	  fAlreadyReportedCursorOnProblem(false),
 	  fAlreadyReportedCursorOffProblem(false)
@@ -65,6 +67,7 @@ CursesFrontend::CursesFrontend(RCPtr<DeviceManager>& manager, bool useColor)
 
 	fTopLineWindow = newwin(toph, fScreenWidth, tops, 0);
         fDriveStatusWindow = newwin(driveh, fScreenWidth, drives, 0);
+        fCasWindow = newwin(driveh, fScreenWidth, drives, 0);
 	fStatusLineWindow = newwin(logth, fScreenWidth, logts, 0);
 	fLogWindow = newwin(logh, fScreenWidth, logs, 0);
 	fBottomLineWindow = newwin(both, fScreenWidth, bots, 0);
@@ -82,6 +85,7 @@ CursesFrontend::CursesFrontend(RCPtr<DeviceManager>& manager, bool useColor)
 
         fTopLinePanel = new_panel(fTopLineWindow);
 	fDriveStatusPanel = new_panel(fDriveStatusWindow);
+	fCasPanel = new_panel(fCasWindow);
 	fStatusLinePanel = new_panel(fStatusLineWindow);
 	fLogPanel = new_panel(fLogWindow);
 	fBottomLinePanel = new_panel(fBottomLineWindow);
@@ -89,6 +93,7 @@ CursesFrontend::CursesFrontend(RCPtr<DeviceManager>& manager, bool useColor)
 	fAuxPanel = new_panel(fAuxWindow);
 
 	ShowAuxWindow(false);
+	ShowCasWindow(false);
 
 	// init colors
 	if (useColor && has_colors()) {
@@ -166,6 +171,7 @@ CursesFrontend::~CursesFrontend()
 {
 	del_panel(fTopLinePanel);
 	del_panel(fDriveStatusPanel);
+	del_panel(fCasPanel);
 	del_panel(fStatusLinePanel);
 	del_panel(fLogPanel);
 	del_panel(fBottomLinePanel);
@@ -174,6 +180,7 @@ CursesFrontend::~CursesFrontend()
 
 	delwin(fTopLineWindow);
 	delwin(fDriveStatusWindow);
+	delwin(fCasWindow);
 	delwin(fStatusLineWindow);
 	delwin(fLogWindow);
 	delwin(fBottomLineWindow);
@@ -276,6 +283,7 @@ void CursesFrontend::HandleResize(bool redrawDriveStatusOnly)
 
 		wresize(fTopLineWindow, toph, fScreenWidth);
 		wresize(fDriveStatusWindow, driveh, fScreenWidth);
+		wresize(fCasWindow, driveh, fScreenWidth);
 		wresize(fStatusLineWindow, logth, fScreenWidth);
 		wresize(fLogWindow, logh, fScreenWidth);
 		wresize(fBottomLineWindow, both, fScreenWidth);
@@ -284,6 +292,7 @@ void CursesFrontend::HandleResize(bool redrawDriveStatusOnly)
 	
 		replace_panel(fTopLinePanel, fTopLineWindow);
 		replace_panel(fDriveStatusPanel, fDriveStatusWindow);
+		replace_panel(fCasPanel, fCasWindow);
 		replace_panel(fStatusLinePanel, fStatusLineWindow);
 		replace_panel(fLogPanel, fLogWindow);
 		replace_panel(fBottomLinePanel, fBottomLineWindow);
@@ -292,6 +301,7 @@ void CursesFrontend::HandleResize(bool redrawDriveStatusOnly)
 
 		move_panel(fTopLinePanel, tops, 0);
 		move_panel(fDriveStatusPanel, drives, 0);
+		move_panel(fCasPanel, drives, 0);
 		move_panel(fStatusLinePanel, logts, 0);
 		move_panel(fLogPanel, logs, 0);
 		move_panel(fBottomLinePanel, bots, 0);
@@ -324,6 +334,7 @@ void CursesFrontend::InitWindows(bool resetCursor)
 void CursesFrontend::InitDriveStatusWindows()
 {
 	werase(fDriveStatusWindow);
+	werase(fCasWindow);
 	werase(fStatusLineWindow);
 	werase(fLogWindow);
 
@@ -355,6 +366,20 @@ bool CursesFrontend::ShowAuxWindow(bool on)
 	}
 	top_panel(fInputLinePanel);
 	fAuxWindowStatus = on;
+	return oldStat;
+}
+
+bool CursesFrontend::ShowCasWindow(bool on)
+{
+	bool oldStat = fCasWindowStatus;
+	if (on) {
+		show_panel(fCasPanel);
+		top_panel(fCasPanel);
+	} else {
+		hide_panel(fCasPanel);
+	}
+	top_panel(fInputLinePanel);
+	fCasWindowStatus = on;
 	return oldStat;
 }
 
@@ -790,6 +815,64 @@ void CursesFrontend::DisplayPrinterFilename()
 		wclrtoeol(fDriveStatusWindow);
 	}
 	wattrset(fDriveStatusWindow, fDriveColorStandard);
+}
+
+void CursesFrontend::DisplayCasFilename()
+{
+	unsigned int len=0;
+	const char* filename = 0;
+
+	RCPtr<CasHandler> casHandler = fDeviceManager->GetCasHandler();
+
+	if (casHandler) {
+		filename = casHandler->GetFilename();
+	}
+	wmove(fCasWindow, 1, 0);
+	wattrset(fCasWindow, fDriveColorStandard);
+
+	waddstr(fCasWindow, "File: ");
+	if (filename) {
+		char *sf = MiscUtils::ShortenFilename(filename, fScreenWidth - 6);
+		if (sf) {
+			len = strlen(sf);
+			waddstr(fCasWindow, sf);
+			delete[] sf;
+		} else {
+			len = 0;
+		}
+	}
+	if (len < fScreenWidth - 6) {
+		wclrtoeol(fCasWindow);
+	}
+}
+
+void CursesFrontend::DisplayCasDescription()
+{
+	unsigned int len=0;
+	const char* desc = 0;
+
+	RCPtr<CasHandler> casHandler = fDeviceManager->GetCasHandler();
+
+	if (casHandler) {
+		desc = casHandler->GetDescription();
+	}
+	wmove(fCasWindow, 2, 0);
+	wattrset(fCasWindow, fDriveColorStandard);
+
+	waddstr(fCasWindow, "Description: ");
+	if (desc) {
+		char *sf = MiscUtils::ShortenFilename(desc, fScreenWidth - 13);
+		if (sf) {
+			len = strlen(sf);
+			waddstr(fCasWindow, sf);
+			delete[] sf;
+		} else {
+			len = 0;
+		}
+	}
+	if (len < fScreenWidth - 13) {
+		wclrtoeol(fCasWindow);
+	}
 }
 
 bool CursesFrontend::ShowCursor(bool on)
@@ -1435,6 +1518,7 @@ void CursesFrontend::ProcessLoadDrive()
 	ShowDriveNumber(d);
 
 	waddstr(fInputLineWindow," file: ");
+
 	unsigned int x,y, width;
 	getyx(fInputLineWindow, y, x);
 	if ( (x + 10) > fScreenWidth ) {
@@ -1445,6 +1529,7 @@ void CursesFrontend::ProcessLoadDrive()
 	}
 
 	FileInput input(this, fDirCache);
+
 	input.SetEnableVirtualDriveKey(true);
 
 	char filename[PATH_MAX];
@@ -2467,4 +2552,88 @@ void CursesFrontend::ShowText(const char* title, const char* const * text)
 	werase(fAuxWindow);
 	ShowAuxWindow(oldAux);
 	ShowCursor(oldCursor);
+}
+
+void CursesFrontend::DisplayCasStatus()
+{
+	DisplayCasFilename();
+	DisplayCasDescription();
+	UpdateScreen();
+}
+
+void CursesFrontend::ProcessTapeEmulation()
+{
+	ClearInputLine();
+	waddstr(fInputLineWindow, "CAS image: ");
+	ShowCursor(true);
+	UpdateScreen();
+
+	unsigned int x,y, width;
+	getyx(fInputLineWindow, y, x);
+	if ( (x + 10) > fScreenWidth ) {
+		x = 0;
+		width = fScreenWidth;
+	} else {
+		width = fScreenWidth - x;
+	}
+
+	FileInput input(this, fDirCache);
+
+	char filename[PATH_MAX];
+	filename[0] = 0;
+
+	ShowFileInputHint(false);
+
+	StringInput::EInputResult res = 
+	input.InputString(fInputLineWindow, x, y, width, filename, PATH_MAX, eFileSelectKey, true, &fCasHistory);
+	fDirCache->ClearDirectoryData();
+
+	if (res == StringInput::eInputAborted) {
+		AbortInput();
+		return;
+	}
+
+	if ( (res == StringInput::eInputStartSelect) || (filename[0] == 0) ) {
+		//DPRINTF("start select: path=\"%s\" filename=\"%s\"", input.GetPath(), input.GetFilename());
+		ClearInputLine();
+
+		FileSelect sel(this);
+		sel.SetEnableDos2xDirectory(true);
+		ShowAuxWindow(true);
+		bool ok;
+		if (filename[0] != 0) {
+			ok=sel.Select(fAuxWindow, input.GetPath(), input.GetFilename(), filename, PATH_MAX);
+		} else {
+			ok=sel.Select(fAuxWindow, NULL, NULL, filename, PATH_MAX);
+		}
+		ShowAuxWindow(false);
+		if (!ok) {
+			AbortInput();
+			return;
+		}
+		ClearInputLine();
+	}
+
+	if ( (filename[0] == 0) || (!fDeviceManager->LoadCasImage(filename)) ) {
+		AbortInput();
+		return;
+	}
+
+	RCPtr<CasHandler> cas = fDeviceManager->GetCasHandler();
+	fCasHistory.Add(cas->GetFilename());
+
+	ShowCursor(false);
+	ShowCasWindow(true);
+	ShowStandardHint();
+	DisplayCasStatus();
+	UpdateScreen();
+
+	// TODO: emulation...
+	int ch;
+	ch = wgetch(fInputLineWindow);
+
+	ShowCasWindow(false);
+	ShowStandardHint();
+	UpdateScreen();
+	fDeviceManager->UnloadCasImage();
 }

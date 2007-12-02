@@ -25,13 +25,30 @@
 #include "RefCounted.h"
 #include "RCPtr.h"
 #include "CasImage.h"
+#include "SIOWrapper.h"
 
 class CasHandler : public RefCounted {
 public:
-	CasHandler(const RCPtr<CasImage>& image);
+	CasHandler(const RCPtr<CasImage>& image, RCPtr<SIOWrapper>& siowrapper);
 
 	unsigned int GetCurrentBaudRate() const;
 	unsigned int GetCurrentBlockNumber() const;
+	unsigned int GetCurrentPartNumber() const;
+
+	unsigned int GetNumberOfBlocks() const;
+	unsigned int GetNumberOfParts() const;
+
+	const char* GetFilename() const;
+	const char* GetDescription() const;
+
+	enum EState {
+		eStatePaused,
+		eStateRunning,
+		eStateDone
+	};
+
+	void SetState(EState state);
+	EState GetState() const;
 
 protected:
 
@@ -39,8 +56,13 @@ protected:
 
 private:
 	RCPtr<CasImage> fCasImage;
+	RCPtr<SIOWrapper> fSIOWrapper;
 	unsigned int fCurrentBaudRate;
 	unsigned int fCurrentBlockNumber;
+
+	EState fState;
+
+	unsigned int* fPartsIdx;
 };
 
 inline unsigned int CasHandler::GetCurrentBaudRate() const
@@ -51,6 +73,36 @@ inline unsigned int CasHandler::GetCurrentBaudRate() const
 inline unsigned int CasHandler::GetCurrentBlockNumber() const
 {
 	return fCurrentBaudRate;
+}
+
+inline unsigned int CasHandler::GetNumberOfBlocks() const
+{
+	return fCasImage->GetNumberOfBlocks();
+}
+
+inline unsigned int CasHandler::GetNumberOfParts() const
+{
+	return fCasImage->GetNumberOfParts();
+}
+
+inline const char* CasHandler::GetDescription() const
+{
+	return fCasImage->GetDescription();
+}
+
+inline const char* CasHandler::GetFilename() const
+{
+	return fCasImage->GetFilename();
+}
+
+inline void CasHandler::SetState(CasHandler::EState state)
+{
+	fState = state;
+}
+
+inline CasHandler::EState CasHandler::GetState() const
+{
+	return fState;
 }
 
 #endif

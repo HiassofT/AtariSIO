@@ -27,6 +27,7 @@
 #include "RCPtr.h"
 #include "RefCounted.h"
 #include "PrinterHandler.h"
+#include "CasHandler.h"
 
 class DeviceManager : public RefCounted {
 public:
@@ -123,6 +124,11 @@ public:
 	// returns true if there are any changed images
 	bool CheckForChangedImages();
 
+	RCPtr<CasHandler> GetCasHandler();
+
+	bool LoadCasImage(const char* filename);
+	void UnloadCasImage();
+
 private:
 	RCPtr<SIOWrapper> fSIOWrapper;
 	RCPtr<SIOManager> fSIOManager;
@@ -134,6 +140,7 @@ private:
 	bool fUseHighSpeed;
 	bool fEnableXF551Mode;
 	SIOWrapper::ESIOServerCommandLine fCableType;
+	RCPtr<CasHandler> fCasHandler;
 };
 
 inline RCPtr<SIOManager> DeviceManager::GetSIOManager()
@@ -144,6 +151,11 @@ inline RCPtr<SIOManager> DeviceManager::GetSIOManager()
 inline RCPtr<SIOWrapper> DeviceManager::GetSIOWrapper()
 {
 	return fSIOWrapper;
+}
+
+inline RCPtr<CasHandler> DeviceManager::GetCasHandler()
+{
+	return fCasHandler;
 }
 
 inline SIOWrapper::ESIOServerCommandLine DeviceManager::GetSioServerMode() const

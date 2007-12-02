@@ -57,6 +57,10 @@ public:
 	void DisplayPrinterEOLConversion();
 	void DisplayPrinterFilename();
 
+	void DisplayCasStatus();
+	void DisplayCasFilename();
+	void DisplayCasDescription();
+
 	// return old status
 	bool ShowCursor(bool on);
 
@@ -112,10 +116,13 @@ public:
 	void ProcessUninstallPrinterHandler();
 	void ProcessFlushPrinterData();
 
+	void ProcessTapeEmulation();
+
 	void AddFilenameHistory(const char* string);
 
 	// return old status
 	bool ShowAuxWindow(bool on);
+	bool ShowCasWindow(bool on);
 
 	void IndicateGotSigWinCh() { fGotSigWinCh = true; }
 	bool GotSigWinCh() { return fGotSigWinCh; }
@@ -207,6 +214,7 @@ private:
 	// permanent windows
 	WINDOW* fTopLineWindow;
 	WINDOW* fDriveStatusWindow;
+	WINDOW* fCasWindow;
 	WINDOW* fStatusLineWindow;
 	WINDOW* fLogWindow;
 	WINDOW* fBottomLineWindow;
@@ -215,6 +223,7 @@ private:
 
 	PANEL* fTopLinePanel;
 	PANEL* fDriveStatusPanel;
+	PANEL* fCasPanel;
 	PANEL* fStatusLinePanel;
 	PANEL* fLogPanel;
 	PANEL* fBottomLinePanel;
@@ -262,12 +271,14 @@ private:
 	int fTraceLevel;
 
 	History fFilenameHistory;
+	History fCasHistory;
 	History fPrinterHistory;
 	History fImageSizeHistory;
 	RCPtr<DirectoryCache> fDirCache;
 
 	bool fCursorStatus;
 	bool fAuxWindowStatus;
+	bool fCasWindowStatus;
 
 	bool fGotSigWinCh;
 

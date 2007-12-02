@@ -25,14 +25,44 @@
 #include <string.h>
 #include <list>
 
-CasHandler::CasHandler(const RCPtr<CasImage>& image)
+CasHandler::CasHandler(const RCPtr<CasImage>& image, RCPtr<SIOWrapper>& siowrapper)
 	: fCasImage(image),
+	  fSIOWrapper(siowrapper),
 	  fCurrentBaudRate(0),
-	  fCurrentBlockNumber(0)
+	  fCurrentBlockNumber(0),
+	  fState(eStatePaused),
+	  fPartsIdx(0)
 {
 	Assert(fCasImage.IsNotNull());
+	Assert(fCasImage->GetNumberOfBlocks() > 0);
+	Assert(fCasImage->GetNumberOfParts() > 0);
+
+	unsigned int total_parts = fCasImage->GetNumberOfParts();
+
+	fPartsIdx = new unsigned int[total_parts];
+
+	// build part index cache
+	if (fCasImage->GetNumberOfParts() == 1) {
+		fPartsIdx[0] = 0;
+	} else {
+		unsigned int i, p, part;
+		part = 1;
+		for (i=0; i<fCasImage->GetNumberOfBlocks(); i++) {
+			if ((p = fCasImage->GetBlock(i)->GetPartNumber() != part)) {
+				Assert(p < total_parts);
+				fPartsIdx[p] = i;
+				part = p;
+			}
+		}
+		Assert(part + 1 == fCasImage->GetNumberOfParts());
+	}
 }
 
 CasHandler::~CasHandler()
 {
+	if (fPartsIdx) {
+		delete[] fPartsIdx;
+	}
 }
+
+

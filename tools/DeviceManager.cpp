@@ -1050,3 +1050,28 @@ const char* DeviceManager::GetPrinterFilename() const
 		return NULL;
 	}
 }
+
+void DeviceManager::UnloadCasImage()
+{
+	fCasHandler.SetToNull();
+}	
+
+bool DeviceManager::LoadCasImage(const char* filename)
+{
+	char absPath[PATH_MAX];
+	UnloadCasImage();
+
+	if (realpath(filename,absPath) == 0) {
+		AERROR("cannot find \"%s\"", filename);
+		return false;
+	}
+
+	RCPtr<CasImage> image = new CasImage;
+
+	if (image->ReadImageFromFile(absPath)) {
+		fCasHandler = new CasHandler(image, fSIOWrapper);
+		return true;
+	} else {
+		return false;
+	}
+}
