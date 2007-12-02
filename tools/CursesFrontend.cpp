@@ -2350,6 +2350,7 @@ static const char* const helpText[] =
 		"I     uninstall printer handler",
 		"F     flush queued printer data",
 	        "t     set trace level",
+	        "T     tape emulation",
 		"C     set cable type",
 		"s     set SIO high speed mode",
 		"X     enable/disable XF551 commands",
