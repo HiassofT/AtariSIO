@@ -138,7 +138,7 @@ bool CasImage::ReadImageFromFile(const char* filename)
 	unsigned int partno = 0;
 	bool done = false;
 
-	list< RCPtr<CasBlock> > blocklist;
+	std::list< RCPtr<CasBlock> > blocklist;
 
 
 	blocktype = ReadBlockFromFile(fileio, length, aux, false);
@@ -195,8 +195,8 @@ bool CasImage::ReadImageFromFile(const char* filename)
 
 	{
 		unsigned int i = 0;
-		list< RCPtr<CasBlock> >::const_iterator iter;
-		list< RCPtr<CasBlock> >::const_iterator listend = blocklist.end();
+		std::list< RCPtr<CasBlock> >::const_iterator iter;
+		std::list< RCPtr<CasBlock> >::const_iterator listend = blocklist.end();
 		for (iter=blocklist.begin(); iter != listend; iter++) {
 			fCasBlocks[i++] = *iter;
 		}
