@@ -1236,13 +1236,13 @@ again:
 	}
 }
 
-static int setup_send_data_frame(struct atarisio_dev* dev, unsigned int data_length, unsigned char* user_buffer)
+static int setup_send_frame(struct atarisio_dev* dev, unsigned int data_length, unsigned char* user_buffer, int add_checksum)
 {
 	unsigned long flags;
 	unsigned int len, remain;
 	unsigned char checksum;
 
-	if (data_length == 0) {
+	if ((data_length == 0) || (data_length >= MAX_SIO_DATA_LENGTH)) {
 		return -EINVAL;
 	}
 
@@ -1267,45 +1267,12 @@ static int setup_send_data_frame(struct atarisio_dev* dev, unsigned int data_len
 		}
 	}
 
-	checksum = calculate_checksum((unsigned char*)(dev->tx_buf.buf),
-		       	dev->tx_buf.head, data_length, IOBUF_LENGTH);
+	if (add_checksum) {
+		checksum = calculate_checksum((unsigned char*)(dev->tx_buf.buf),
+				dev->tx_buf.head, data_length, IOBUF_LENGTH);
 
-	dev->tx_buf.buf[(dev->tx_buf.head+data_length) % IOBUF_LENGTH] = checksum;
-
-	dev->tx_buf.head = (dev->tx_buf.head + data_length + 1) % IOBUF_LENGTH;
-	spin_unlock_irqrestore(&dev->tx_lock, flags);
-
-	return 0;
-}
-
-static int setup_send_raw_frame(struct atarisio_dev* dev, unsigned int data_length, unsigned char* user_buffer)
-{
-	unsigned long flags;
-	unsigned int len, remain;
-
-	if (data_length == 0) {
-		return -EINVAL;
-	}
-
-	spin_lock_irqsave(&dev->tx_lock, flags);
-	dev->tx_buf.head = dev->tx_buf.tail;
-
-	len = IOBUF_LENGTH - dev->tx_buf.head;
-	if (len > data_length) {
-		len = data_length;
-	}
-	if ( copy_from_user((unsigned char*) (&(dev->tx_buf.buf[dev->tx_buf.head])), 
-			user_buffer,
-			len) ) {
-		return -EFAULT;
-	}
-	remain = data_length - len;
-	if (remain>0) {
-		if ( copy_from_user((unsigned char*) dev->tx_buf.buf,
-				user_buffer+len,
-				remain) ) {
-			return -EFAULT;
-		}
+		dev->tx_buf.buf[(dev->tx_buf.head+data_length) % IOBUF_LENGTH] = checksum;
+		data_length++;
 	}
 
 	dev->tx_buf.head = (dev->tx_buf.head + data_length) % IOBUF_LENGTH;
@@ -1314,10 +1281,20 @@ static int setup_send_raw_frame(struct atarisio_dev* dev, unsigned int data_leng
 	return 0;
 }
 
+static int setup_send_data_frame(struct atarisio_dev* dev, unsigned int data_length, unsigned char* user_buffer)
+{
+	return setup_send_frame(dev, data_length, user_buffer, 1);
+}
+
+static int setup_send_raw_frame(struct atarisio_dev* dev, unsigned int data_length, unsigned char* user_buffer)
+{
+	return setup_send_frame(dev, data_length, user_buffer, 0);
+}
+
 static int copy_received_data_to_user(struct atarisio_dev* dev, unsigned int data_length, unsigned char* user_buffer)
 {
 	unsigned int len, remain;
-	if (data_length == 0) {
+	if ((data_length == 0) || (data_length >= MAX_SIO_DATA_LENGTH)) {
 		return -EINVAL;
 	}
 	/* if we received any bytes, copy the to the user buffer, even
