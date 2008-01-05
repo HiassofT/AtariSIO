@@ -58,8 +58,12 @@ public:
 	void DisplayPrinterFilename();
 
 	void DisplayCasStatus();
+
+	void DisplayCasText();
 	void DisplayCasFilename();
 	void DisplayCasDescription();
+	void DisplayCasBlock();
+	void DisplayCasState();
 
 	// return old status
 	bool ShowCursor(bool on);
@@ -244,6 +248,17 @@ private:
 	unsigned int fDriveFilenameX;
 	unsigned int fDriveFilenameLength;
 
+	// cas display positions
+	unsigned int fCasFilenameY;
+	unsigned int fCasDescriptionY;
+	unsigned int fCasBlockY;
+	unsigned int fCasPartY;
+	unsigned int fCasBaudY;
+	unsigned int fCasGapY;
+	unsigned int fCasLengthY;
+	unsigned int fCasStateY;
+	unsigned int fCasXStart;
+
 	// log window colors
 	attr_t fLogColorStandard;
 	attr_t fLogColorHighlight;
@@ -259,6 +274,10 @@ private:
 	attr_t fDriveColorWriteProtected;
 	attr_t fDriveColorChanged;
 
+	// cas window colors
+	attr_t fCasColorStandard;
+	attr_t fCasColorInfo;
+	
 	attr_t fStatusColorStandard;
 
 	// printer status colors

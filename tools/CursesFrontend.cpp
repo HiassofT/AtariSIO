@@ -121,6 +121,9 @@ CursesFrontend::CursesFrontend(RCPtr<DeviceManager>& manager, bool useColor)
 		fDriveColorWriteProtected = COLOR_PAIR(6);
 		fDriveColorChanged = COLOR_PAIR(6);
 
+		fCasColorStandard = COLOR_PAIR(0);
+		fCasColorInfo = COLOR_PAIR(3);
+
 		fPrinterColorSpawned = COLOR_PAIR(4);
 		fPrinterColorError = COLOR_PAIR(6);
 
@@ -144,6 +147,9 @@ CursesFrontend::CursesFrontend(RCPtr<DeviceManager>& manager, bool useColor)
 		fDriveColorWritable = 0;
 		fDriveColorWriteProtected = 0;
 		fDriveColorChanged = 0;
+
+		fCasColorStandard = 0;
+		fCasColorInfo = 0;
 
 		fPrinterColorSpawned = 0;
 		fPrinterColorError = 0;
@@ -243,6 +249,18 @@ bool CursesFrontend::CalculateWindowPositions(
 	} else {
 		fDriveFilenameLength = 0;
 	}
+
+	fCasFilenameY = 1;
+	fCasDescriptionY = 2;
+	fCasBlockY = 3;
+	fCasPartY = 4;
+	fCasBaudY = 5;
+	fCasGapY = 6;
+	fCasLengthY = 7;
+	fCasStateY = 9;
+
+	fCasXStart = 7;
+
 	return true;
 }
 
@@ -816,6 +834,46 @@ void CursesFrontend::DisplayPrinterFilename()
 	}
 	wattrset(fDriveStatusWindow, fDriveColorStandard);
 }
+	
+
+void CursesFrontend::DisplayCasStatus()
+{
+	DisplayCasText();
+	DisplayCasFilename();
+	DisplayCasDescription();
+	DisplayCasBlock();
+	DisplayCasState();
+	UpdateScreen();
+}
+
+void CursesFrontend::DisplayCasText()
+{
+	wmove(fCasWindow, fCasFilenameY, 0);
+	wattrset(fCasWindow, fCasColorStandard);
+	waddstr(fCasWindow,"    C:");
+	
+	wmove(fCasWindow, fCasDescriptionY, 0);
+	waddstr(fCasWindow," Desc:");
+	
+	wmove(fCasWindow, fCasBlockY, 0);
+	waddstr(fCasWindow,"Block:");
+	
+	wmove(fCasWindow, fCasPartY, 0);
+	waddstr(fCasWindow," Part:");
+	
+	wmove(fCasWindow, fCasBaudY, 0);
+	waddstr(fCasWindow," Baud:");
+	
+	wmove(fCasWindow, fCasGapY, 0);
+	waddstr(fCasWindow,"  Gap:");
+	
+	wmove(fCasWindow, fCasLengthY, 0);
+	waddstr(fCasWindow,"Bytes:");
+
+	wmove(fCasWindow, fCasStateY, 0);
+	waddstr(fCasWindow,"State:");
+}
+
 
 void CursesFrontend::DisplayCasFilename()
 {
@@ -824,15 +882,18 @@ void CursesFrontend::DisplayCasFilename()
 
 	RCPtr<CasHandler> casHandler = fDeviceManager->GetCasHandler();
 
-	if (casHandler) {
-		filename = casHandler->GetFilename();
+	if (!casHandler) {
+		Assert(false);
+		return;
 	}
-	wmove(fCasWindow, 1, 0);
-	wattrset(fCasWindow, fDriveColorStandard);
 
-	waddstr(fCasWindow, "File: ");
+	filename = casHandler->GetFilename();
+
+	wmove(fCasWindow, fCasFilenameY, fCasXStart);
+	wattrset(fCasWindow, fCasColorStandard);
+
 	if (filename) {
-		char *sf = MiscUtils::ShortenFilename(filename, fScreenWidth - 6);
+		char *sf = MiscUtils::ShortenFilename(filename, fScreenWidth - fCasXStart);
 		if (sf) {
 			len = strlen(sf);
 			waddstr(fCasWindow, sf);
@@ -841,7 +902,7 @@ void CursesFrontend::DisplayCasFilename()
 			len = 0;
 		}
 	}
-	if (len < fScreenWidth - 6) {
+	if (len < fScreenWidth - fCasXStart) {
 		wclrtoeol(fCasWindow);
 	}
 }
@@ -853,15 +914,18 @@ void CursesFrontend::DisplayCasDescription()
 
 	RCPtr<CasHandler> casHandler = fDeviceManager->GetCasHandler();
 
-	if (casHandler) {
-		desc = casHandler->GetDescription();
+	if (!casHandler) {
+		Assert(false);
+		return;
 	}
-	wmove(fCasWindow, 2, 0);
-	wattrset(fCasWindow, fDriveColorStandard);
 
-	waddstr(fCasWindow, "Description: ");
+	desc = casHandler->GetDescription();
+
+	wmove(fCasWindow, fCasDescriptionY, fCasXStart);
+	wattrset(fCasWindow, fCasColorStandard);
+
 	if (desc) {
-		char *sf = MiscUtils::ShortenFilename(desc, fScreenWidth - 13);
+		char *sf = MiscUtils::ShortenFilename(desc, fScreenWidth - fCasXStart);
 		if (sf) {
 			len = strlen(sf);
 			waddstr(fCasWindow, sf);
@@ -870,9 +934,80 @@ void CursesFrontend::DisplayCasDescription()
 			len = 0;
 		}
 	}
-	if (len < fScreenWidth - 13) {
+	if (len < fScreenWidth - fCasXStart) {
 		wclrtoeol(fCasWindow);
 	}
+}
+
+
+void CursesFrontend::DisplayCasBlock()
+{
+	RCPtr<CasHandler> casHandler = fDeviceManager->GetCasHandler();
+
+	if (!casHandler) {
+		Assert(false);
+		return;
+	}
+
+	wmove(fCasWindow, fCasBlockY, fCasXStart);
+	wattrset(fCasWindow, fCasColorInfo);
+
+	wprintw(fCasWindow, "%5d", casHandler->GetCurrentBlockNumber() + 1);
+
+	wattrset(fCasWindow, fCasColorStandard);
+	wprintw(fCasWindow, " of %d", casHandler->GetNumberOfBlocks());
+
+	wmove(fCasWindow, fCasPartY, fCasXStart);
+	wattrset(fCasWindow, fCasColorInfo);
+
+	wprintw(fCasWindow, "%5d", casHandler->GetCurrentPartNumber() + 1);
+
+	wattrset(fCasWindow, fCasColorStandard);
+	wprintw(fCasWindow, " of %d", casHandler->GetNumberOfParts());
+
+	wmove(fCasWindow, fCasBaudY, fCasXStart);
+	wattrset(fCasWindow, fCasColorInfo);
+
+	wprintw(fCasWindow, "%5d",
+		casHandler->GetCurrentBlockBaudRate());
+
+	wmove(fCasWindow, fCasGapY, fCasXStart);
+	wprintw(fCasWindow, "%5d",
+		casHandler->GetCurrentBlockGap());
+
+	wmove(fCasWindow, fCasLengthY, fCasXStart);
+	wprintw(fCasWindow, "%5d",
+		casHandler->GetCurrentBlockLength());
+
+	wattrset(fCasWindow, fCasColorStandard);
+}
+
+void CursesFrontend::DisplayCasState()
+{
+	RCPtr<CasHandler> casHandler = fDeviceManager->GetCasHandler();
+
+	if (!casHandler) {
+		Assert(false);
+		return;
+	}
+
+	wmove(fCasWindow, fCasStateY, fCasXStart);
+
+	wattrset(fCasWindow, fCasColorInfo);
+
+	switch (casHandler->GetState()) {
+	case CasHandler::eStatePaused:
+		waddstr(fCasWindow, "Pause");
+		break;
+	case CasHandler::eStatePlaying:
+		waddstr(fCasWindow, "Play ");
+		break;
+	case CasHandler::eStateDone:
+		waddstr(fCasWindow, "Done ");
+		break;
+	}
+
+	wattrset(fCasWindow, fCasColorStandard);
 }
 
 bool CursesFrontend::ShowCursor(bool on)
@@ -2555,13 +2690,6 @@ void CursesFrontend::ShowText(const char* title, const char* const * text)
 	ShowCursor(oldCursor);
 }
 
-void CursesFrontend::DisplayCasStatus()
-{
-	DisplayCasFilename();
-	DisplayCasDescription();
-	UpdateScreen();
-}
-
 void CursesFrontend::ProcessTapeEmulation()
 {
 	ClearInputLine();
@@ -2630,8 +2758,83 @@ void CursesFrontend::ProcessTapeEmulation()
 	UpdateScreen();
 
 	// TODO: emulation...
-	int ch;
-	ch = wgetch(fInputLineWindow);
+	bool done = false;
+
+	while (!done) {
+		int ch;
+		ch = wgetch(fInputLineWindow);
+
+		switch (ch) {
+		case 'q':
+		       	done = true;
+			break;
+		case KEY_LEFT:
+			if (cas->SeekPrevBlock()) {
+				DisplayCasBlock();
+				UpdateScreen();
+			} else {
+				beep();
+			}
+			break;
+		case KEY_RIGHT:
+			if (cas->SeekNextBlock()) {
+				DisplayCasBlock();
+				UpdateScreen();
+			} else {
+				beep();
+			}
+			break;
+		case KEY_UP:
+			if (cas->SeekPrevBlock(20)) {
+				DisplayCasBlock();
+				UpdateScreen();
+			} else {
+				beep();
+			}
+			break;
+		case KEY_DOWN:
+			if (cas->SeekNextBlock(20)) {
+				DisplayCasBlock();
+				UpdateScreen();
+			} else {
+				beep();
+			}
+			break;
+		case KEY_PPAGE:
+			if (cas->SeekPrevPart()) {
+				DisplayCasBlock();
+				UpdateScreen();
+			} else {
+				beep();
+			}
+			break;
+		case KEY_NPAGE:
+			if (cas->SeekNextPart()) {
+				DisplayCasBlock();
+				UpdateScreen();
+			} else {
+				beep();
+			}
+			break;
+		case KEY_HOME:
+			if (cas->SeekStart()) {
+				DisplayCasBlock();
+				UpdateScreen();
+			} else {
+				beep();
+			}
+			break;
+		case KEY_END:
+			if (cas->SeekEnd()) {
+				DisplayCasBlock();
+				UpdateScreen();
+			} else {
+				beep();
+			}
+			break;
+		default: beep();
+		}
+	}
 
 	ShowCasWindow(false);
 	ShowStandardHint();

@@ -206,7 +206,7 @@ bool CasImage::ReadImageFromFile(const char* filename)
 	fileio->Close();
 	FreeTempBuf();
 
-	fFilename = new char[strlen(filename)];
+	fFilename = new char[strlen(filename)+1];
 	strcpy (fFilename, filename);
 
 	return true;
