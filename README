@@ -1,6 +1,6 @@
 AtariSIO driver and utilities V0.30
 
-Copyright (C) 2002-2007 Matthias Reichl <hias@horus.com>
+Copyright (C) 2002-2008 Matthias Reichl <hias@horus.com>
 
 This program is proteced under the terms of the GNU General Public
 License, version 2. Please read LICENSE for further details.
@@ -151,6 +151,8 @@ in this package but has to be built and installed separately
              path is either a filename or |print-command, eg |lpr
 <filename>   load <filename> into current drive number, and then
              increment drive number by one
+             if the filename ends with '.cas' or '.cas.gz', the
+             CAS-image is loaded and tape emulation is started
 
 -h just prints the above help screen.
 
@@ -335,7 +337,7 @@ list. You can also search through the list by pressing the first
 letter(s) of a filename. If you press '<TAB>' the next matching file
 will be selected. Note: this search is case-insensitve.
 
-Note: If the '<home'> and '<end>' keys don't work most likely
+Note: If the '<home>' and '<end>' keys don't work most likely
 your terminal settings (the TERM environment variable) aren't right
 or your ncurses library / terminfo settings are broken. In this
 case either fix it or use the '^A' / '^E' keys.
@@ -398,6 +400,15 @@ file you can view it's DOS2.x directory by pressing '^D'.
      to a directory that is currently used as a virtual drive
      (new files don't show up automatically on virtual drives,
      the directory is only scanned when creating a virtual drive).
+
+'T'  start tape (CAS) emulation
+     First enter the filename of a CAS image (or use the file selector).
+     '<space>' toggles pause/play mode, cursor left/right seek back/forward
+     one block, up/down seeks 20 blocks, pageup/down seeks to the
+     previous/next part, home/end seek to the beginning/end.
+     Use 'q' to exit tape emulation and return back to disk drive emulation.
+     Note: CAS image with long blocks (more than 200 bytes) are currently
+     not supported.
 
 
 4. SIO trace levels

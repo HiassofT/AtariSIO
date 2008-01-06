@@ -2,7 +2,7 @@
    CasHandler - Wrapper around CasImage containing current state
    and functions for tape emulation
 
-   (c) 2007 Matthias Reichl <hias@horus.com>
+   (c) 2007-2008 Matthias Reichl <hias@horus.com>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -272,7 +272,7 @@ CasHandler::EPlayResult CasHandler::DoPlaying()
 				} else {
 					int ret = fSIOWrapper->SendTapeBlock((unsigned char*) (block->GetData()), len);
 					if (ret) {
-						AERROR("transmitting CAS block %d failed", fCurrentBlockNumber + 1);
+						AERROR("transmitting CAS block %d failed: %d ", fCurrentBlockNumber + 1, ret);
 						ok = false;
 					}
 				}

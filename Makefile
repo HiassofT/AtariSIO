@@ -1,6 +1,6 @@
 ########################################################################
 # AtariSIO Makefile
-# (c) 2002-2007 by Matthias Reichl <hias@horus.com>
+# (c) 2002-2008 by Matthias Reichl <hias@horus.com>
 # http://www.horus.com/~hias/atari/
 ########################################################################
 

@@ -2,7 +2,7 @@
    atariserver.cpp - implementation of an Atari SIO server, using
    a curses frontend
 
-   Copyright (C) 2003-2005 Matthias Reichl <hias@horus.com>
+   Copyright (C) 2003-2008 Matthias Reichl <hias@horus.com>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -65,6 +65,8 @@ static void my_sig_handler(int sig)
 }
 
 static int trace_level = 0;
+
+static const char* cas_filename = 0;
 
 static void process_args(RCPtr<DeviceManager>& manager, CursesFrontend* frontend, int argc, char** argv)
 {
@@ -243,25 +245,35 @@ illegal_option:
 					AERROR("illegal option \"%s\"", argv[i]);
 				}
 			} else {
-				if (manager->DriveNumberOK(DeviceManager::EDriveNumber(drive))) {
-					DeviceManager::EDriveNumber driveNo = DeviceManager::EDriveNumber(drive);
-					if (manager->DriveInUse(driveNo)) {
-						AERROR("drive D%d: already assigned!", drive);
-					}
-					if (!manager->LoadDiskImage(driveNo, argv[i])) {
-						AERROR("cannot load \"%s\" into D%d:", argv[i], drive);
+				int len = strlen(argv[i]);
+				if ( ( (len >= 4) && (strcasecmp(argv[i]+len-4, ".cas") == 0) ) ||
+				     ( (len >= 7) && (strcasecmp(argv[i]+len-7, ".cas.gz") == 0) ) ) {
+					if (cas_filename) {
+						AERROR("only one CAS image allowed");
 					} else {
-						if (write_protect_next) {
-							if (!manager->SetWriteProtectImage(driveNo, true)) {
-								AERROR("write protecting D%d: failed!", drive);
-							}
-							write_protect_next = false;
-						}
-						drive++;
+						cas_filename = argv[i];
 					}
-					frontend->AddFilenameHistory(manager->GetImageFilename(driveNo));
 				} else {
-					AERROR("too many images - there is no drive D%d:",drive);
+					if (manager->DriveNumberOK(DeviceManager::EDriveNumber(drive))) {
+						DeviceManager::EDriveNumber driveNo = DeviceManager::EDriveNumber(drive);
+						if (manager->DriveInUse(driveNo)) {
+							AERROR("drive D%d: already assigned!", drive);
+						}
+						if (!manager->LoadDiskImage(driveNo, argv[i])) {
+							AERROR("cannot load \"%s\" into D%d:", argv[i], drive);
+						} else {
+							if (write_protect_next) {
+								if (!manager->SetWriteProtectImage(driveNo, true)) {
+									AERROR("write protecting D%d: failed!", drive);
+								}
+								write_protect_next = false;
+							}
+							drive++;
+						}
+						frontend->AddFilenameHistory(manager->GetImageFilename(driveNo));
+					} else {
+						AERROR("too many images - there is no drive D%d:",drive);
+					}
 				}
 			}
 		}
@@ -360,6 +372,8 @@ int main(int argc, char** argv)
 		printf("              path is either a filename or |print-command, eg |lpr\n");
 		printf("<filename>    load <filename> into current drive number, and then\n");
 		printf("              increment drive number by one\n");
+		printf("              if the filename ends with '.cas' or '.cas.gz', the\n");
+		printf("              CAS-image is loaded and tape emulation is started\n");
 		return 0;
 	}
 
@@ -419,6 +433,9 @@ int main(int argc, char** argv)
 	frontend->DisplayStatusLine();
 	frontend->UpdateScreen();
 
+	if (cas_filename) {
+		frontend->ProcessTapeEmulation(cas_filename);
+	}
 	bool running = true;
 	do {
 		int ch = frontend->GetCh(false);

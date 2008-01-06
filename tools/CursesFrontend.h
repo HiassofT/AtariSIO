@@ -4,7 +4,7 @@
 /*
    CursesFrontend.h - curses frontend for atariserver
 
-   Copyright (C) 2003, 2004 Matthias Reichl <hias@horus.com>
+   Copyright (C) 2003-2008 Matthias Reichl <hias@horus.com>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -60,6 +60,7 @@ public:
 	void DisplayCasStatus();
 
 	void DisplayCasText();
+
 	void DisplayCasFilename();
 	void DisplayCasDescription();
 	void DisplayCasBlock();
@@ -120,7 +121,7 @@ public:
 	void ProcessUninstallPrinterHandler();
 	void ProcessFlushPrinterData();
 
-	void ProcessTapeEmulation();
+	void ProcessTapeEmulation(const char* loadfilename = 0);
 
 	void AddFilenameHistory(const char* string);
 
@@ -184,6 +185,7 @@ private:
 	void ShowCreateDriveHint();
 	void ShowImageSizeHint(int minimumSectors);
 	void ShowHighSpeedHint();
+	void ShowCasHint();
 
 	void ShowPrinterEOLHint();
 	void ShowPrinterFileHint();

@@ -1,7 +1,7 @@
 /*
    CursesFrontend.cpp - curses frontend for atariserver
 
-   Copyright (C) 2003, 2004 Matthias Reichl <hias@horus.com>
+   Copyright (C) 2003-2008 Matthias Reichl <hias@horus.com>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -1363,6 +1363,13 @@ void CursesFrontend::ShowPrinterFileHint()
 	wprintw(fBottomLineWindow,"'^G'=abort");
 }
 
+void CursesFrontend::ShowCasHint()
+{
+	werase(fBottomLineWindow);
+	wmove(fBottomLineWindow, 0, 0);
+	wprintw(fBottomLineWindow,"use '<space>' to play/pause, cursor keys to seek, '^G'/'q'=abort");
+}
+
 void CursesFrontend::AbortInput()
 {
 	ShowCursor(false);
@@ -2690,57 +2697,62 @@ void CursesFrontend::ShowText(const char* title, const char* const * text)
 	ShowCursor(oldCursor);
 }
 
-void CursesFrontend::ProcessTapeEmulation()
+void CursesFrontend::ProcessTapeEmulation(const char* loadfilename)
 {
-	ClearInputLine();
-	waddstr(fInputLineWindow, "CAS image: ");
-	ShowCursor(true);
-	UpdateScreen();
-
-	unsigned int x,y, width;
-	getyx(fInputLineWindow, y, x);
-	if ( (x + 10) > fScreenWidth ) {
-		x = 0;
-		width = fScreenWidth;
-	} else {
-		width = fScreenWidth - x;
-	}
-
-	FileInput input(this, fDirCache);
-
 	char filename[PATH_MAX];
 	filename[0] = 0;
 
-	ShowFileInputHint(false);
+	ClearInputLine();
+	if (loadfilename) {
+		strncpy(filename, loadfilename, PATH_MAX-1);
+		filename[PATH_MAX-1] = 0;
+	} else {
+		waddstr(fInputLineWindow, "CAS image: ");
+		ShowCursor(true);
+		UpdateScreen();
 
-	StringInput::EInputResult res = 
-	input.InputString(fInputLineWindow, x, y, width, filename, PATH_MAX, eFileSelectKey, true, &fCasHistory);
-	fDirCache->ClearDirectoryData();
-
-	if (res == StringInput::eInputAborted) {
-		AbortInput();
-		return;
-	}
-
-	if ( (res == StringInput::eInputStartSelect) || (filename[0] == 0) ) {
-		//DPRINTF("start select: path=\"%s\" filename=\"%s\"", input.GetPath(), input.GetFilename());
-		ClearInputLine();
-
-		FileSelect sel(this);
-		sel.SetEnableDos2xDirectory(true);
-		ShowAuxWindow(true);
-		bool ok;
-		if (filename[0] != 0) {
-			ok=sel.Select(fAuxWindow, input.GetPath(), input.GetFilename(), filename, PATH_MAX);
+		unsigned int x,y, width;
+		getyx(fInputLineWindow, y, x);
+		if ( (x + 10) > fScreenWidth ) {
+			x = 0;
+			width = fScreenWidth;
 		} else {
-			ok=sel.Select(fAuxWindow, NULL, NULL, filename, PATH_MAX);
+			width = fScreenWidth - x;
 		}
-		ShowAuxWindow(false);
-		if (!ok) {
+
+		FileInput input(this, fDirCache);
+
+		ShowFileInputHint(false);
+
+		StringInput::EInputResult res = 
+		input.InputString(fInputLineWindow, x, y, width, filename, PATH_MAX, eFileSelectKey, true, &fCasHistory);
+		fDirCache->ClearDirectoryData();
+
+		if (res == StringInput::eInputAborted) {
 			AbortInput();
 			return;
 		}
-		ClearInputLine();
+
+		if ( (res == StringInput::eInputStartSelect) || (filename[0] == 0) ) {
+			//DPRINTF("start select: path=\"%s\" filename=\"%s\"", input.GetPath(), input.GetFilename());
+			ClearInputLine();
+
+			FileSelect sel(this);
+			sel.SetEnableDos2xDirectory(true);
+			ShowAuxWindow(true);
+			bool ok;
+			if (filename[0] != 0) {
+				ok=sel.Select(fAuxWindow, input.GetPath(), input.GetFilename(), filename, PATH_MAX);
+			} else {
+				ok=sel.Select(fAuxWindow, NULL, NULL, filename, PATH_MAX);
+			}
+			ShowAuxWindow(false);
+			if (!ok) {
+				AbortInput();
+				return;
+			}
+			ClearInputLine();
+		}
 	}
 
 	if ( (filename[0] == 0) || (!fDeviceManager->LoadCasImage(filename)) ) {
@@ -2753,7 +2765,7 @@ void CursesFrontend::ProcessTapeEmulation()
 
 	ShowCursor(false);
 	ShowCasWindow(true);
-	ShowStandardHint();
+	ShowCasHint();
 	DisplayCasStatus();
 	UpdateScreen();
 
@@ -2790,11 +2802,14 @@ void CursesFrontend::ProcessTapeEmulation()
 				break;
 			}
 		} else {
-			cas->SetPause(true);
-			switch (ch) {
-			case 'q':
+			if (IsAbortChar(ch)) {
 				done = true;
-				break;
+				continue;
+			}
+
+			cas->SetPause(true);
+
+			switch (ch) {
 			case KEY_LEFT:
 				if (!cas->SeekPrevBlock()) {
 					beep();
@@ -2838,6 +2853,7 @@ void CursesFrontend::ProcessTapeEmulation()
 			case KEY_RESIZE:
 				HandleResize();
 				DisplayCasStatus();
+				ShowCasHint();
 				break;
 			default: beep();
 			}
