@@ -22,10 +22,15 @@
    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
+#include <sys/types.h>
+#include <sys/time.h>
+
 #include "RefCounted.h"
 #include "RCPtr.h"
 #include "CasImage.h"
 #include "SIOWrapper.h"
+#include "SIOTracer.h"
+#include "MiscUtils.h"
 
 class CasHandler : public RefCounted {
 public:
@@ -52,6 +57,8 @@ public:
 
 	EState GetState() const;
 
+	void SetPause(bool on);
+
 	bool SeekStart();
 	bool SeekEnd();
 	bool SeekNextBlock(unsigned int skip=1);
@@ -59,11 +66,24 @@ public:
 	bool SeekNextPart();
 	bool SeekPrevPart();
 
+	enum EPlayResult {
+		eGotKeypress,
+		eGotSignal
+	};
+
+	EPlayResult DoPlaying();
+
 protected:
 
 	virtual ~CasHandler();
 
 private:
+
+	void SetupNextBlock();
+
+	// returns false if already past start time
+	bool CalculateWaitTime(struct timeval& tv);
+
 	enum EInternalState {
 		eInternalStatePaused,
 		eInternalStateWaiting,
@@ -79,6 +99,10 @@ private:
 	EInternalState fState;
 
 	unsigned int* fPartsIdx;
+
+	MiscUtils::TimestampType fBlockStartTime;
+
+	SIOTracer* fTracer;
 };
 
 inline unsigned int CasHandler::GetCurrentBlockNumber() const

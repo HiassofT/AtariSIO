@@ -95,7 +95,7 @@ public:
 	int WaitForCommandFrame(int otherReadPollDevice=-1);
 	/*
 	 * return values:
-	 * -1 = error
+	 * -1 = timeout
 	 *  0 = command frame is waiting
 	 *  1 = other device has data
 	 *  2 = error in select (or caught signal)

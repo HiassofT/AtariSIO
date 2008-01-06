@@ -619,6 +619,34 @@ void SIOTracer::IndicateCwdChanged()
 	}
 }
 
+void SIOTracer::IndicateCasStateChanged()
+{
+	if (fTraceGroupsCache & eTraceImageStatus) {
+		RCPtr<TracerEntry> e = fTracerList;
+		while (e.IsNotNull()) {
+			if (e->fTraceGroups & eTraceImageStatus) {
+				e->fRealTracer->IndicateCasStateChanged();
+				e->fRealTracer->FlushOutput();
+			}
+			e = e->fNext;
+		}
+	}
+}
+
+void SIOTracer::IndicateCasBlockChanged()
+{
+	if (fTraceGroupsCache & eTraceImageStatus) {
+		RCPtr<TracerEntry> e = fTracerList;
+		while (e.IsNotNull()) {
+			if (e->fTraceGroups & eTraceImageStatus) {
+				e->fRealTracer->IndicateCasBlockChanged();
+				e->fRealTracer->FlushOutput();
+			}
+			e = e->fNext;
+		}
+	}
+}
+
 void SIOTracer::IndicatePrinterChanged()
 {
 	if (fTraceGroupsCache & eTraceImageStatus) {

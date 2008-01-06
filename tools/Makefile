@@ -35,7 +35,7 @@ endif
 COMMON_OBJS = DiskImage.o FileIO.o SIOTracer.o FileTracer.o Error.o
 
 ATRIMAGE_OBJS = AtrImage.o AtrMemoryImage.o DCMCodec.o \
-	CasBlock.o CasImage.o CasHandler.o
+	CasBlock.o CasImage.o
 
 ATARIXFER_OBJS = atarixfer.o $(COMMON_OBJS) $(ATRIMAGE_OBJS) \
 	SIOWrapper.o MiscUtils.o Directory.o \
@@ -66,7 +66,8 @@ ATARISERVER_OBJS = atariserver.o CursesFrontend.o StringInput.o \
 	PrinterHandler.o Coprocess.o RemoteControlHandler.o \
 	DataContainer.o HighSpeedSIOCode.o MyPicoDosCode.o \
 	CursesFrontendTracer.o AtrSearchPath.o SearchPath.o \
-	Dos2xUtils.o VirtualImageObserver.o
+	Dos2xUtils.o VirtualImageObserver.o \
+	CasHandler.o
 
 ATARISERVER_LIBS = $(COMMON_LIBS) -lpanel -lncurses
 
@@ -100,7 +101,7 @@ DIR2ATR_OBJS = dir2atr.o $(COMMON_OBJS) $(ATRIMAGE_OBJS) \
 SERIALWATCHER_OBJS = serialwatcher.o SIOTracer.o FileTracer.o Error.o \
 	MiscUtils.o Directory.o
 
-CASINFO_OBJS = $(COMMON_OBJS) CasImage.o CasBlock.o CasHandler.o \
+CASINFO_OBJS = $(COMMON_OBJS) CasImage.o CasBlock.o CasHandler.o SIOWrapper.o \
 	casinfo.o
 
 ALL_IN_ONE_OBJS = atarisio.o $(ATARISERVER_OBJS) atarixfer.o adir.o dir2atr.o

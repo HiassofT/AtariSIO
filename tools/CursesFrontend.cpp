@@ -2757,82 +2757,90 @@ void CursesFrontend::ProcessTapeEmulation()
 	DisplayCasStatus();
 	UpdateScreen();
 
-	// TODO: emulation...
 	bool done = false;
 
 	while (!done) {
-		int ch;
-		ch = wgetch(fInputLineWindow);
+		CasHandler::EPlayResult ret;
 
-		switch (ch) {
-		case 'q':
-		       	done = true;
-			break;
-		case KEY_LEFT:
-			if (cas->SeekPrevBlock()) {
-				DisplayCasBlock();
-				UpdateScreen();
+		ret = cas->DoPlaying();
+		int ch;
+
+		if (ret == CasHandler::eGotSignal) {
+			if (GotSigWinCh()) {
+				ch = KEY_RESIZE;
 			} else {
-				beep();
+				continue;
 			}
-			break;
-		case KEY_RIGHT:
-			if (cas->SeekNextBlock()) {
-				DisplayCasBlock();
-				UpdateScreen();
-			} else {
-				beep();
+		} else {
+			ch = wgetch(fInputLineWindow);
+			if (ch == KEY_RESIZE) {
+				DPRINTF("got KEY_RESIZE from ncurses!");
+				continue;
 			}
-			break;
-		case KEY_UP:
-			if (cas->SeekPrevBlock(20)) {
-				DisplayCasBlock();
-				UpdateScreen();
-			} else {
-				beep();
+		}
+
+		if (ch == ' ') {
+			switch (cas->GetState()) {
+			case CasHandler::eStatePaused:
+			case CasHandler::eStateDone:
+				cas->SetPause(false);
+				break;
+			case CasHandler::eStatePlaying:
+				cas->SetPause(true);
+				break;
 			}
-			break;
-		case KEY_DOWN:
-			if (cas->SeekNextBlock(20)) {
-				DisplayCasBlock();
-				UpdateScreen();
-			} else {
-				beep();
+		} else {
+			cas->SetPause(true);
+			switch (ch) {
+			case 'q':
+				done = true;
+				break;
+			case KEY_LEFT:
+				if (!cas->SeekPrevBlock()) {
+					beep();
+				}
+				break;
+			case KEY_RIGHT:
+				if (!cas->SeekNextBlock()) {
+					beep();
+				}
+				break;
+			case KEY_UP:
+				if (!cas->SeekPrevBlock(20)) {
+					beep();
+				}
+				break;
+			case KEY_DOWN:
+				if (!cas->SeekNextBlock(20)) {
+					beep();
+				}
+				break;
+			case KEY_PPAGE:
+				if (!cas->SeekPrevPart()) {
+					beep();
+				}
+				break;
+			case KEY_NPAGE:
+				if (!cas->SeekNextPart()) {
+					beep();
+				}
+				break;
+			case KEY_HOME:
+				if (!cas->SeekStart()) {
+					beep();
+				}
+				break;
+			case KEY_END:
+				if (!cas->SeekEnd()) {
+					beep();
+				}
+				break;
+			case KEY_RESIZE:
+				HandleResize();
+				DisplayCasStatus();
+				break;
+			default: beep();
 			}
-			break;
-		case KEY_PPAGE:
-			if (cas->SeekPrevPart()) {
-				DisplayCasBlock();
-				UpdateScreen();
-			} else {
-				beep();
-			}
-			break;
-		case KEY_NPAGE:
-			if (cas->SeekNextPart()) {
-				DisplayCasBlock();
-				UpdateScreen();
-			} else {
-				beep();
-			}
-			break;
-		case KEY_HOME:
-			if (cas->SeekStart()) {
-				DisplayCasBlock();
-				UpdateScreen();
-			} else {
-				beep();
-			}
-			break;
-		case KEY_END:
-			if (cas->SeekEnd()) {
-				DisplayCasBlock();
-				UpdateScreen();
-			} else {
-				beep();
-			}
-			break;
-		default: beep();
 		}
 	}
 

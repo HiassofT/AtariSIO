@@ -88,3 +88,13 @@ void CursesFrontendTracer::IndicateCwdChanged()
 {
 	fFrontend->InitTopLine();
 }
+
+void CursesFrontendTracer::IndicateCasStateChanged()
+{
+	fFrontend->DisplayCasState();
+}
+
+void CursesFrontendTracer::IndicateCasBlockChanged()
+{
+	fFrontend->DisplayCasBlock();
+}

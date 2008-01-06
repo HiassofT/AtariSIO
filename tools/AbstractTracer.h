@@ -67,6 +67,9 @@ public:
 	virtual void IndicateCwdChanged() { }
 	virtual void IndicatePrinterChanged() { }
 
+	virtual void IndicateCasStateChanged() { }
+	virtual void IndicateCasBlockChanged() { }
+
 protected:
 	virtual void ReallyStartTraceLine()
 	{}

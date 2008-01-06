@@ -43,6 +43,12 @@ namespace MiscUtils {
 		return (TimestampType)tv.tv_sec * 1000000 + tv.tv_usec;
 	}
 	
+	inline void TimestampToTimeval(TimestampType ts, struct timeval& tv)
+	{
+		tv.tv_sec = ts / 1000000;
+		tv.tv_usec = ts % 1000000;
+	}
+
 	inline TimestampType GetCurrentTime()
 	{
 		struct timeval tv;

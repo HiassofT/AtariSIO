@@ -136,6 +136,9 @@ public:
 	void IndicateCwdChanged();
 	void IndicatePrinterChanged();
 
+	void IndicateCasStateChanged();
+	void IndicateCasBlockChanged();
+
 protected:
 	SIOTracer();
 
