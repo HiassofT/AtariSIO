@@ -50,11 +50,15 @@ CasHandler::CasHandler(const RCPtr<CasImage>& image, RCPtr<SIOWrapper>& siowrapp
 		unsigned int i, p, part;
 		part = 0;
 		for (i=1; i<fCasImage->GetNumberOfBlocks(); i++) {
-			if ((p = fCasImage->GetBlock(i)->GetPartNumber() != part)) {
+			if ((p = fCasImage->GetBlock(i)->GetPartNumber()) != part) {
+				//TRACE("part(%d) = %d", i, p);
 				Assert(p < total_parts);
 				fPartsIdx[p] = i;
 				part = p;
+			} else {
+				//TRACE("part(%d) = %d", i, p);
 			}
+
 		}
 		Assert(part + 1 == fCasImage->GetNumberOfParts());
 	}
