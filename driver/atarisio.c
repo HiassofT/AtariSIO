@@ -158,7 +158,7 @@ static int irq[ATARISIO_MAXDEV] = {0, };
 static int debug = 0;
 static int debug_irq = 0;
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,0)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,10)
 MODULE_PARM(minor,"i");
 MODULE_PARM(port,"1-" __MODULE_STRING(ATARISIO_MAXDEV) "s");
 MODULE_PARM(io,"1-" __MODULE_STRING(ATARISIO_MAXDEV) "i");
