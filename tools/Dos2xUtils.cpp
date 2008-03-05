@@ -509,10 +509,21 @@ bool Dos2xUtils::AddEntry(const char* atariname, bool allowNameChange, unsigned 
 	memcpy(fAtariName[entryNumber], atariname, 12);
 
 	if (allowNameChange) {
+
+		// find first blank in filename, otherwise replace last two characters
+		char* ablank = strchr(atariname, ' ');
+		int pos = 6;
+		if (ablank) {
+			pos = ablank - atariname;
+		}
+		if (pos > 6) {
+			pos = 6;
+		}
+
 		int i = 0;
 		while (!CheckNameUnique(entryNumber)) {
-			fAtariName[entryNumber][6] = '0' + (i / 10);
-			fAtariName[entryNumber][7] = '0' + (i % 10);
+			fAtariName[entryNumber][pos] = '0' + (i / 10);
+			fAtariName[entryNumber][pos+1] = '0' + (i % 10);
 			i++;
 		}
 	}
