@@ -350,7 +350,7 @@ int main(int argc, char** argv)
 	}
 
 	if (wantHelp) {
-		printf("atariserver " VERSION_STRING " (c) 2002-2007 Matthias Reichl\n");
+		printf("atariserver " VERSION_STRING " (c) 2002-2008 Matthias Reichl\n");
 		printf("usage: [-f device] [-cChmsStX] [-o file] [-P c|l|r file]\n");
 		printf("       [ [-12345678] [-p] (-V dens dir)|file  ... ]\n");
 		printf("-h            display help\n");

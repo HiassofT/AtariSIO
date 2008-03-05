@@ -460,7 +460,7 @@ int main(int argc, char** argv)
 
 	char* atarisioDevName = getenv("ATARIXFER_DEVICE");
 
-	printf("atarixfer %s\n(c) 2002-2007 by Matthias Reichl <hias@horus.com>\n\n",VERSION_STRING);
+	printf("atarixfer %s\n(c) 2002-2008 by Matthias Reichl <hias@horus.com>\n\n",VERSION_STRING);
 	while(!finished) {
 		c = getopt(argc, argv, "prw12345678df:");
 		if (c == -1) {

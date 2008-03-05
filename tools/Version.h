@@ -4,7 +4,7 @@
 /*
    Version.h - define the AtariSIO version string
 
-   Copyright (C) 2003-2007 Matthias Reichl <hias@horus.com>
+   Copyright (C) 2003-2008 Matthias Reichl <hias@horus.com>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -21,6 +21,7 @@
    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-#define VERSION_STRING "0.30-pre3"
+//#define VERSION_STRING "0.30-pre3"
+#define VERSION_STRING "0.30-080107"
 
 #endif
