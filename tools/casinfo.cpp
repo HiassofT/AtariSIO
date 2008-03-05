@@ -23,13 +23,16 @@
 #include "SIOTracer.h"
 #include "SIOWrapper.h"
 #include "FileTracer.h"
+#include "Version.h"
 
 #include <stdio.h>
 
 int main(int argc, char** argv)
 {
+	printf("casinfo " VERSION_STRING " (c) 2007-2008 Matthias Reichl\n");
+
 	if (argc < 2) {
-		printf("usage: casinfo file.cas\n");
+		printf("usage: casinfo file.cas ...\n");
 		return 1;
 	}
 
@@ -41,43 +44,49 @@ int main(int argc, char** argv)
 		sioTracer->SetTraceGroup(SIOTracer::eTraceDebug, true, tracer);
 	}
 
-	const char* filename = argv[1];
 
-	RCPtr<CasImage> image = new CasImage();
+	int i;
+	for (i=1; i<argc; i++) {
+		const char* filename = argv[1];
 
-	if (!image->ReadImageFromFile(filename)) {
-		printf("error reading CAS file %s\n", filename);
-		return 1;
-	}
+		printf("infos for \"%s\":\n", filename);
 
-	RCPtr<SIOWrapper> siowrapper;
+		RCPtr<CasImage> image = new CasImage();
 
-	RCPtr<CasHandler> casHandler = new CasHandler(image, siowrapper);
+		if (!image->ReadImageFromFile(filename)) {
+			printf("error reading file!\n");
+			continue;
+		}
 
-	printf("Description: ");
-	const char* desc = image->GetDescription();
-	if (desc) {
-		printf("%s\n", desc);
-	} else {
-		printf("<none>\n");
-	}
+		RCPtr<SIOWrapper> siowrapper;
 
-	unsigned int total_blocks = image->GetNumberOfBlocks();
+		RCPtr<CasHandler> casHandler = new CasHandler(image, siowrapper);
 
-	printf("Number of Parts: %d\n", image->GetNumberOfParts());
-	printf("Number of Blocks: %d\n", total_blocks);
-
-	unsigned int i;
-	for (i=0; i<total_blocks; i++) {
-		RCPtr<CasBlock> block = image->GetBlock(i);
-
-		if (block) {
-			printf("%4d:  part: %2d  baud: %5d  gap: %5d  length: %5d\n",
-				i, 
-				block->GetPartNumber(),
-				block->GetBaudRate(), block->GetGap(), block->GetLength());
+		printf("Description: ");
+		const char* desc = image->GetDescription();
+		if (desc) {
+			printf("%s\n", desc);
 		} else {
-			printf("%4d:  ERROR getting block\n", i);
+			printf("<none>\n");
+		}
+
+		unsigned int total_blocks = image->GetNumberOfBlocks();
+
+		printf("Number of Parts: %d\n", image->GetNumberOfParts());
+		printf("Number of Blocks: %d\n", total_blocks);
+
+		unsigned int i;
+		for (i=0; i<total_blocks; i++) {
+			RCPtr<CasBlock> block = image->GetBlock(i);
+
+			if (block) {
+				printf("%4d:  part: %2d  baud: %5d  gap: %5d  length: %5d\n",
+					i, 
+					block->GetPartNumber(),
+					block->GetBaudRate(), block->GetGap(), block->GetLength());
+			} else {
+				printf("%4d:  ERROR getting block\n", i);
+			}
 		}
 	}
 
