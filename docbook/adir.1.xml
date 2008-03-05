@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<refentry id="refadir">
+  <refmeta>
+    <refentrytitle>adir</refentrytitle>
+
+    <manvolnum>1</manvolnum>
+  </refmeta>
+
+  <refnamediv>
+    <refname>adir</refname>
+
+    <refpurpose>list directory contents of Atari disk image</refpurpose>
+  </refnamediv>
+
+  <refsynopsisdiv>
+    <cmdsynopsis>
+      <command>adir</command>
+
+      <arg><option>-<replaceable>columns</replaceable></option></arg>
+
+      <arg><option>-r</option></arg>
+
+      <arg><option>-t</option></arg>
+
+      <arg choice="plain"
+      rep="repeat"><replaceable>filename</replaceable></arg>
+    </cmdsynopsis>
+  </refsynopsisdiv>
+
+  <refsect1>
+    <title>Description</title>
+
+    <para><command>adir</command> lists the directory of one or more DOS 2.x
+    or MyDOS disk images (ATR, XFD, or DCM (DiskComm) format). Output
+    resembles the output of the Atari DOS <userinput>A</userinput> command.
+    Single, enhanced 1050, double, and high-capacity (hard disk) images are
+    supported.</para>
+  </refsect1>
+
+  <refsect1>
+    <title>Options</title>
+
+    <variablelist>
+      <varlistentry>
+        <term><option>-<replaceable>columns</replaceable></option></term>
+
+        <listitem>
+          <para>Number of columns for output format. Default is
+          <option>-4</option> This option is ignored if <option>-r</option> is
+          given.</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><option>-r</option></term>
+
+        <listitem>
+          <simpara>Raw format: list the contents of all directory entries that
+          have been used, including those containing deleted files. Output
+          consists of 6 columns:</simpara>
+
+          <itemizedlist>
+            <listitem>
+              <para>File number</para>
+            </listitem>
+
+            <listitem>
+              <para>Status flags (in hex)</para>
+            </listitem>
+
+            <listitem>
+              <para>File name (8 characters)</para>
+            </listitem>
+
+            <listitem>
+              <para>File extension (3 characters)</para>
+            </listitem>
+
+            <listitem>
+              <para>Starting sector</para>
+            </listitem>
+
+            <listitem>
+              <para>File size in sectors</para>
+            </listitem>
+          </itemizedlist>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><option>-t</option></term>
+
+        <listitem>
+          <para>Recursively print directory tree of image. Only useful for
+          MyDOS-formatted disk images.</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><replaceable>filename</replaceable></term>
+
+        <listitem>
+          <para>One or more Atari DOS 2.x or MyDOS-compatible disk image files
+          (ATR, XFD or DCM format).</para>
+        </listitem>
+      </varlistentry>
+    </variablelist>
+  </refsect1>
+
+  <refsect1>
+    <title>See also</title>
+
+    <para>atariserver, dir2atr, <xref linkend="refatarixfer" /></para>
+
+    <para>AtariSIO website: <ulink
+    url="http://www.horus.com/~hias/atari/"></ulink></para>
+  </refsect1>
+</refentry>

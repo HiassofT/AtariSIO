@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!DOCTYPE book PUBLIC "-//OASIS//DTD DocBook XML V4.3//EN"
+"http://www.oasis-open.org/docbook/xml/4.3/docbookx.dtd" [
+<!ENTITY intro SYSTEM "intro.xml">
+<!ENTITY refatarixfer SYSTEM "atarixfer.1.xml">
+<!ENTITY refadir SYSTEM "adir.1.xml">
+<!ENTITY refdir2atr SYSTEM "dir2atr.1.xml">
+]>
+<book>
+  <bookinfo>
+    <title>AtariSIO</title>
+
+    <author>
+      <firstname>Matthias</firstname>
+
+      <surname>Reichl</surname>
+
+      <affiliation>
+        <address><email>hias@horus.com</email></address>
+      </affiliation>
+    </author>
+
+    <copyright>
+      <year>2002-2008</year>
+
+      <holder>Matthias Reichl</holder>
+    </copyright>
+  </bookinfo>
+
+  <chapter id="chapintro">
+    <title>Introduction</title>
+
+    &intro;
+  </chapter>
+
+  <reference id="ref">
+    <referenceinfo>
+      <title>HiassofT's Atari 8-bit Tools</title>
+
+      <date>28 February 2008</date>
+
+      <productname>AtariSIO 0.30-pre3</productname>
+    </referenceinfo>
+
+    <title>AtariSIO man pages</title>
+
+    &refatarixfer;
+    &refadir;
+    &refdir2atr;
+  </reference>
+</book>

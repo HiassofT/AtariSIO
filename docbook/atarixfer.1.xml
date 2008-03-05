@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<refentry id="refatarixfer">
+  <refmeta>
+    <refentrytitle>atarixfer</refentrytitle>
+
+    <manvolnum>1</manvolnum>
+  </refmeta>
+
+  <refnamediv>
+    <refname>atarixfer</refname>
+
+    <refpurpose>transfer Atari disk images from/to an Atari disk
+    drive</refpurpose>
+  </refnamediv>
+
+  <refsynopsisdiv>
+    <cmdsynopsis>
+      <command>atarixfer</command>
+
+      <arg>-f <replaceable>device</replaceable></arg>
+
+      <arg>-p</arg>
+
+      <arg>-d</arg>
+
+      <arg>-<replaceable>driveno</replaceable></arg>
+
+      <group choice="plain">
+        <arg choice="plain">-r <replaceable>imagefile</replaceable></arg>
+
+        <arg choice="plain">-w <replaceable>imagefile</replaceable></arg>
+      </group>
+    </cmdsynopsis>
+  </refsynopsisdiv>
+
+  <refsect1>
+    <title>Description</title>
+
+    <para><command>atarixfer</command> can either write a disk image to a real
+    Atari disk drive, or read a disk from an Atari drive and write its
+    contents to a disk image. A 1050-2-PC or APE ProSystem cable is
+    required.</para>
+
+    <para><command>atarixfer</command> only supports whole-disk transfers, to
+    or from a disk images. Reading/writing single files or individual sectors
+    is not possible.</para>
+  </refsect1>
+
+  <refsect1>
+    <title>Options</title>
+
+    <variablelist>
+      <varlistentry>
+        <term><option>-f</option> <replaceable>device</replaceable></term>
+
+        <listitem>
+          <para>Use alternative AtariSIO device (default:
+          <filename>/dev/atarisio0</filename>).</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><option>-p</option></term>
+
+        <listitem>
+          <para>Use APE ProSystem cable (default: 1050-2-PC cable).</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><option>-d</option></term>
+
+        <listitem>
+          <para>Enable debugging output.</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><option>-<replaceable>driveno</replaceable></option></term>
+
+        <listitem>
+          <para>Use drive number (<literal>1</literal>..<literal>8</literal>).
+          Default is <literal>1</literal>. The drive number must match the
+          drive number switches on the Atari drive.</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><option>-r</option> <replaceable>imagefile</replaceable></term>
+
+        <listitem>
+          <para>Read from Atari disk and create an image of its contents. The
+          type of image to create is decided by the extension of the filename,
+          which should end in <literal>.atr</literal>,
+          <literal>.xfd</literal>, or <literal>.dcm</literal>
+          (case-insensitive). If the filename doesn't match any of these, ATR
+          image format is assumed.</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><option>-w</option> <replaceable>imagefile</replaceable></term>
+
+        <listitem>
+          <para>Write a disk image to the drive.</para>
+        </listitem>
+      </varlistentry>
+    </variablelist>
+  </refsect1>
+
+  <refsect1>
+    <title>See also</title>
+
+    <para>atariserver, dir2atr, <xref linkend="refadir" /></para>
+
+    <para>AtariSIO website: <ulink
+    url="http://www.horus.com/~hias/atari/"></ulink></para>
+  </refsect1>
+</refentry>

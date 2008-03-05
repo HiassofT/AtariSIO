@@ -1,0 +1,193 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<refentry id="refdir2atr">
+  <refmeta>
+    <refentrytitle>dir2atr</refentrytitle>
+
+    <manvolnum>1</manvolnum>
+  </refmeta>
+
+  <refnamediv>
+    <refname>dir2atr</refname>
+
+    <refpurpose>create Atari disk image from directory</refpurpose>
+  </refnamediv>
+
+  <refsynopsisdiv>
+    <cmdsynopsis>
+      <command>dir2atr</command>
+
+      <arg><option>-d</option></arg>
+
+      <arg><option>-m</option></arg>
+
+      <arg><option>-p</option></arg>
+
+      <arg><option>-b</option> <replaceable>boottype</replaceable></arg>
+
+      <arg><replaceable>sectors</replaceable></arg>
+
+      <arg choice="plain"><replaceable>imagefile</replaceable></arg>
+
+      <arg choice="plain"><replaceable>directory</replaceable></arg>
+    </cmdsynopsis>
+  </refsynopsisdiv>
+
+  <refsect1>
+    <title>Description</title>
+
+    <para><command>dir2atr</command> creates an Atari DOS 2.x or MyDOS
+    compatible disk image containing the files from
+    <replaceable>directory</replaceable>. Despite the name,
+    <command>dir2atr</command> can create ATR, DCM and XFD images.</para>
+  </refsect1>
+
+  <refsect1>
+    <title>Options</title>
+
+    <variablelist>
+      <varlistentry>
+        <term><option>-d</option></term>
+
+        <listitem>
+          <para>Create image with double density sectors (256 bytes). Default
+          is single density (128 bytes per sector).</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><option>-m</option></term>
+
+        <listitem>
+          <para>Create disk image in MyDOS format instead of standard DOS 2.x
+          format. This is the default unless you explicitly create a standard
+          single density image (720 SD sectors), enhanced 1050 image (1040 SD
+          sectors) or double density image (720 DD sectors).</para>
+
+          <para>If MyDOS format is selected <command>dir2atr</command> will
+          also recurse into subdirectories.</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><option>-p</option></term>
+
+        <listitem>
+          <para>Create <filename>PICONAME.TXT</filename> file in disk image,
+          containing the long filename information (used by MyPicoDos).</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><option>-b</option> <replaceable>boottype</replaceable></term>
+
+        <listitem>
+          <para>Create a bootable disk for the specified DOS.
+          <replaceable>boottype</replaceable> must be one of:</para>
+
+          <variablelist>
+            <varlistentry>
+              <term><userinput>Dos20</userinput>,
+              <userinput>Dos25</userinput>, <userinput>MyDos453</userinput>,
+              <userinput>TurboDos21</userinput>,
+              <userinput>TurboDos21HS</userinput></term>
+
+              <listitem>
+                <para>for Atari Dos 2.0, Atari Dos 2.5, MyDos 4.53, TurboDos
+                2.1 and TurboDos 2.1HS, respectively.</para>
+
+                <para><emphasis>Note:</emphasis> The directory must already
+                contain a matching <filename>DOS.SYS</filename> file!</para>
+              </listitem>
+            </varlistentry>
+
+            <varlistentry>
+              <term><userinput>MyPicoDos403</userinput>,
+              <userinput>MyPicoDos403HS</userinput>,
+              <userinput>MyPicoDos404</userinput>,
+              <userinput>MyPicoDos404N</userinput>,
+              <userinput>MyPicoDos404R</userinput>,
+              <userinput>MyPicoDos404RN</userinput>,
+              <userinput>MyPicoDos404B</userinput></term>
+
+              <listitem>
+                <para>for MyPicoDos version 4.03 standard, 4.03 highspeed or
+                MyPicoDos 4.04. As for version 4.04 the suffix
+                <userinput>N</userinput> means normal speed SIO (instead of
+                highspeed SIO), <userinput>R</userinput> versions include the
+                AtariSIO remote console and the <userinput>B</userinput> is
+                the "barebone" version without highspeed SIO support and
+                without remote console.</para>
+
+                <para><emphasis>Note:</emphasis> <command>dir2atr</command>
+                automatically adds the <filename>PICODOS.SYS</filename> file
+                to the disk image. It is recommended that you also add the
+                <option>-p</option> option to add a
+                <filename>PICONAME.TXT</filename> file.</para>
+              </listitem>
+            </varlistentry>
+          </variablelist>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><replaceable>sectors</replaceable></term>
+
+        <listitem>
+          <para>Numbers of sectors in the disk image. Must be between 720 and
+          65535.</para>
+
+          <para>If the number of sectors is omitted,
+          <command>dir2atr</command> will automatically calculate it so that
+          all files in the <replaceable>directory</replaceable> fit into the
+          image.</para>
+
+          <para>If <replaceable>sectors</replaceable> is specified but too
+          small for all files in <replaceable>directory</replaceable>, you
+          will get an error message but <command>dir2atr</command> still
+          creates an image file. <emphasis>Note:</emphasis>
+          <command>dir2atr</command> stops on the first file that doesn't fit
+          into the disk image, so you might end up with an empty image file if
+          the first file was too big.</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><replaceable>imagefile</replaceable></term>
+
+        <listitem>
+          <para>Name of the Atari disk image file. Depending on the extension
+          an ATR, DCM or XFD file is created. <emphasis>Note:</emphasis> DCM
+          files are limited to standard single/enhanced/double density
+          format.</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><replaceable>directory</replaceable></term>
+
+        <listitem>
+          <para>Source directory with files to be copied to the disk
+          image.</para>
+
+          <para>The files are copied in ascending alphabetical order (case
+          sensitive). If MyDOS format is used, <command>dir2atr</command> also
+          recurses into subdirectories. <emphasis>Note:</emphasis> empty
+          subdirectories will not be added to the image. Only real files will
+          be added, symlinks etc. will be skipped.</para>
+
+          <para>Filenames will automatically be converted to uppercase "8.3"
+          names, as required by Atari DOS.</para>
+        </listitem>
+      </varlistentry>
+    </variablelist>
+  </refsect1>
+
+  <refsect1>
+    <title>See also</title>
+
+    <para>atariserver, dir2atr, adir</para>
+
+    <para>AtariSIO website: <ulink
+    url="http://www.horus.com/~hias/atari/"></ulink></para>
+  </refsect1>
+</refentry>
