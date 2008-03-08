@@ -24,6 +24,9 @@
 #include <string.h>
 #include <getopt.h>
 
+#include <sys/types.h>
+#include <sys/stat.h>
+
 #include "AtrMemoryImage.h"
 #include "SIOTracer.h"
 #include "FileTracer.h"
@@ -58,6 +61,8 @@ int main(int argc, char**argv)
 	char* directory;
 	char* atrfilename;
 	ESectorLength seclen;
+
+	struct stat statbuf;
 
 	Dos2xUtils::EBootType bootType = Dos2xUtils::eBootDefault;
 
@@ -120,6 +125,16 @@ int main(int argc, char**argv)
 
 	atrfilename=argv[optind++];
 	directory=argv[optind++];
+
+	// check if directory exists
+	if (stat(directory, &statbuf)) {
+		printf("error: cannot stat directory \"%s\"\n", directory);
+		return 1;
+	}
+	if (!S_ISDIR(statbuf.st_mode)) {
+		printf("error: \"%s\" is not a directory\n", directory);
+		return 1;
+	}
 
 	if (autoSectors) {
 		if (!mydos) {

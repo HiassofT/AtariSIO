@@ -1,0 +1,8 @@
+- include Debian package names (libncurses5-dev etc.) in install docs
+
+- add extended command info (remote control device $61, get time, ...)
+  to docs
+
+- add udev rule templates to setup permissions
+
+
