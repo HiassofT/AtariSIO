@@ -1123,7 +1123,7 @@ int AtrSIOHandler::ProcessCommandFrame(SIO_command_frame& frame, const RCPtr<SIO
 
 			memset(buf, 0, buflen);
 			snprintf((char*)buf, buflen - 1, "AtariSIO for Linux" VERSION_STRING "\233"
-					"(c) 2003-2007 Matthias Reichl\233");
+					"(c) 2003-2008 Matthias Reichl\233");
 
 			fTracer->TraceCommandOK();
 			fTracer->TraceApeSpecial(myDriveNo, shortdesc);
