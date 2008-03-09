@@ -199,8 +199,14 @@ void Dos2xUtils::AddFiles(bool createPiconame)
 	if ((fEntryCount == eMaxEntries) && (i<num)) {
 		AWARN("more than %d entries in \"%s\", skipping files", eMaxEntries, fDirectory);
 	}
-	if (createPiconame && fEntryCount < eMaxEntries) {
-		CreatePiconame();
+	if (createPiconame) {
+	       	if (fEntryCount < eMaxEntries) {
+			if (!CreatePiconame()) {
+				AWARN("adding PICONAME.TXT failed!");
+			}
+		} else {
+			AWARN("cannot add PICONAME.TXT, directory full!");
+		}
 	}
 }
 
