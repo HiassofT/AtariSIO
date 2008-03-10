@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<refentry id="refatariserver">
+  <refmeta>
+    <refentrytitle>atariserver</refentrytitle>
+
+    <manvolnum>1</manvolnum>
+  </refmeta>
+
+  <refnamediv>
+    <refname>atariserver</refname>
+
+    <refpurpose>emulate Atari disk drives and printer</refpurpose>
+  </refnamediv>
+
+  <refsynopsisdiv>
+    <cmdsynopsis>
+      <command>atariserver</command>
+
+      <arg>-f <replaceable>device</replaceable></arg>
+
+      <arg>options</arg>
+
+      <arg><replaceable>filename</replaceable></arg>
+
+    </cmdsynopsis>
+  </refsynopsisdiv>
+
+  <refsect1>
+    <title>Description</title>
+
+    <para><command>atariserver</command></para>
+
+  </refsect1>
+
+  <refsect1>
+    <title>Options</title>
+
+    <variablelist>
+      <varlistentry>
+        <term><option>-f</option> <replaceable>device</replaceable></term>
+
+        <listitem>
+          <para>Use alternative AtariSIO device (default:
+          <filename>/dev/atarisio0</filename>).</para>
+        </listitem>
+      </varlistentry>
+
+    </variablelist>
+  </refsect1>
+
+  <refsect1>
+    <title>See also</title>
+
+    <para>
+      <xref linkend="refatarixfer" />,
+      <xref linkend="refadir" />,
+      <xref linkend="refdir2atr" />
+    </para>
+
+    <para>AtariSIO website: <ulink
+    url="http://www.horus.com/~hias/atari/"></ulink></para>
+  </refsect1>
+</refentry>

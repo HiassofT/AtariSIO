@@ -111,7 +111,11 @@
   <refsect1>
     <title>See also</title>
 
-    <para>atariserver, dir2atr, <xref linkend="refadir" /></para>
+    <para>
+      <xref linkend="refatariserver" />,
+      <xref linkend="refadir" />,
+      <xref linkend="refdir2atr" />
+    </para>
 
     <para>AtariSIO website: <ulink
     url="http://www.horus.com/~hias/atari/"></ulink></para>
