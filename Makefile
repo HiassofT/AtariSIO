@@ -8,7 +8,7 @@
 # use kernel 2.6 build system (comment out if you use kernel 2.2/2.4)
 ########################################################################
 
-USE_KBUILD_26 = 1
+#USE_KBUILD_26 = 1
 
 ########################################################################
 # location of your kernel source (header) files

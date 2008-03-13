@@ -19,7 +19,7 @@ ifdef ALL_IN_ONE
 EXECUTABLES = atarisio
 CXXFLAGS += -DALL_IN_ONE
 else
-EXECUTABLES = atariserver atarixfer adir dir2atr measure-system-latency casinfo
+EXECUTABLES = atariserver atarixfer adir dir2atr measure-system-latency casinfo comdump
 #	atariserver-nocurses
 #	ataridd smag24 
 #	speedy
@@ -104,6 +104,9 @@ SERIALWATCHER_OBJS = serialwatcher.o SIOTracer.o FileTracer.o Error.o \
 CASINFO_OBJS = $(COMMON_OBJS) CasImage.o CasBlock.o CasHandler.o SIOWrapper.o \
 	casinfo.o
 
+COMDUMP_OBJS = ComBlock.o Error.o AtariComMemory.o \
+	comdump.o
+
 ALL_IN_ONE_OBJS = atarisio.o $(ATARISERVER_OBJS) atarixfer.o adir.o dir2atr.o
 
 ifdef ENABLE_ATP
@@ -144,6 +147,12 @@ serialwatcher: $(SERIALWATCHER_OBJS)
 
 casinfo: $(CASINFO_OBJS)
 	$(CXX) $(LDFLAGS) -o casinfo $(CASINFO_OBJS) $(COMMON_LIBS)
+
+comdump: $(COMDUMP_OBJS)
+	$(CXX) $(LDFLAGS) -o comdump $(COMDUMP_OBJS)
+
+comdump.exe: comdump.cpp Error.cpp AtariComMemory.cpp ComBlock.cpp
+	i586-mingw32msvc-g++ -o comdump.exe $^
 
 turbo: $(TURBO_OBJS)
 	$(CXX) $(LDFLAGS) -o turbo $(TURBO_OBJS) $(ATARISERVER_LIBS)

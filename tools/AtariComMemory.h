@@ -1,10 +1,9 @@
-#ifndef VERSION_H
-#define VERSION_H
-
+#ifndef ATARICOMMEMORY_H
+#define ATARICOMMEMORY_H
 /*
-   Version.h - define the AtariSIO version string
+   AtariComMemory - helper class for merging COM file blocks
 
-   Copyright (C) 2003-2008 Matthias Reichl <hias@horus.com>
+   Copyright (C) 2008 Matthias Reichl <hias@horus.com>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -21,7 +20,33 @@
    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-//#define VERSION_STRING "0.30-pre3"
-#define VERSION_STRING "0.30-080313"
+#include "ComBlock.h"
+
+class AtariComMemory : public RefCounted {
+public:
+	AtariComMemory();
+	virtual ~AtariComMemory();
+
+	void Clear();
+
+	bool WriteComBlockToMemory(const RCPtr<ComBlock>& blk);
+
+	bool ContainsData() const;
+
+	RCPtr<ComBlock> AsComBlock() const;
+
+private:
+	enum { eMemSize = 65536 };
+
+	bool fContainsData;
+	unsigned char fData[eMemSize];
+	unsigned int fMinAddress;
+	unsigned int fMaxAddress;
+};
+
+inline bool AtariComMemory::ContainsData() const
+{
+	return fContainsData;
+}
 
 #endif

@@ -71,4 +71,23 @@ public:
 	virtual ~FileWriteError() {}
 };
 
+// general I/O errors, without a filename
+
+class EOFError : public ErrorObject {
+public:
+	EOFError()
+		: ErrorObject("Got EOF")
+	{ }
+	virtual ~EOFError() {}
+};
+
+class ReadError : public ErrorObject {
+public:
+	ReadError()
+		: ErrorObject("read error")
+	{ }
+	virtual ~ReadError() {}
+};
+
+
 #endif
