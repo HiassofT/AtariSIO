@@ -1,5 +1,5 @@
 /*
-   comdump - dump blocks of a Atari COM file
+   ataricom - list and manipulate blocks of a Atari COM file
 
    Copyright (C) 2008 Matthias Reichl <hias@horus.com>
 
@@ -97,7 +97,7 @@ int main(int argc, char** argv)
 
 	RCPtr<AtariComMemory> memory;
 
-	printf("comdump V" VERSION_STRING " (c) 2008 by Matthias Reichl <hias@horus.com>\n");
+	printf("ataricom V" VERSION_STRING " (c) 2008 by Matthias Reichl <hias@horus.com>\n");
 
 	for (idx = 1; idx < argc; idx++) {
 		char * arg = argv[idx];
@@ -367,7 +367,7 @@ int main(int argc, char** argv)
 	return 0;
 
 usage:
-	std::cout << "usage: comdump [-bmx range]... file [outfile]" << std::endl
+	std::cout << "usage: ataricom [-bmx range]... file [outfile]" << std::endl
 		<<   "       -b start[-end]: only copy specified blocks" << std::endl
 		<<   "       -x start[-end]: exclude specified blocks" << std::endl
 		<<   "       -m start-end: merge specified blocks" << std::endl

@@ -19,7 +19,7 @@ ifdef ALL_IN_ONE
 EXECUTABLES = atarisio
 CXXFLAGS += -DALL_IN_ONE
 else
-EXECUTABLES = atariserver atarixfer adir dir2atr measure-system-latency casinfo comdump
+EXECUTABLES = atariserver atarixfer adir dir2atr measure-system-latency casinfo ataricom
 #	atariserver-nocurses
 #	ataridd smag24 
 #	speedy
@@ -104,8 +104,8 @@ SERIALWATCHER_OBJS = serialwatcher.o SIOTracer.o FileTracer.o Error.o \
 CASINFO_OBJS = $(COMMON_OBJS) CasImage.o CasBlock.o CasHandler.o SIOWrapper.o \
 	casinfo.o
 
-COMDUMP_OBJS = ComBlock.o Error.o AtariComMemory.o \
-	comdump.o
+ATARICOM_OBJS = ComBlock.o Error.o AtariComMemory.o \
+	ataricom.o
 
 ALL_IN_ONE_OBJS = atarisio.o $(ATARISERVER_OBJS) atarixfer.o adir.o dir2atr.o
 
@@ -119,55 +119,55 @@ asmcode:
 	$(MAKE) -C 6502
 
 atarixfer: $(ATARIXFER_OBJS)
-	$(CXX) $(LDFLAGS) -o atarixfer $(ATARIXFER_OBJS) $(COMMON_LIBS)
+	$(CXX) $(LDFLAGS) -o $@ $(ATARIXFER_OBJS) $(COMMON_LIBS)
 
 atariserver: $(ATARISERVER_OBJS)
-	$(CXX) $(LDFLAGS) -o atariserver $(ATARISERVER_OBJS) $(ATARISERVER_LIBS)
+	$(CXX) $(LDFLAGS) -o $@ $(ATARISERVER_OBJS) $(ATARISERVER_LIBS)
 
 atariserver-nocurses: $(ATARISERVER_NOCURSES_OBJS)
-	$(CXX) $(LDFLAGS) -o atariserver-nocurses $(ATARISERVER_NOCURSES_OBJS) $(ATARISERVER_NOCURSES_LIBS)
+	$(CXX) $(LDFLAGS) -o $@ $(ATARISERVER_NOCURSES_OBJS) $(ATARISERVER_NOCURSES_LIBS)
 
 measure-system-latency: $(MEASURE_SYSTEM_LATENCY_OBJS)
-	$(CXX) $(LDFLAGS) -o measure-system-latency $(MEASURE_SYSTEM_LATENCY_OBJS) $(COMMON_LIBS)
+	$(CXX) $(LDFLAGS) -o $@ $(MEASURE_SYSTEM_LATENCY_OBJS) $(COMMON_LIBS)
 
 atr2atp: $(ATR2ATP_OBJS)
-	$(CXX) $(LDFLAGS) -o atr2atp $(ATR2ATP_OBJS) $(COMMON_LIBS)
+	$(CXX) $(LDFLAGS) -o $@ $(ATR2ATP_OBJS) $(COMMON_LIBS)
 
 atpdump: $(ATPDUMP_OBJS)
-	$(CXX) $(LDFLAGS) -o atpdump $(ATPDUMP_OBJS) $(COMMON_LIBS)
+	$(CXX) $(LDFLAGS) -o $@ $(ATPDUMP_OBJS) $(COMMON_LIBS)
 
 adir: $(ADIR_OBJS)
-	$(CXX) $(LDFLAGS) -o adir $(ADIR_OBJS) $(COMMON_LIBS)
+	$(CXX) $(LDFLAGS) -o $@ $(ADIR_OBJS) $(COMMON_LIBS)
 
 dir2atr: $(DIR2ATR_OBJS)
-	$(CXX) $(LDFLAGS) -o dir2atr $(DIR2ATR_OBJS) $(COMMON_LIBS)
+	$(CXX) $(LDFLAGS) -o $@ $(DIR2ATR_OBJS) $(COMMON_LIBS)
 
 serialwatcher: $(SERIALWATCHER_OBJS)
-	$(CXX) $(LDFLAGS) -o serialwatcher $(SERIALWATCHER_OBJS)
+	$(CXX) $(LDFLAGS) -o $@ $(SERIALWATCHER_OBJS)
 
 casinfo: $(CASINFO_OBJS)
-	$(CXX) $(LDFLAGS) -o casinfo $(CASINFO_OBJS) $(COMMON_LIBS)
+	$(CXX) $(LDFLAGS) -o $@ $(CASINFO_OBJS) $(COMMON_LIBS)
 
-comdump: $(COMDUMP_OBJS)
-	$(CXX) $(LDFLAGS) -o comdump $(COMDUMP_OBJS)
+ataricom: $(ATARICOM_OBJS)
+	$(CXX) $(LDFLAGS) -o $@ $(ATARICOM_OBJS)
 
-comdump.exe: comdump.cpp Error.cpp AtariComMemory.cpp ComBlock.cpp
-	i586-mingw32msvc-g++ -o comdump.exe $^
+ataricom.exe: ataricom.cpp Error.cpp AtariComMemory.cpp ComBlock.cpp
+	i586-mingw32msvc-g++ -W -Wall -DATARISIO_DEBUG -o $@ $^
 
 turbo: $(TURBO_OBJS)
-	$(CXX) $(LDFLAGS) -o turbo $(TURBO_OBJS) $(ATARISERVER_LIBS)
+	$(CXX) $(LDFLAGS) -o $@ $(TURBO_OBJS) $(ATARISERVER_LIBS)
 
 speedy: $(SPEEDY_OBJS)
-	$(CXX) $(LDFLAGS) -o speedy $(SPEEDY_OBJS) $(ATARISERVER_LIBS)
+	$(CXX) $(LDFLAGS) -o $@ $(SPEEDY_OBJS) $(ATARISERVER_LIBS)
 
 ataridd: $(ATARIDD_OBJS)
-	$(CXX) $(LDFLAGS) -o ataridd $(ATARIDD_OBJS) $(ATARISERVER_LIBS)
+	$(CXX) $(LDFLAGS) -o $@ $(ATARIDD_OBJS) $(ATARISERVER_LIBS)
 
 smag24: $(SMAG24_OBJS)
-	$(CXX) $(LDFLAGS) -o smag24 $(SMAG24_OBJS) $(ATARISERVER_LIBS)
+	$(CXX) $(LDFLAGS) -o $@ $(SMAG24_OBJS) $(ATARISERVER_LIBS)
 
 atarisio: $(ALL_IN_ONE_OBJS)
-	$(CXX) $(LDFLAGS) -o atarisio $(ALL_IN_ONE_OBJS) $(ATARISERVER_LIBS)
+	$(CXX) $(LDFLAGS) -o $@ $(ALL_IN_ONE_OBJS) $(ATARISERVER_LIBS)
 
 cleanthis:
 	rm -f *.o $(EXECUTABLES)
