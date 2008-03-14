@@ -18,6 +18,9 @@
    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
+#include <sstream>
+#include <iostream>
+#include <iomanip>
 #include "string.h"
 #include "ComBlock.h"
 #include "Error.h"
@@ -27,8 +30,6 @@ ComBlock::ComBlock(FILE*f)
 	: fData(0), fFileOffset(0)
 {
 	unsigned char buf[4];
-
-	fFileOffset = ftell(f);
 
 	int len = 0;
 	if ((len = fread(buf, 1, 4, f)) != 4) {
@@ -40,7 +41,6 @@ ComBlock::ComBlock(FILE*f)
 	}
 
 	if (buf[0] == 0xff && buf[1] == 0xff) {
-		fFileOffset += 2;
 		buf[0] = buf[2];
 		buf[1] = buf[3];
 		if (fread(buf+2, 1, 2, f) != 2) {
@@ -59,6 +59,8 @@ ComBlock::ComBlock(FILE*f)
 	fLen = endadr - fStartAddress + 1;
 
 	fData = new unsigned char[fLen];
+
+	fFileOffset = ftell(f);
 
 	if (fread(fData, 1, fLen, f) != fLen) {
 		ClearData();
@@ -115,4 +117,29 @@ bool ComBlock::WriteToFile(FILE* f, bool include_ffff) const
 		return false;
 	}
 	return true;
+}
+
+std::string ComBlock::GetDescription() const
+{
+	std::ostringstream s;
+
+	s << std::hex
+		<< std::setw(4) << std::setfill('0')
+		<< fStartAddress
+		<< '-'
+		<< std::setw(4)
+		<< (fStartAddress + fLen - 1)
+		<< std::dec << std::setfill(' ')
+		<< " (bytes: " 
+		<< std::setw(5)
+		<< fLen
+	;
+	if (fFileOffset > 0) {
+		s << ", offset: "
+			<< std::setw(5)
+			<< fFileOffset
+		;
+	}
+	s << ")";
+	return s.str();
 }

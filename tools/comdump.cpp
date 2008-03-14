@@ -21,47 +21,163 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <iostream>
+#include <iomanip>
+#include <vector>
 #include "AtariComMemory.h"
 #include "ComBlock.h"
 #include "Error.h"
 #include "Version.h"
 
+static bool get_range(const char* str, unsigned int& start, unsigned int& end, bool accept_single = false)
+{
+	long v1, v2;
+	char* tmp = strdup(str);
+	char* p = strchr(tmp,'-');
+	if (!p) {
+		free(tmp);
+		if (accept_single) {
+			v1 = atoi(str);
+			if (v1 < 0) {
+				return false;
+			}
+			start = v1;
+			end = v1;
+			return true;
+		}
+		return false;
+	}
+	*p = 0;
+	v1 = atoi(tmp);
+	v2 = atoi(p+1);
+	free(tmp);
+	if (v1 < 0 || v2 < 0 || v2 < v1) {
+		return false;
+	} else {
+		start = v1;
+		end = v2;
+		return true;
+	}
+}
+
 int main(int argc, char** argv)
 {
-	FILE* f;
-	FILE* of;
-	char* filename;
-	char* out_filename;
-	bool done = false;
-	int blkcount = 0;
+	FILE* f = 0;
+	FILE* of = 0;
+	char* filename = 0;
+	char* out_filename = 0;
 
-	bool mergeMode = false;
-	int merge_start;
-	int merge_end;
+	bool list_mode = true;
+
+	bool done = false;
+
+	unsigned int iblk = 0;
+	unsigned int oblk = 0;
+
+	bool merge_mode = false;
+	std::vector<unsigned int> merge_start;
+	std::vector<unsigned int> merge_end;
+	unsigned int merge_count = 0;
+	unsigned int merge_idx = 0;
+
+	std::vector<unsigned int> block_start;
+	std::vector<unsigned int> block_end;
+	unsigned int block_count = 0;
+	unsigned int block_idx = 0;
+
+	enum EBlockMode {
+		eNoBlockProcessing,
+		eIncludeBlocks,
+		eExcludeBlocks
+	};
+
+	EBlockMode block_mode = eNoBlockProcessing;
+
+	int idx = 1;
 
 	RCPtr<AtariComMemory> memory;
 
 	printf("comdump V" VERSION_STRING " (c) 2008 by Matthias Reichl <hias@horus.com>\n");
-	if (argc < 2) {
+
+	for (idx = 1; idx < argc; idx++) {
+		char * arg = argv[idx];
+		unsigned int start, end;
+		if (*arg == '-') {
+			switch (arg[1]) {
+			case 'm': // merge mode
+				list_mode = false;
+				merge_mode = true;
+				idx++;
+				if (idx >= argc) {
+					goto usage;
+				}
+				if (!get_range(argv[idx], start, end, true)) {
+					std::cout << "invalid range " << argv[idx] << std::endl;
+					goto usage;
+				}
+				if (merge_count) {
+					if (start < merge_end[merge_count-1]) {
+						std::cout << "blocks must be in ascending order!" << std::endl;
+						goto usage;
+					}
+				}
+				merge_start.push_back(start);
+				merge_end.push_back(end);
+				merge_count++;
+				break;
+			case 'x': // exclude blocks
+			case 'b': // copy blocks
+				if (arg[1] == 'x') {
+					if (block_mode == eIncludeBlocks) {
+						std::cout << "-b and -x are mutually exclusive!" << std::endl;
+						goto usage;
+					}
+					block_mode = eExcludeBlocks;
+				} else {
+					if (block_mode == eExcludeBlocks) {
+						std::cout << "-b and -x are mutually exclusive!" << std::endl;
+						goto usage;
+					}
+					block_mode = eIncludeBlocks;
+				}
+				list_mode = false;
+				idx++;
+				if (idx >= argc) {
+					goto usage;
+				}
+				if (!get_range(argv[idx], start, end, true)) {
+					std::cout << "invalid range " << argv[idx] << std::endl;
+					goto usage;
+				}
+				if (block_count) {
+					if (start < block_end[block_count-1]) {
+						std::cout << "blocks must be in ascending order!" << std::endl;
+						goto usage;
+					}
+				}
+				block_start.push_back(start);
+				block_end.push_back(end);
+				block_count++;
+				break;
+			default:
+				goto usage;
+			}
+		} else {
+			if (!filename) {
+				filename = arg;
+			} else {
+				if (out_filename) {
+					goto usage;
+				}
+				out_filename = arg;
+			}
+		}
+	}
+	if (!filename) {
 		goto usage;
 	}
-	if (strcmp(argv[1], "-m") == 0) {
-		mergeMode = true;
-		if (argc < 6) {
-			goto usage;
-		}
-		merge_start = atoi(argv[2]);
-		merge_end = atoi(argv[3]);
-		filename = argv[4];
-		out_filename = argv[5];
-		if (merge_start < 0 || merge_end < 0 || (merge_end <= merge_start)) {
-			goto usage;
-		}
-		memory = new AtariComMemory();
-
-		printf("using merge mode: blk %d - %d\n", merge_start, merge_end);
-	} else {
-		filename = argv[1];
+	if ((!list_mode) && (!out_filename)) {
+		goto usage;
 	}
 
 	if (!(f = fopen(filename,"rb"))) {
@@ -70,11 +186,15 @@ int main(int argc, char** argv)
 	}
 	done = false;
 
-	if (mergeMode) {
+	if (!list_mode) {
 		if (!(of = fopen(out_filename,"wb"))) {
 			printf("cannot create output file %s\n", out_filename);
 			return 1;
 		}
+	}
+
+	if (merge_mode) {
+		memory = new AtariComMemory();
 	}
 
 	while (!done) {
@@ -96,62 +216,162 @@ int main(int argc, char** argv)
 			done = true;
 		}
 		if (!done) {
-			printf("block %04d: %04X-%04X (%d bytes, offset %ld)\n",
-				blkcount,
-				block->GetStartAddress(),
-				block->GetEndAddress(),
-				block->GetLength(),
-				block->GetFileOffset());
-			if (block->ContainsAddress(0x2e0) && block->ContainsAddress(0x2e1)) {
-				printf("       RUN: %02X%02X\n",
-					block->GetByte(0x2e1),
-					block->GetByte(0x2e0));
-			}
-			if (block->ContainsAddress(0x2e2) && block->ContainsAddress(0x2e3)) {
-				printf("      INIT: %02X%02X\n",
-					block->GetByte(0x2e3),
-					block->GetByte(0x2e2));
-			}
-			if (mergeMode) {
-				if (blkcount >= merge_start && blkcount <= merge_end) {
-					printf("merging block %d\n", blkcount);
-					memory->WriteComBlockToMemory(block);
+			if (list_mode) {
+				std::cout << "block "
+					<< std::setw(4) << iblk
+					<< ": "
+					<< block->GetDescription()
+					<< std::endl;
+				if (block->ContainsAddress(0x2e0) && block->ContainsAddress(0x2e1)) {
+					unsigned int adr = block->GetByte(0x2e0) + (block->GetByte(0x2e1) << 8);
+					std::cout << "       RUN: "
+						<< std::hex << std::setfill('0')
+						<< std::setw(4) << adr
+						<< std::dec << std::setfill(' ')
+						<< std::endl
+					;
+				}
+				if (block->ContainsAddress(0x2e2) && block->ContainsAddress(0x2e3)) {
+					unsigned int adr = block->GetByte(0x2e2) + (block->GetByte(0x2e3) << 8);
+					std::cout << "      INIT: "
+						<< std::hex << std::setfill('0')
+						<< std::setw(4) << adr
+						<< std::dec << std::setfill(' ')
+						<< std::endl
+					;
+				}
+			} else {
+				bool process_block = true;
+				bool merge_block = false;
+				bool write_merged_memory = false;
 
-					if (blkcount == merge_end) {
-						RCPtr<ComBlock> mblock = memory->AsComBlock();
-						printf("writing block %04X-%04X\n",
-								mblock->GetStartAddress(),
-								mblock->GetEndAddress());
-						memory->Clear();
-						if (!mblock->WriteToFile(of, blkcount==0 )) {
-							printf("error writing to output file\n");
+				// check if we need to process this block
+
+				switch (block_mode) {
+				case eIncludeBlocks:
+					process_block = false;
+					break;
+				case eExcludeBlocks:
+				case eNoBlockProcessing:
+					process_block = true;
+					break;
+				}
+
+				if (block_idx < block_count) {
+					switch (block_mode) {
+					case eIncludeBlocks:
+						if (iblk >= block_start[block_idx] && iblk <= block_end[block_idx]) {
+							process_block = true;
+							if (iblk == block_end[block_idx]) {
+								block_idx ++;
+							}
+						} else {
+							process_block = false;
+						}
+						break;
+					case eExcludeBlocks:
+						if (iblk >= block_start[block_idx] && iblk <= block_end[block_idx]) {
+							process_block = false;
+							if (iblk == block_end[block_idx]) {
+								block_idx ++;
+							}
+						} else {
+							process_block = true;
+						}
+						break;
+					case eNoBlockProcessing:
+						process_block = true;
+						break;
+					}
+				}
+
+
+				// check if we need to merge blocks
+				if (merge_idx < merge_count) {
+					if (iblk >= merge_start[merge_idx] && iblk <= merge_end[merge_idx]) {
+						merge_block = true;
+						if (iblk == merge_end[merge_idx]) {
+							write_merged_memory = true;
+							merge_idx++;
+						}
+					}
+				}
+				if (process_block) {
+					if (merge_block) {
+						std::cout << "       merge block "
+							<< std::setw(4) << iblk
+							<< " " << block->GetDescription()
+							<< std::endl
+						;
+						memory->WriteComBlockToMemory(block);
+					} else {
+						std::cout << "       write block "
+							<< std::setw(4) << iblk
+							<< " " << block->GetDescription()
+							<< std::endl
+						;
+						if (!block->WriteToFile(of, oblk==0 )) {
+							std::cout << "error writing to output file!" << std::endl;
 							done = true;
+						} else {
+							oblk++;
+						}
+					}
+					if (write_merged_memory) {
+						if (memory->ContainsData()) {
+							RCPtr<ComBlock> mblock = memory->AsComBlock();
+							std::cout << "write merged block      "
+								<< mblock->GetDescription() << std::endl;
+							if (!mblock->WriteToFile(of, oblk==0 )) {
+								std::cout << "error writing to output file!" << std::endl;
+								done = true;
+							} else {
+								oblk++;
+							}
+							memory->Clear();
+						} else {
+							std::cout << "warning: no merged memory to write" << std::endl;
 						}
 					}
 				} else {
-					if (!block->WriteToFile(of, blkcount==0 )) {
-						printf("error writing to output file\n");
-						done = true;
-					}
+					std::cout << "        skip block "
+						<< std::setw(4) << iblk
+						<< " " << block->GetDescription()
+						<< std::endl
+					;
 				}
 			}
-			blkcount++;
+			iblk++;
 		}
 	}
-	if (mergeMode) {
+	if (merge_mode) {
 		if (memory->ContainsData()) {
-			printf("Warning: EOF reached but still data to write.\n");
+			std::cout << "warning: EOF reached but merged data to write" << std::endl;
 			RCPtr<ComBlock> mblock = memory->AsComBlock();
-			if (!mblock->WriteToFile(of, blkcount==0 )) {
+			std::cout << "write merged block      "
+				<< mblock->GetDescription() << std::endl;
+			if (!mblock->WriteToFile(of, oblk==0 )) {
 				printf("error writing to output file\n");
+			} else {
+				oblk++;
 			}
 		}
+	}
+	if (of) {
+		std::cout << "wrote a total of "
+			<< std::setw(4) << oblk
+			<< " blocks" << std::endl
+		;
 		fclose(of);
 	}
 	return 0;
 
 usage:
-	printf("usage: comdump filename\n");
-	printf("   or: comdump -m start end filename out-filename\n");
+	std::cout << "usage: comdump [-bmx range]... file [outfile]" << std::endl
+		<<   "       -b start[-end]: only copy specified blocks" << std::endl
+		<<   "       -x start[-end]: exclude specified blocks" << std::endl
+		<<   "       -m start-end: merge specified blocks" << std::endl
+	;
+
 	return 1;
 }

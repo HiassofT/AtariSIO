@@ -21,6 +21,7 @@
    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
+#include <string>
 #include <stdio.h>
 
 #include "RCPtr.h"
@@ -47,6 +48,8 @@ public:
 	bool WriteToFile(FILE* f, bool include_ffff = false) const;
 
 	unsigned char GetByte(unsigned int address) const;
+
+	std::string GetDescription() const;
 
 private:
 	void SetData(unsigned char* data, unsigned int len, unsigned int start_address);
