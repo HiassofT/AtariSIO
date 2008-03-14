@@ -51,7 +51,7 @@ static bool get_range(const char* str, unsigned int& start, unsigned int& end, b
 	v1 = atoi(tmp);
 	v2 = atoi(p+1);
 	free(tmp);
-	if (v1 < 0 || v2 < 0 || v2 < v1) {
+	if (v1 <= 0 || v2 <= 0 || v2 < v1) {
 		return false;
 	} else {
 		start = v1;
@@ -71,8 +71,8 @@ int main(int argc, char** argv)
 
 	bool done = false;
 
-	unsigned int iblk = 0;
-	unsigned int oblk = 0;
+	unsigned int iblk = 1;
+	unsigned int oblk = 1;
 
 	bool merge_mode = false;
 	std::vector<unsigned int> merge_start;
@@ -97,7 +97,7 @@ int main(int argc, char** argv)
 
 	RCPtr<AtariComMemory> memory;
 
-	printf("ataricom V" VERSION_STRING " (c) 2008 by Matthias Reichl <hias@horus.com>\n");
+	std::cout << "ataricom V" << VERSION_STRING << " (c) 2008 by Matthias Reichl <hias@horus.com>" << std::endl;
 
 	for (idx = 1; idx < argc; idx++) {
 		char * arg = argv[idx];
@@ -116,7 +116,7 @@ int main(int argc, char** argv)
 					goto usage;
 				}
 				if (merge_count) {
-					if (start < merge_end[merge_count-1]) {
+					if (start <= merge_end[merge_count-1]) {
 						std::cout << "blocks must be in ascending order!" << std::endl;
 						goto usage;
 					}
@@ -150,7 +150,7 @@ int main(int argc, char** argv)
 					goto usage;
 				}
 				if (block_count) {
-					if (start < block_end[block_count-1]) {
+					if (start <= block_end[block_count-1]) {
 						std::cout << "blocks must be in ascending order!" << std::endl;
 						goto usage;
 					}
@@ -181,14 +181,14 @@ int main(int argc, char** argv)
 	}
 
 	if (!(f = fopen(filename,"rb"))) {
-		printf("cannot open %s\n", filename);
+		std::cout << "error: cannot open " << filename << std::endl;
 		return 1;
 	}
 	done = false;
 
 	if (!list_mode) {
 		if (!(of = fopen(out_filename,"wb"))) {
-			printf("cannot create output file %s\n", out_filename);
+			std::cout << "error: cannot create output file " << out_filename << std::endl;
 			return 1;
 		}
 	}
@@ -204,15 +204,15 @@ int main(int argc, char** argv)
 			block = new ComBlock(f);
 		}
 		catch (EOFError) {
-			printf("got end of file\n");
+			//std::cout << "got end of file" << std::endl;
 			done = true;
 		}
 		catch (ReadError) {
-			printf("error reading file %s, terminating\n", filename);
+			std::cout << "error reading file " << filename << ", terminating" << std::endl;
 			done = true;
 		}
 		catch (ErrorObject& e) {
-			printf("%s\n", e.AsString());
+			std::cout << e.AsString() << std::endl;
 			done = true;
 		}
 		if (!done) {
@@ -310,7 +310,7 @@ int main(int argc, char** argv)
 							<< " " << block->GetDescription()
 							<< std::endl
 						;
-						if (!block->WriteToFile(of, oblk==0 )) {
+						if (!block->WriteToFile(of, oblk==1 )) {
 							std::cout << "error writing to output file!" << std::endl;
 							done = true;
 						} else {
@@ -322,7 +322,7 @@ int main(int argc, char** argv)
 							RCPtr<ComBlock> mblock = memory->AsComBlock();
 							std::cout << "write merged block      "
 								<< mblock->GetDescription() << std::endl;
-							if (!mblock->WriteToFile(of, oblk==0 )) {
+							if (!mblock->WriteToFile(of, oblk==1 )) {
 								std::cout << "error writing to output file!" << std::endl;
 								done = true;
 							} else {
@@ -350,8 +350,8 @@ int main(int argc, char** argv)
 			RCPtr<ComBlock> mblock = memory->AsComBlock();
 			std::cout << "write merged block      "
 				<< mblock->GetDescription() << std::endl;
-			if (!mblock->WriteToFile(of, oblk==0 )) {
-				printf("error writing to output file\n");
+			if (!mblock->WriteToFile(of, oblk==1 )) {
+				std::cout << "error writing to output file!" << std::endl;
 			} else {
 				oblk++;
 			}
@@ -359,7 +359,7 @@ int main(int argc, char** argv)
 	}
 	if (of) {
 		std::cout << "wrote a total of "
-			<< std::setw(4) << oblk
+			<< std::setw(4) << (oblk-1)
 			<< " blocks" << std::endl
 		;
 		fclose(of);

@@ -136,7 +136,7 @@ std::string ComBlock::GetDescription() const
 	;
 	if (fFileOffset > 0) {
 		s << ", offset: "
-			<< std::setw(5)
+			<< std::setw(6)
 			<< fFileOffset
 		;
 	}
