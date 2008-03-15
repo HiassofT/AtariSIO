@@ -27,11 +27,12 @@
 #include "RCPtr.h"
 #include "RefCounted.h"
 #include "AtariDebug.h"
+#include "FileIO.h"
 
 class ComBlock : public RefCounted {
 public:
 	// read COM block from file
-	ComBlock(FILE* f);
+	ComBlock(RCPtr<FileIO>& f);
 
 	// create COM block from data
 	ComBlock(const unsigned char* data, unsigned int len, unsigned int start_address);
@@ -45,7 +46,7 @@ public:
 
 	bool ContainsAddress(unsigned int adr) const;
 
-	bool WriteToFile(FILE* f, bool include_ffff = false) const;
+	bool WriteToFile(RCPtr<FileIO>& f, bool include_ffff = false) const;
 
 	unsigned char GetByte(unsigned int address) const;
 

@@ -26,31 +26,22 @@
 #include "Error.h"
 #include "AtariDebug.h"
 
-ComBlock::ComBlock(FILE*f)
+ComBlock::ComBlock(RCPtr<FileIO>& f)
 	: fData(0), fFileOffset(0)
 {
-	unsigned char buf[4];
+	unsigned int endadr;
 
-	int len = 0;
-	if ((len = fread(buf, 1, 4, f)) != 4) {
-		if (len == 0) {
-			throw EOFError();
-		} else {
+	if (!f->ReadWord(fStartAddress)) {
+		throw EOFError();
+	}
+	if (fStartAddress == 0xffff) {
+		if (!f->ReadWord(fStartAddress)) {
 			throw ReadError();
 		}
 	}
-
-	if (buf[0] == 0xff && buf[1] == 0xff) {
-		buf[0] = buf[2];
-		buf[1] = buf[3];
-		if (fread(buf+2, 1, 2, f) != 2) {
-			throw ReadError();
-		}
+	if (!f->ReadWord(endadr)) {
+		throw ReadError();
 	}
-
-	fStartAddress = buf[0] + (buf[1] << 8);
-
-	unsigned int endadr = buf[2] + (buf[3] << 8);
 
 	if (endadr < fStartAddress) {
 		throw ErrorObject("invalid header in COM file");
@@ -60,9 +51,9 @@ ComBlock::ComBlock(FILE*f)
 
 	fData = new unsigned char[fLen];
 
-	fFileOffset = ftell(f);
+	fFileOffset = f->Tell();
 
-	if (fread(fData, 1, fLen, f) != fLen) {
+	if (!f->ReadBlock(fData, fLen)) {
 		ClearData();
 		throw ReadError();
 	}
@@ -96,24 +87,24 @@ void ComBlock::ClearData()
 	}
 }
 
-bool ComBlock::WriteToFile(FILE* f, bool include_ffff) const
+bool ComBlock::WriteToFile(RCPtr<FileIO>& f, bool include_ffff) const
 {
-	unsigned char buf[4];
+	unsigned int tmp;
 	if (include_ffff) {
-		buf[0] = 0xff;
-		buf[1] = 0xff;
-		if (fwrite(buf, 1, 2, f) != 2) {
+		tmp = 0xffff;
+		if (!f->WriteWord(tmp)) {
 			return false;
 		}
 	}
-	buf[0] = fStartAddress & 0xff;
-	buf[1] = fStartAddress >> 8 ;
-	buf[2] = (fStartAddress + fLen - 1) & 0xff;
-	buf[3] = (fStartAddress + fLen - 1) >> 8;
-	if (fwrite(buf, 1, 4, f) != 4) {
+	if (!f->WriteWord(fStartAddress)) {
 		return false;
 	}
-	if (fwrite(fData, 1, fLen, f) != fLen) {
+	tmp = fStartAddress + fLen - 1;
+	if (!f->WriteWord(tmp)) {
+		return false;
+	}
+
+	if (!f->WriteBlock(fData, fLen)) {
 		return false;
 	}
 	return true;

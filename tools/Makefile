@@ -104,7 +104,7 @@ SERIALWATCHER_OBJS = serialwatcher.o SIOTracer.o FileTracer.o Error.o \
 CASINFO_OBJS = $(COMMON_OBJS) CasImage.o CasBlock.o CasHandler.o SIOWrapper.o \
 	casinfo.o
 
-ATARICOM_OBJS = ComBlock.o Error.o AtariComMemory.o \
+ATARICOM_OBJS = ComBlock.o Error.o AtariComMemory.o FileIO.o \
 	ataricom.o
 
 ALL_IN_ONE_OBJS = atarisio.o $(ATARISERVER_OBJS) atarixfer.o adir.o dir2atr.o
@@ -149,9 +149,9 @@ casinfo: $(CASINFO_OBJS)
 	$(CXX) $(LDFLAGS) -o $@ $(CASINFO_OBJS) $(COMMON_LIBS)
 
 ataricom: $(ATARICOM_OBJS)
-	$(CXX) $(LDFLAGS) -o $@ $(ATARICOM_OBJS)
+	$(CXX) $(LDFLAGS) -o $@ $(ATARICOM_OBJS) $(COMMON_LIBS)
 
-ataricom.exe: ataricom.cpp Error.cpp AtariComMemory.cpp ComBlock.cpp
+ataricom.exe: ataricom.cpp Error.cpp AtariComMemory.cpp ComBlock.cpp FileIO.cpp
 	i586-mingw32msvc-g++ -W -Wall -DATARISIO_DEBUG -o $@ $^
 
 turbo: $(TURBO_OBJS)

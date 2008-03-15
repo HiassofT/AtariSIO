@@ -62,8 +62,9 @@ static bool get_range(const char* str, unsigned int& start, unsigned int& end, b
 
 int main(int argc, char** argv)
 {
-	FILE* f = 0;
-	FILE* of = 0;
+	RCPtr<FileIO> f;
+	RCPtr<FileIO> of;
+
 	char* filename = 0;
 	char* out_filename = 0;
 
@@ -73,6 +74,7 @@ int main(int argc, char** argv)
 
 	unsigned int iblk = 1;
 	unsigned int oblk = 1;
+	unsigned int tmpword;
 
 	bool merge_mode = false;
 	std::vector<unsigned int> merge_start;
@@ -180,15 +182,29 @@ int main(int argc, char** argv)
 		goto usage;
 	}
 
-	if (!(f = fopen(filename,"rb"))) {
+	f = new StdFileIO;
+	if (!f->OpenRead(filename)) {
 		std::cout << "error: cannot open " << filename << std::endl;
 		return 1;
 	}
+	if (!f->ReadWord(tmpword)) {
+		std::cout << "error reading " << filename << std::endl;
+		f->Close();
+		return 1;
+	}
+	if (tmpword != 0xffff) {
+		std::cout << "error: " << filename << "doesn't start with $FF, $FF" << std::endl;
+		f->Close();
+		return 1;
+	}
+
 	done = false;
 
 	if (!list_mode) {
-		if (!(of = fopen(out_filename,"wb"))) {
+		of = new StdFileIO;
+		if (!of->OpenWrite(out_filename)) {
 			std::cout << "error: cannot create output file " << out_filename << std::endl;
+			f->Close();
 			return 1;
 		}
 	}
@@ -362,8 +378,9 @@ int main(int argc, char** argv)
 			<< std::setw(4) << (oblk-1)
 			<< " blocks" << std::endl
 		;
-		fclose(of);
+		of->Close();
 	}
+	f->Close();
 	return 0;
 
 usage:
