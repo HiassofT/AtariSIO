@@ -69,6 +69,7 @@ int main(int argc, char** argv)
 	char* out_filename = 0;
 
 	bool list_mode = true;
+	bool raw_mode = false;
 
 	bool done = false;
 
@@ -160,6 +161,11 @@ int main(int argc, char** argv)
 				block_start.push_back(start);
 				block_end.push_back(end);
 				block_count++;
+				break;
+			case 'r': // raw write mode
+				std::cout << "writing file in raw mode" << std::endl;
+				raw_mode = true;
+				list_mode = false;
 				break;
 			default:
 				goto usage;
@@ -326,7 +332,13 @@ int main(int argc, char** argv)
 							<< " " << block->GetDescription()
 							<< std::endl
 						;
-						if (!block->WriteToFile(of, oblk==1 )) {
+						bool ok;
+						if (raw_mode) {
+							ok = block->WriteRawToFile(of);
+						} else {
+							ok = block->WriteToFile(of, oblk==1);
+						}
+						if (!ok) {
 							std::cout << "error writing to output file!" << std::endl;
 							done = true;
 						} else {
@@ -338,7 +350,13 @@ int main(int argc, char** argv)
 							RCPtr<ComBlock> mblock = memory->AsComBlock();
 							std::cout << "write merged block      "
 								<< mblock->GetDescription() << std::endl;
-							if (!mblock->WriteToFile(of, oblk==1 )) {
+							bool ok;
+							if (raw_mode) {
+								ok = mblock->WriteRawToFile(of);
+							} else {
+								ok = mblock->WriteToFile(of, oblk==1);
+							}
+							if (!ok) {
 								std::cout << "error writing to output file!" << std::endl;
 								done = true;
 							} else {
@@ -366,7 +384,13 @@ int main(int argc, char** argv)
 			RCPtr<ComBlock> mblock = memory->AsComBlock();
 			std::cout << "write merged block      "
 				<< mblock->GetDescription() << std::endl;
-			if (!mblock->WriteToFile(of, oblk==1 )) {
+			bool ok;
+			if (raw_mode) {
+				ok = mblock->WriteRawToFile(of);
+			} else {
+				ok = mblock->WriteToFile(of, oblk==1);
+			}
+			if (!ok) {
 				std::cout << "error writing to output file!" << std::endl;
 			} else {
 				oblk++;
@@ -385,9 +409,10 @@ int main(int argc, char** argv)
 
 usage:
 	std::cout << "usage: ataricom [-bmx range]... file [outfile]" << std::endl
-		<<   "       -b start[-end]: only copy specified blocks" << std::endl
-		<<   "       -x start[-end]: exclude specified blocks" << std::endl
-		<<   "       -m start-end: merge specified blocks" << std::endl
+		<<   "       -b start[-end] : only copy specified blocks" << std::endl
+		<<   "       -x start[-end] : exclude specified blocks" << std::endl
+		<<   "       -m start-end : merge specified blocks" << std::endl
+		<<   "       -r : write raw data blocks (without COM header)" << std::endl
 	;
 
 	return 1;

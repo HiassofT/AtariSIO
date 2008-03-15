@@ -30,6 +30,8 @@ ComBlock::ComBlock(RCPtr<FileIO>& f)
 	: fData(0), fFileOffset(0)
 {
 	unsigned int endadr;
+	Assert(f.IsNotNull());
+	Assert(f->IsOpen());
 
 	if (!f->ReadWord(fStartAddress)) {
 		throw EOFError();
@@ -90,6 +92,9 @@ void ComBlock::ClearData()
 bool ComBlock::WriteToFile(RCPtr<FileIO>& f, bool include_ffff) const
 {
 	unsigned int tmp;
+	Assert(f.IsNotNull());
+	Assert(f->IsOpen());
+
 	if (include_ffff) {
 		tmp = 0xffff;
 		if (!f->WriteWord(tmp)) {
@@ -104,6 +109,13 @@ bool ComBlock::WriteToFile(RCPtr<FileIO>& f, bool include_ffff) const
 		return false;
 	}
 
+	return WriteRawToFile(f);
+}
+
+bool ComBlock::WriteRawToFile(RCPtr<FileIO>& f) const
+{
+	Assert(f.IsNotNull());
+	Assert(f->IsOpen());
 	if (!f->WriteBlock(fData, fLen)) {
 		return false;
 	}

@@ -46,7 +46,11 @@ public:
 
 	bool ContainsAddress(unsigned int adr) const;
 
+	// write with COM header and, optionally, including the $FF, $FF start header
 	bool WriteToFile(RCPtr<FileIO>& f, bool include_ffff = false) const;
+
+	// write without COM header
+	bool WriteRawToFile(RCPtr<FileIO>& f) const;
 
 	unsigned char GetByte(unsigned int address) const;
 
