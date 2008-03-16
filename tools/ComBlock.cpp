@@ -116,7 +116,7 @@ bool ComBlock::WriteRawToFile(RCPtr<FileIO>& f) const
 {
 	Assert(f.IsNotNull());
 	Assert(f->IsOpen());
-	if (!f->WriteBlock(fData, fLen)) {
+	if (f->WriteBlock(fData, fLen) != fLen) {
 		return false;
 	}
 	return true;

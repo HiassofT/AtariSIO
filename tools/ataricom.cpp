@@ -18,6 +18,7 @@
    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -37,7 +38,7 @@ static bool get_range(const char* str, unsigned int& start, unsigned int& end, b
 	if (!p) {
 		free(tmp);
 		if (accept_single) {
-			v1 = atoi(str);
+			v1 = strtol(str, NULL, 0);
 			if (v1 < 0) {
 				return false;
 			}
@@ -48,9 +49,14 @@ static bool get_range(const char* str, unsigned int& start, unsigned int& end, b
 		return false;
 	}
 	*p = 0;
-	v1 = atoi(tmp);
-	v2 = atoi(p+1);
+	v1 = strtol(tmp, NULL, 0);
+	if (*(p+1)) {
+		v2 = strtol(p+1, NULL, 0);
+	} else {
+		v2 = LONG_MAX;
+	}
 	free(tmp);
+
 	if (v1 <= 0 || v2 <= 0 || v2 < v1) {
 		return false;
 	} else {
@@ -68,7 +74,14 @@ int main(int argc, char** argv)
 	char* filename = 0;
 	char* out_filename = 0;
 
-	bool list_mode = true;
+	enum EOperationMode {
+		eModeList,
+		eModeProcess,
+		eModeCreate
+	};
+
+	EOperationMode mode = eModeList;
+
 	bool raw_mode = false;
 
 	bool done = false;
@@ -76,6 +89,8 @@ int main(int argc, char** argv)
 	unsigned int iblk = 1;
 	unsigned int oblk = 1;
 	unsigned int tmpword;
+
+	unsigned int create_address = 0;
 
 	bool merge_mode = false;
 	std::vector<unsigned int> merge_start;
@@ -108,7 +123,12 @@ int main(int argc, char** argv)
 		if (*arg == '-') {
 			switch (arg[1]) {
 			case 'm': // merge mode
-				list_mode = false;
+				if (mode == eModeCreate) {
+					std::cout << "error: -m and -c cannot be used together" << std::endl;
+					goto usage;
+				}
+				mode = eModeProcess;
+
 				merge_mode = true;
 				idx++;
 				if (idx >= argc) {
@@ -130,6 +150,11 @@ int main(int argc, char** argv)
 				break;
 			case 'x': // exclude blocks
 			case 'b': // copy blocks
+				if (mode == eModeCreate) {
+					std::cout << "error: -b/-x and -c cannot be used together" << std::endl;
+					goto usage;
+				}
+				mode = eModeProcess;
 				if (arg[1] == 'x') {
 					if (block_mode == eIncludeBlocks) {
 						std::cout << "-b and -x are mutually exclusive!" << std::endl;
@@ -143,7 +168,6 @@ int main(int argc, char** argv)
 					}
 					block_mode = eIncludeBlocks;
 				}
-				list_mode = false;
 				idx++;
 				if (idx >= argc) {
 					goto usage;
@@ -163,9 +187,33 @@ int main(int argc, char** argv)
 				block_count++;
 				break;
 			case 'r': // raw write mode
+				if (mode == eModeCreate) {
+					std::cout << "error: -r and -c cannot be used together" << std::endl;
+					goto usage;
+				}
+				mode = eModeProcess;
 				std::cout << "writing file in raw mode" << std::endl;
 				raw_mode = true;
-				list_mode = false;
+				break;
+			case 'c': // create mode
+				if (raw_mode) {
+					std::cout << "error: -r and -c cannot be used together" << std::endl;
+					goto usage;
+				}
+				if (mode == eModeProcess) {
+					std::cout << "error: -b/-x/-m and -c cannot be used together" << std::endl;
+					goto usage;
+				}
+				mode = eModeCreate;
+				if (idx >= argc) {
+					goto usage;
+				}
+				create_address = strtol(argv[idx+1], NULL, 0);
+				if (create_address > 65534) {
+					std::cout << "error: starting address must be less than 65534" << std::endl;
+					goto usage;
+				}
+				idx++;
 				break;
 			default:
 				goto usage;
@@ -184,7 +232,7 @@ int main(int argc, char** argv)
 	if (!filename) {
 		goto usage;
 	}
-	if ((!list_mode) && (!out_filename)) {
+	if ((mode != eModeList) && (!out_filename)) {
 		goto usage;
 	}
 
@@ -193,20 +241,22 @@ int main(int argc, char** argv)
 		std::cout << "error: cannot open " << filename << std::endl;
 		return 1;
 	}
-	if (!f->ReadWord(tmpword)) {
-		std::cout << "error reading " << filename << std::endl;
-		f->Close();
-		return 1;
-	}
-	if (tmpword != 0xffff) {
-		std::cout << "error: " << filename << "doesn't start with $FF, $FF" << std::endl;
-		f->Close();
-		return 1;
+	if (mode != eModeCreate) {
+		if (!f->ReadWord(tmpword)) {
+			std::cout << "error reading " << filename << std::endl;
+			f->Close();
+			return 1;
+		}
+		if (tmpword != 0xffff) {
+			std::cout << "error: " << filename << "doesn't start with $FF, $FF" << std::endl;
+			f->Close();
+			return 1;
+		}
 	}
 
 	done = false;
 
-	if (!list_mode) {
+	if (mode != eModeList) {
 		of = new StdFileIO;
 		if (!of->OpenWrite(out_filename)) {
 			std::cout << "error: cannot create output file " << out_filename << std::endl;
@@ -219,142 +269,153 @@ int main(int argc, char** argv)
 		memory = new AtariComMemory();
 	}
 
-	while (!done) {
-		RCPtr<ComBlock> block;
-
-		try {
-			block = new ComBlock(f);
+	if (mode == eModeCreate) {
+		unsigned int len = f->GetFileLength();
+		if (create_address + len > 65536) {
+			std::cout << "warning: input file too big, truncating to end address $FFFF" << std::endl;
+			len = 65536 - create_address;
 		}
-		catch (EOFError) {
-			//std::cout << "got end of file" << std::endl;
-			done = true;
+		unsigned char* buf = new unsigned char[len];
+		if (f->ReadBlock(buf, len) != len) {
+			std::cout << "error reading input file!" << std::endl;
+			f->Close();
+			of->Close();
+			of->Unlink(out_filename);
+			return 1;
 		}
-		catch (ReadError) {
-			std::cout << "error reading file " << filename << ", terminating" << std::endl;
-			done = true;
+		RCPtr<ComBlock> block = new ComBlock(buf, len, create_address);
+		std::cout << "       write block "
+			<< std::setw(4) << iblk
+			<< " " << block->GetDescription()
+			<< std::endl
+		;
+		if (!block->WriteToFile(of, true)) {
+			std::cout << "error writing output file!" << std::endl;
+			f->Close();
+			of->Close();
+			return 1;
 		}
-		catch (ErrorObject& e) {
-			std::cout << e.AsString() << std::endl;
-			done = true;
-		}
-		if (!done) {
-			if (list_mode) {
-				std::cout << "block "
-					<< std::setw(4) << iblk
-					<< ": "
-					<< block->GetDescription()
-					<< std::endl;
-				if (block->ContainsAddress(0x2e0) && block->ContainsAddress(0x2e1)) {
-					unsigned int adr = block->GetByte(0x2e0) + (block->GetByte(0x2e1) << 8);
-					std::cout << "       RUN: "
-						<< std::hex << std::setfill('0')
-						<< std::setw(4) << adr
-						<< std::dec << std::setfill(' ')
-						<< std::endl
-					;
-				}
-				if (block->ContainsAddress(0x2e2) && block->ContainsAddress(0x2e3)) {
-					unsigned int adr = block->GetByte(0x2e2) + (block->GetByte(0x2e3) << 8);
-					std::cout << "      INIT: "
-						<< std::hex << std::setfill('0')
-						<< std::setw(4) << adr
-						<< std::dec << std::setfill(' ')
-						<< std::endl
-					;
-				}
-			} else {
-				bool process_block = true;
-				bool merge_block = false;
-				bool write_merged_memory = false;
+		delete[] buf;
+		oblk++;
+	} else {
+		while (!done) {
+			RCPtr<ComBlock> block;
 
-				// check if we need to process this block
+			try {
+				block = new ComBlock(f);
+			}
+			catch (EOFError) {
+				//std::cout << "got end of file" << std::endl;
+				done = true;
+			}
+			catch (ReadError) {
+				std::cout << "error reading file " << filename << ", terminating" << std::endl;
+				done = true;
+			}
+			catch (ErrorObject& e) {
+				std::cout << e.AsString() << std::endl;
+				done = true;
+			}
+			if (!done) {
+				if (mode == eModeList) {
+					std::cout << "block "
+						<< std::setw(4) << iblk
+						<< ": "
+						<< block->GetDescription()
+						<< std::endl;
+					if (block->ContainsAddress(0x2e0) && block->ContainsAddress(0x2e1)) {
+						unsigned int adr = block->GetByte(0x2e0) + (block->GetByte(0x2e1) << 8);
+						std::cout << "       RUN: "
+							<< std::hex << std::setfill('0')
+							<< std::setw(4) << adr
+							<< std::dec << std::setfill(' ')
+							<< std::endl
+						;
+					}
+					if (block->ContainsAddress(0x2e2) && block->ContainsAddress(0x2e3)) {
+						unsigned int adr = block->GetByte(0x2e2) + (block->GetByte(0x2e3) << 8);
+						std::cout << "      INIT: "
+							<< std::hex << std::setfill('0')
+							<< std::setw(4) << adr
+							<< std::dec << std::setfill(' ')
+							<< std::endl
+						;
+					}
+				} else {
+					bool process_block = true;
+					bool merge_block = false;
+					bool write_merged_memory = false;
 
-				switch (block_mode) {
-				case eIncludeBlocks:
-					process_block = false;
-					break;
-				case eExcludeBlocks:
-				case eNoBlockProcessing:
-					process_block = true;
-					break;
-				}
+					// check if we need to process this block
 
-				if (block_idx < block_count) {
 					switch (block_mode) {
 					case eIncludeBlocks:
-						if (iblk >= block_start[block_idx] && iblk <= block_end[block_idx]) {
-							process_block = true;
-							if (iblk == block_end[block_idx]) {
-								block_idx ++;
-							}
-						} else {
-							process_block = false;
-						}
+						process_block = false;
 						break;
 					case eExcludeBlocks:
-						if (iblk >= block_start[block_idx] && iblk <= block_end[block_idx]) {
-							process_block = false;
-							if (iblk == block_end[block_idx]) {
-								block_idx ++;
-							}
-						} else {
-							process_block = true;
-						}
-						break;
 					case eNoBlockProcessing:
 						process_block = true;
 						break;
 					}
-				}
 
-
-				// check if we need to merge blocks
-				if (merge_idx < merge_count) {
-					if (iblk >= merge_start[merge_idx] && iblk <= merge_end[merge_idx]) {
-						merge_block = true;
-						if (iblk == merge_end[merge_idx]) {
-							write_merged_memory = true;
-							merge_idx++;
+					if (block_idx < block_count) {
+						switch (block_mode) {
+						case eIncludeBlocks:
+							if (iblk >= block_start[block_idx] && iblk <= block_end[block_idx]) {
+								process_block = true;
+								if (iblk == block_end[block_idx]) {
+									block_idx ++;
+								}
+							} else {
+								process_block = false;
+							}
+							break;
+						case eExcludeBlocks:
+							if (iblk >= block_start[block_idx] && iblk <= block_end[block_idx]) {
+								process_block = false;
+								if (iblk == block_end[block_idx]) {
+									block_idx ++;
+								}
+							} else {
+								process_block = true;
+							}
+							break;
+						case eNoBlockProcessing:
+							process_block = true;
+							break;
 						}
 					}
-				}
-				if (process_block) {
-					if (merge_block) {
-						std::cout << "       merge block "
-							<< std::setw(4) << iblk
-							<< " " << block->GetDescription()
-							<< std::endl
-						;
-						memory->WriteComBlockToMemory(block);
-					} else {
-						std::cout << "       write block "
-							<< std::setw(4) << iblk
-							<< " " << block->GetDescription()
-							<< std::endl
-						;
-						bool ok;
-						if (raw_mode) {
-							ok = block->WriteRawToFile(of);
-						} else {
-							ok = block->WriteToFile(of, oblk==1);
-						}
-						if (!ok) {
-							std::cout << "error writing to output file!" << std::endl;
-							done = true;
-						} else {
-							oblk++;
+
+
+					// check if we need to merge blocks
+					if (merge_idx < merge_count) {
+						if (iblk >= merge_start[merge_idx] && iblk <= merge_end[merge_idx]) {
+							merge_block = true;
+							if (iblk == merge_end[merge_idx]) {
+								write_merged_memory = true;
+								merge_idx++;
+							}
 						}
 					}
-					if (write_merged_memory) {
-						if (memory->ContainsData()) {
-							RCPtr<ComBlock> mblock = memory->AsComBlock();
-							std::cout << "write merged block      "
-								<< mblock->GetDescription() << std::endl;
+					if (process_block) {
+						if (merge_block) {
+							std::cout << "       merge block "
+								<< std::setw(4) << iblk
+								<< " " << block->GetDescription()
+								<< std::endl
+							;
+							memory->WriteComBlockToMemory(block);
+						} else {
+							std::cout << "       write block "
+								<< std::setw(4) << iblk
+								<< " " << block->GetDescription()
+								<< std::endl
+							;
 							bool ok;
 							if (raw_mode) {
-								ok = mblock->WriteRawToFile(of);
+								ok = block->WriteRawToFile(of);
 							} else {
-								ok = mblock->WriteToFile(of, oblk==1);
+								ok = block->WriteToFile(of, oblk==1);
 							}
 							if (!ok) {
 								std::cout << "error writing to output file!" << std::endl;
@@ -362,38 +423,57 @@ int main(int argc, char** argv)
 							} else {
 								oblk++;
 							}
-							memory->Clear();
-						} else {
-							std::cout << "warning: no merged memory to write" << std::endl;
 						}
+						if (write_merged_memory) {
+							if (memory->ContainsData()) {
+								RCPtr<ComBlock> mblock = memory->AsComBlock();
+								std::cout << "write merged block      "
+									<< mblock->GetDescription() << std::endl;
+								bool ok;
+								if (raw_mode) {
+									ok = mblock->WriteRawToFile(of);
+								} else {
+									ok = mblock->WriteToFile(of, oblk==1);
+								}
+								if (!ok) {
+									std::cout << "error writing to output file!" << std::endl;
+									done = true;
+								} else {
+									oblk++;
+								}
+								memory->Clear();
+							} else {
+								std::cout << "warning: no merged memory to write" << std::endl;
+							}
+						}
+					} else {
+						std::cout << "        skip block "
+							<< std::setw(4) << iblk
+							<< " " << block->GetDescription()
+							<< std::endl
+						;
 					}
-				} else {
-					std::cout << "        skip block "
-						<< std::setw(4) << iblk
-						<< " " << block->GetDescription()
-						<< std::endl
-					;
 				}
+				iblk++;
 			}
-			iblk++;
 		}
-	}
-	if (merge_mode) {
-		if (memory->ContainsData()) {
-			std::cout << "warning: EOF reached but merged data to write" << std::endl;
-			RCPtr<ComBlock> mblock = memory->AsComBlock();
-			std::cout << "write merged block      "
-				<< mblock->GetDescription() << std::endl;
-			bool ok;
-			if (raw_mode) {
-				ok = mblock->WriteRawToFile(of);
-			} else {
-				ok = mblock->WriteToFile(of, oblk==1);
-			}
-			if (!ok) {
-				std::cout << "error writing to output file!" << std::endl;
-			} else {
-				oblk++;
+		if (merge_mode) {
+			if (memory->ContainsData()) {
+				//std::cout << "warning: EOF reached but merged data to write" << std::endl;
+				RCPtr<ComBlock> mblock = memory->AsComBlock();
+				std::cout << "write merged block      "
+					<< mblock->GetDescription() << std::endl;
+				bool ok;
+				if (raw_mode) {
+					ok = mblock->WriteRawToFile(of);
+				} else {
+					ok = mblock->WriteToFile(of, oblk==1);
+				}
+				if (!ok) {
+					std::cout << "error writing to output file!" << std::endl;
+				} else {
+					oblk++;
+				}
 			}
 		}
 	}
