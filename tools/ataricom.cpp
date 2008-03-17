@@ -66,6 +66,31 @@ static bool get_range(const char* str, unsigned int& start, unsigned int& end, b
 	}
 }
 
+static bool write_block(RCPtr<ComBlock>& block, RCPtr<FileIO>& f,
+		bool raw, bool with_ffff,
+		const char* infotxt,
+		int blknum = -1)
+{
+	std::cout << infotxt;
+	if (blknum >= 0) {
+		std::cout << " " << std::setw(4) << blknum << " ";
+	} else {
+		std::cout << "      ";
+	}
+	std::cout << block->GetDescription() << std::endl ;
+
+	bool ok;
+	if (raw) {
+		ok = block->WriteRawToFile(f);
+	} else {
+		ok = block->WriteToFile(f, with_ffff);
+	}
+	if (!ok) {
+		std::cout << "error writing to output file!" << std::endl;
+	}
+	return ok;
+}
+
 int main(int argc, char** argv)
 {
 	RCPtr<FileIO> f;
@@ -91,6 +116,10 @@ int main(int argc, char** argv)
 	unsigned int tmpword;
 
 	unsigned int create_address = 0;
+
+	int run_address = -1;
+	int init_address = -1;
+	int tmp_address;
 
 	bool merge_mode = false;
 	std::vector<unsigned int> merge_start;
@@ -186,9 +215,13 @@ int main(int argc, char** argv)
 				block_end.push_back(end);
 				block_count++;
 				break;
-			case 'r': // raw write mode
+			case 'n': // raw write mode
 				if (mode == eModeCreate) {
-					std::cout << "error: -r and -c cannot be used together" << std::endl;
+					std::cout << "error: -n and -c cannot be used together" << std::endl;
+					goto usage;
+				}
+				if ( (run_address >= 0) || (init_address >= 0)) {
+					std::cout << "error: -r/-i and -n cannot be used together" << std::endl;
 					goto usage;
 				}
 				mode = eModeProcess;
@@ -197,7 +230,7 @@ int main(int argc, char** argv)
 				break;
 			case 'c': // create mode
 				if (raw_mode) {
-					std::cout << "error: -r and -c cannot be used together" << std::endl;
+					std::cout << "error: -n and -c cannot be used together" << std::endl;
 					goto usage;
 				}
 				if (mode == eModeProcess) {
@@ -208,10 +241,49 @@ int main(int argc, char** argv)
 				if (idx >= argc) {
 					goto usage;
 				}
-				create_address = strtol(argv[idx+1], NULL, 0);
-				if (create_address > 65534) {
+				tmp_address = strtol(argv[idx+1], NULL, 0);
+				if (tmp_address < 0 || tmp_address > 65534) {
 					std::cout << "error: starting address must be less than 65534" << std::endl;
 					goto usage;
+				}
+				create_address = tmp_address;
+				idx++;
+				break;
+			case 'r':
+			case 'i':
+				if (raw_mode) {
+					std::cout << "error: -r/-i and -n cannot be used together" << std::endl;
+					goto usage;
+				}
+				if (idx >= argc) {
+					goto usage;
+				}
+
+				tmp_address = strtol(argv[idx+1], NULL, 0);
+				if (tmp_address < 0 || tmp_address > 65535) {
+					std::cout << "error: invalid ";
+					if (arg[1] == 'r') {
+						std::cout << "run ";
+					} else {
+						std::cout << "init ";
+					}
+					std::cout << "address" << std::endl;
+					goto usage;
+				}
+				if (arg[1] == 'r') {
+					if (run_address >= 0) {
+						std::cout << "error: run address already set" << std::endl;
+						goto usage;
+					} else {
+						run_address = tmp_address;
+					}
+				} else {
+					if (init_address >= 0) {
+						std::cout << "error: init address already set" << std::endl;
+						goto usage;
+					} else {
+						init_address = tmp_address;
+					}
 				}
 				idx++;
 				break;
@@ -232,6 +304,11 @@ int main(int argc, char** argv)
 	if (!filename) {
 		goto usage;
 	}
+
+	if (mode == eModeList && ( run_address >= 0 || init_address >= 0)) {
+		mode = eModeProcess;
+	}
+
 	if ((mode != eModeList) && (!out_filename)) {
 		goto usage;
 	}
@@ -284,13 +361,7 @@ int main(int argc, char** argv)
 			return 1;
 		}
 		RCPtr<ComBlock> block = new ComBlock(buf, len, create_address);
-		std::cout << "       write block "
-			<< std::setw(4) << iblk
-			<< " " << block->GetDescription()
-			<< std::endl
-		;
-		if (!block->WriteToFile(of, true)) {
-			std::cout << "error writing output file!" << std::endl;
+		if (!write_block(block, of, false, true, "       write block")) {
 			f->Close();
 			of->Close();
 			return 1;
@@ -406,40 +477,19 @@ int main(int argc, char** argv)
 							;
 							memory->WriteComBlockToMemory(block);
 						} else {
-							std::cout << "       write block "
-								<< std::setw(4) << iblk
-								<< " " << block->GetDescription()
-								<< std::endl
-							;
-							bool ok;
-							if (raw_mode) {
-								ok = block->WriteRawToFile(of);
-							} else {
-								ok = block->WriteToFile(of, oblk==1);
-							}
-							if (!ok) {
-								std::cout << "error writing to output file!" << std::endl;
-								done = true;
-							} else {
+							if (write_block(block, of, raw_mode, oblk==1, "       write block", iblk)) {
 								oblk++;
+							} else {
+								done = true;
 							}
 						}
 						if (write_merged_memory) {
 							if (memory->ContainsData()) {
 								RCPtr<ComBlock> mblock = memory->AsComBlock();
-								std::cout << "write merged block      "
-									<< mblock->GetDescription() << std::endl;
-								bool ok;
-								if (raw_mode) {
-									ok = mblock->WriteRawToFile(of);
-								} else {
-									ok = mblock->WriteToFile(of, oblk==1);
-								}
-								if (!ok) {
-									std::cout << "error writing to output file!" << std::endl;
-									done = true;
-								} else {
+								if (write_block(mblock, of, raw_mode, oblk==1, "write merged block")) {
 									oblk++;
+								} else {
+									done = true;
 								}
 								memory->Clear();
 							} else {
@@ -461,21 +511,49 @@ int main(int argc, char** argv)
 			if (memory->ContainsData()) {
 				//std::cout << "warning: EOF reached but merged data to write" << std::endl;
 				RCPtr<ComBlock> mblock = memory->AsComBlock();
-				std::cout << "write merged block      "
-					<< mblock->GetDescription() << std::endl;
-				bool ok;
-				if (raw_mode) {
-					ok = mblock->WriteRawToFile(of);
-				} else {
-					ok = mblock->WriteToFile(of, oblk==1);
-				}
-				if (!ok) {
-					std::cout << "error writing to output file!" << std::endl;
-				} else {
+				if (write_block(mblock, of, raw_mode, oblk==1, "write merged block")) {
 					oblk++;
 				}
 			}
 		}
+	}
+	if (run_address >= 0 || init_address >= 0) {
+		unsigned char buf[4];
+		unsigned int start = 0, len = 0;
+		if (run_address >= 0) {
+			std::cout << "  create RUN block "
+				<< std::hex << std::setfill('0')
+				<< std::setw(4) << run_address
+				<< std::dec << std::setfill(' ')
+				<< std::endl
+			;
+			start = 0x2e0;
+			buf[len] = run_address & 0xff;
+			buf[len+1] = run_address >> 8;
+			len += 2;
+		}
+		if (init_address >= 0) {
+			std::cout << " create INIT block "
+				<< std::hex << std::setfill('0')
+				<< std::setw(4) << init_address
+				<< std::dec << std::setfill(' ')
+				<< std::endl
+			;
+			if (start == 0) {
+				start = 0x2e2;
+			}
+			buf[len] = init_address & 0xff;
+			buf[len+1] = init_address >> 8;
+			len += 2;
+		}
+
+		RCPtr<ComBlock> blk = new ComBlock(buf, len, start);
+		if (!write_block(blk, of, raw_mode, oblk==1 , "       write block")) {
+			f->Close();
+			of->Close();
+			return 1;
+		}
+		oblk++;
 	}
 	if (of) {
 		std::cout << "wrote a total of "
@@ -488,11 +566,14 @@ int main(int argc, char** argv)
 	return 0;
 
 usage:
-	std::cout << "usage: ataricom [-bmx range]... file [outfile]" << std::endl
-		<<   "       -b start[-end] : only copy specified blocks" << std::endl
-		<<   "       -x start[-end] : exclude specified blocks" << std::endl
-		<<   "       -m start-end : merge specified blocks" << std::endl
-		<<   "       -r : write raw data blocks (without COM header)" << std::endl
+	std::cout << "usage: ataricom [options]... file [outfile]" << std::endl
+		<<   "       -c address      create COM file from raw data file" << std::endl
+		<<   "       -r address      add RUN block with specified address at end" << std::endl
+		<<   "       -i address      add INIT block with specified address at end" << std::endl
+		<<   "       -b start[-end]  only copy specified blocks" << std::endl
+		<<   "       -x start[-end]  exclude specified blocks" << std::endl
+		<<   "       -m start-end    merge specified blocks" << std::endl
+		<<   "       -n              write raw data blocks (no COM headers)" << std::endl
 	;
 
 	return 1;
