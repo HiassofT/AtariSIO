@@ -30,6 +30,44 @@
 #include "Error.h"
 #include "Version.h"
 
+static long parse_int(const char* str)
+{
+	int base = 10;
+	if (str[0] == '$') {
+		base = 16;
+		str++;
+	} else {
+		if (str[0] == '0') {
+			if (str[1] == 'x' || str[1] == 'X') {
+				base = 16;
+				str += 2;
+			}
+		}
+	}
+	return strtol(str, NULL, base);
+}
+
+static bool get_list(const char* str, const char* delim, std::vector<unsigned int>& list)
+{
+	char* str2 = strdup(str);
+	char* tok;
+	bool ok = true;
+
+	tok = strtok(str2, delim);
+
+	while ( ok && tok ) {
+		long tmp = parse_int(tok);
+		if (tmp < 0) {
+			ok = false;
+		} else {
+			list.push_back(tmp);
+		}
+		tok = strtok(NULL, delim);
+	}
+	free(str2);
+	return ok;
+}
+
 static bool get_range(const char* str, unsigned int& start, unsigned int& end, bool accept_single = false)
 {
 	long v1, v2;
@@ -38,7 +76,7 @@ static bool get_range(const char* str, unsigned int& start, unsigned int& end, b
 	if (!p) {
 		free(tmp);
 		if (accept_single) {
-			v1 = strtol(str, NULL, 0);
+			v1 = parse_int(str);
 			if (v1 < 0) {
 				return false;
 			}
@@ -49,9 +87,9 @@ static bool get_range(const char* str, unsigned int& start, unsigned int& end, b
 		return false;
 	}
 	*p = 0;
-	v1 = strtol(tmp, NULL, 0);
+	v1 = parse_int(tmp);
 	if (*(p+1)) {
-		v2 = strtol(p+1, NULL, 0);
+		v2 = parse_int(p+1);
 	} else {
 		v2 = LONG_MAX;
 	}
@@ -132,6 +170,11 @@ int main(int argc, char** argv)
 	unsigned int block_count = 0;
 	unsigned int block_idx = 0;
 
+	std::vector< std::vector<unsigned int> > split_list;
+	bool split_mode = false;
+	unsigned int split_count = 0;
+	unsigned int split_idx = 0;
+
 	enum EBlockMode {
 		eNoBlockProcessing,
 		eIncludeBlocks,
@@ -169,7 +212,7 @@ int main(int argc, char** argv)
 				}
 				if (merge_count) {
 					if (start <= merge_end[merge_count-1]) {
-						std::cout << "blocks must be in ascending order!" << std::endl;
+						std::cout << "merge blocks must be in ascending order!" << std::endl;
 						goto usage;
 					}
 				}
@@ -238,16 +281,16 @@ int main(int argc, char** argv)
 					goto usage;
 				}
 				mode = eModeCreate;
+				idx++;
 				if (idx >= argc) {
 					goto usage;
 				}
-				tmp_address = strtol(argv[idx+1], NULL, 0);
+				tmp_address = parse_int(argv[idx]);
 				if (tmp_address < 0 || tmp_address > 65534) {
 					std::cout << "error: starting address must be less than 65534" << std::endl;
 					goto usage;
 				}
 				create_address = tmp_address;
-				idx++;
 				break;
 			case 'r':
 			case 'i':
@@ -255,11 +298,12 @@ int main(int argc, char** argv)
 					std::cout << "error: -r/-i and -n cannot be used together" << std::endl;
 					goto usage;
 				}
+				idx++;
 				if (idx >= argc) {
 					goto usage;
 				}
 
-				tmp_address = strtol(argv[idx+1], NULL, 0);
+				tmp_address = parse_int(argv[idx]);
 				if (tmp_address < 0 || tmp_address > 65535) {
 					std::cout << "error: invalid ";
 					if (arg[1] == 'r') {
@@ -285,7 +329,46 @@ int main(int argc, char** argv)
 						init_address = tmp_address;
 					}
 				}
+				break;
+			case 's': // split block mode
+				if (raw_mode) {
+					std::cout << "error: -s and -n cannot be used together" << std::endl;
+					goto usage;
+				}
 				idx++;
+				split_mode = true;
+				if (idx >= argc) {
+					goto usage;
+				} else {
+					std::vector<unsigned int> tmplist;
+					unsigned int i, len;
+					if ((!get_list(argv[idx], ",", tmplist)) || (tmplist.size() < 2) ) {
+						std::cout << "error in split block spec \"" << argv[idx] << "\"" << std::endl;
+						goto usage;
+					}
+					if (split_count > 0) {
+						if (tmplist[0] <= split_list[split_count-1][0]) {
+							std::cout << "split blocks must be in ascending order!" << std::endl;
+							goto usage;
+						}
+					}
+					len = tmplist.size();
+					for (i=1; i<len; i++) {
+						if (tmplist[i] == 0 || tmplist[i] >= 0xffff) {
+							std::cout << "invalid address " << tmplist[i] << " in split blocks mode!" << std::endl;
+							goto usage;
+							if (i > 1) {
+								if (tmplist[i] <= tmplist[i-1]) {
+									std::cout << "split addresses must be in ascending order!" << std::endl;
+									goto usage;
+								}
+							}
+
+						}
+					}
+					split_list.push_back(tmplist);
+					split_count++;
+				}
 				break;
 			default:
 				goto usage;
@@ -305,7 +388,7 @@ int main(int argc, char** argv)
 		goto usage;
 	}
 
-	if (mode == eModeList && ( run_address >= 0 || init_address >= 0)) {
+	if (mode == eModeList && ( run_address >= 0 || init_address >= 0 || split_count > 0 )) {
 		mode = eModeProcess;
 	}
 
@@ -415,6 +498,7 @@ int main(int argc, char** argv)
 				} else {
 					bool process_block = true;
 					bool merge_block = false;
+					bool split_block = false;
 					bool write_merged_memory = false;
 
 					// check if we need to process this block
@@ -468,6 +552,13 @@ int main(int argc, char** argv)
 							}
 						}
 					}
+
+					if (split_idx < split_count) {
+						if (split_list[split_idx][0] == iblk) {
+							split_block = true;
+						}
+					}
+
 					if (process_block) {
 						if (merge_block) {
 							std::cout << "       merge block "
@@ -477,10 +568,61 @@ int main(int argc, char** argv)
 							;
 							memory->WriteComBlockToMemory(block);
 						} else {
-							if (write_block(block, of, raw_mode, oblk==1, "       write block", iblk)) {
-								oblk++;
+							if (split_block) {
+								unsigned int i;
+								unsigned int list_len = split_list[split_idx].size();
+								unsigned int blk_adr = block->GetStartAddress();
+								unsigned int adr;
+								unsigned int blk_len;
+
+								const unsigned char* data = block->GetRawData();
+
+								for (i=1; !done && i<=list_len; i++) {
+									if (i < list_len) {
+										adr = split_list[split_idx][i];
+										if (!block->ContainsAddress(adr-1)) {
+											std::cout << "error: no address "
+												<< std::setw(4) << std::setfill('0') << std::hex
+												<< adr-1
+												<< std::dec << std::setfill(' ')
+												<< " in block " << iblk
+												<< std::endl;
+											done = true;
+										} else {
+											blk_len = adr - blk_adr;
+										}
+									} else {
+										if (!block->ContainsAddress(adr)) {
+											std::cout << "error: no address "
+												<< std::setw(4) << std::setfill('0') << std::hex
+												<< adr
+												<< std::dec << std::setfill(' ')
+												<< " in block " << iblk
+												<< std::endl;
+											done = true;
+										} else {
+											blk_len = block->GetEndAddress() - blk_adr + 1;
+										}
+
+									}
+									if (!done) {
+										RCPtr<ComBlock> blk = new ComBlock(data, blk_len, blk_adr);
+										if (write_block(blk, of, raw_mode, oblk==1, " write split block")) {
+											oblk++;
+										} else {
+											done = true;
+										}
+										data += blk_len;
+									}
+									blk_adr = adr;
+								}
+
 							} else {
-								done = true;
+								if (write_block(block, of, raw_mode, oblk==1, "       write block", iblk)) {
+									oblk++;
+								} else {
+									done = true;
+								}
 							}
 						}
 						if (write_merged_memory) {
@@ -502,6 +644,9 @@ int main(int argc, char** argv)
 							<< " " << block->GetDescription()
 							<< std::endl
 						;
+					}
+					if (split_block) {
+						split_idx++;
 					}
 				}
 				iblk++;
@@ -567,13 +712,14 @@ int main(int argc, char** argv)
 
 usage:
 	std::cout << "usage: ataricom [options]... file [outfile]" << std::endl
-		<<   "       -c address      create COM file from raw data file" << std::endl
-		<<   "       -r address      add RUN block with specified address at end" << std::endl
-		<<   "       -i address      add INIT block with specified address at end" << std::endl
-		<<   "       -b start[-end]  only copy specified blocks" << std::endl
-		<<   "       -x start[-end]  exclude specified blocks" << std::endl
-		<<   "       -m start-end    merge specified blocks" << std::endl
-		<<   "       -n              write raw data blocks (no COM headers)" << std::endl
+		<<   "  -c address      create COM file from raw data file" << std::endl
+		<<   "  -r address      add RUN block with specified address at end of file" << std::endl
+		<<   "  -i address      add INIT block with specified address at end of file" << std::endl
+		<<   "  -b start[-end]  only process specified blocks" << std::endl
+		<<   "  -x start[-end]  exclude specified blocks" << std::endl
+		<<   "  -m start-end    merge specified blocks" << std::endl
+		<<   "  -s block,adr... split block at given addresses" << std::endl
+		<<   "  -n              write raw data blocks (no COM headers)" << std::endl
 	;
 
 	return 1;

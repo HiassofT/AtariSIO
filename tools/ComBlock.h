@@ -54,6 +54,8 @@ public:
 
 	unsigned char GetByte(unsigned int address) const;
 
+	const unsigned char* GetRawData() const;
+
 	std::string GetDescription() const;
 
 private:
@@ -95,6 +97,11 @@ inline unsigned char ComBlock::GetByte(unsigned int adr) const
 {
 	Assert(ContainsAddress(adr));
 	return fData[adr - fStartAddress];
+}
+
+inline const unsigned char* ComBlock::GetRawData() const
+{
+	return fData;
 }
 
 #endif
