@@ -36,7 +36,7 @@ ComBlock::ComBlock(RCPtr<FileIO>& f)
 	if (!f->ReadWord(fStartAddress)) {
 		throw EOFError();
 	}
-	if (fStartAddress == 0xffff) {
+	while (fStartAddress == 0xffff) {
 		if (!f->ReadWord(fStartAddress)) {
 			throw ReadError();
 		}

@@ -561,7 +561,7 @@ int main(int argc, char** argv)
 
 					if (process_block) {
 						if (merge_block) {
-							std::cout << "       merge block "
+							std::cout << "     merging block "
 								<< std::setw(4) << iblk
 								<< " " << block->GetDescription()
 								<< std::endl
@@ -576,6 +576,12 @@ int main(int argc, char** argv)
 								unsigned int blk_len;
 
 								const unsigned char* data = block->GetRawData();
+
+								std::cout << "   splitting block "
+									<< std::setw(4) << iblk
+									<< " " << block->GetDescription()
+									<< std::endl
+								;
 
 								for (i=1; !done && i<=list_len; i++) {
 									if (i < list_len) {
