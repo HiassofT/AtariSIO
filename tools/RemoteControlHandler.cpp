@@ -343,7 +343,7 @@ bool RemoteControlHandler::ProcessCommand(const char* cmd, const RCPtr<SIOWrappe
 		//               1234567890123456789012345678901234567890
 		AddResultString("st print status    xc exchange drives");
 		AddResultString("lo load drive      un unload drive");
-		AddResultString("lv load virtual    rv reload virtual");
+		AddResultString("lv load virtual    rd reload drive");
 		AddResultString("wr write drive     wc write changed");
 		AddResultString("cr create drive    wp write protect");
 		AddResultString("pr printer         ad (de-)activate");
@@ -455,26 +455,26 @@ lv_usage:
 		return false;
 	}
 
-	if (strncasecmp(cmd,"rv",2)==0) { // reload virtual drive
+	if (strncasecmp(cmd,"rd",2)==0) { // reload drive
 		if (*arg == 'a' || *arg == 'A') {
 			driveno = DeviceManager::eAllDrives;
 		} else {
 			if (!ValidDriveNo(*arg) && (*arg != 'a') && (*arg != 'A')) {
 				AddResultString("invalid drive number");
-				goto rv_usage;
+				goto rd_usage;
 			}
 			driveno=GetDriveNo(*arg);
 		}
 
-		ret = fDeviceManager->ReloadVirtualDrive(driveno);
+		ret = fDeviceManager->ReloadDrive(driveno);
 		if (!ret) {
-			AddResultString("error reloading virtual drive(s)");
+			AddResultString("error reloading drive(s)");
 		}
 		fCursesFrontend->DisplayDriveStatus(driveno);
 		fCursesFrontend->UpdateScreen();
 		return ret;
-rv_usage:
-		AddResultString("usage: rv <driveno>");
+rd_usage:
+		AddResultString("usage: rd <driveno>");
 		return false;
 	}
 

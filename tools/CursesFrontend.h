@@ -101,7 +101,7 @@ public:
 	bool ProcessQuit();
 	void ProcessLoadDrive();
 	void ProcessWriteDrive();
-	void ProcessReloadVirtualDrive();
+	void ProcessReloadDrive();
 	void ProcessCreateDrive();
 	void ProcessWriteProtectDrive();
 	void ProcessUnprotectDrive();

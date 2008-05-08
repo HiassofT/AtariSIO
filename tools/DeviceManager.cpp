@@ -310,80 +310,105 @@ bool DeviceManager::CreateVirtualDrive(
 	return false;
 }
 
-bool DeviceManager::ReloadVirtualDrive(EDriveNumber driveno)
+bool DeviceManager::ReloadDrive(EDriveNumber driveno)
 {
-	int i;
 	int ok=true;
 
+	int min, max;
+	min = max = driveno;
+
 	if (driveno == eAllDrives) {
-		for (i=eMinDriveNumber;i<=eMaxDriveNumber;i++) {
-			if (DriveInUse(EDriveNumber(i))) {
-				RCPtr<AbstractSIOHandler> absHandler = GetSIOHandler((EDriveNumber)i);
-				RCPtr<DiskImage> diskImage = absHandler->GetDiskImage();
-				if (diskImage->IsVirtualImage()) {
-					ALOG("Reloading virtual drive D%d:", i);
-					if (!ReloadVirtualDrive((EDriveNumber)i)) {
-						ALOG("ERROR reloading virtual drive D%d:", i);
-						ok = false;
+		min = eMinDriveNumber;
+		max = eMaxDriveNumber;
+	} else {
+		if (!DriveNumberOK(driveno)) {
+			return false;
+		}
+	}
+
+	for (int i=min; i<=max; i++) {
+		driveno = (EDriveNumber) i;
+		if (DriveInUse(EDriveNumber(i))) {
+			RCPtr<AbstractSIOHandler> absHandler = GetSIOHandler(driveno);
+			RCPtr<DiskImage> diskImage = absHandler->GetDiskImage();
+			if (!diskImage->IsVirtualImage()) {
+				if (diskImage->GetFilename() && (diskImage->GetFilename()[0] != 0)) {
+					if (DriveIsChanged(driveno)) {
+						ALOG("Not reloading changed drive D%d:", driveno);
+					} else {
+						ALOG("Reloading drive D%d:", driveno);
+
+						char* filename = strdup(diskImage->GetFilename());
+
+						bool active = DeviceIsActive(driveno);
+						bool wp = DriveIsWriteProtected(driveno);
+						UnloadDiskImage(driveno);
+
+						if (!LoadDiskImage(driveno, filename, true)) {
+							ALOG("ERROR reloading drive D%d:", driveno);
+							ok = false;
+						} else {
+							SetDeviceActive(driveno, active);
+							SetWriteProtectImage(driveno, wp);
+						}
+						free(filename);
 					}
 				}
+			} else {
+
+				ALOG("Reloading virtual drive D%d:", driveno);
+
+				char* path;
+				EDiskFormat diskFormat;
+				ESectorLength seclen;
+				unsigned int sectors;
+				Dos2xUtils::EDosFormat dosFormat;
+
+				{
+					RCPtr<AbstractSIOHandler> absHandler = GetSIOHandler(driveno);
+					if (!absHandler->IsAtrSIOHandler()) {
+						Assert(false);
+						return false;
+					}
+					RCPtr<AtrSIOHandler> atrHandler = RCPtrStaticCast<AtrSIOHandler>(absHandler);
+					RCPtr<DiskImage> diskImage = atrHandler->GetDiskImage();
+					RCPtr<const VirtualImageObserver> observer;
+					RCPtr<const Dos2xUtils> rootdir;
+					if (!diskImage->IsVirtualImage()) {
+						return false;
+					}
+
+					RCPtr<AtrImage> atrImage = RCPtrStaticCast<AtrImage>(diskImage);
+					observer = atrHandler->GetVirtualImageObserver();
+					rootdir = observer->GetRootDirectoryObserver();
+
+					diskFormat = atrImage->GetDiskFormat();
+					path = strdup(diskImage->GetFilename());
+					seclen = diskImage->GetSectorLength();
+					sectors = diskImage->GetNumberOfSectors();
+
+					dosFormat = rootdir->GetDosFormat();
+				}
+
+				// hack to create a MyDos disk
+				if (dosFormat == Dos2xUtils::eMyDos) {
+					diskFormat = eUserDefDisk;
+				}
+
+
+				UnloadDiskImage(driveno);
+				if (diskFormat == eUserDefDisk) {
+					unsigned int estimatedSectors = Dos2xUtils::EstimateDiskSize(path, seclen, true);
+					if (estimatedSectors > sectors) {
+						sectors = estimatedSectors;
+					}
+					ok = CreateVirtualDrive(driveno, path, seclen, sectors);
+				} else {
+					ok = CreateVirtualDrive(driveno, path, diskFormat);
+				}
+				free(path);
 			}
 		}
-	} else {
-		char* path;
-		EDiskFormat diskFormat;
-		ESectorLength seclen;
-		unsigned int sectors;
-		Dos2xUtils::EDosFormat dosFormat;
-
-		{
-			if (!DriveNumberOK(driveno)) {
-				return false;
-			}
-			if (!DriveInUse(driveno)) {
-				return false;
-			}
-			RCPtr<AbstractSIOHandler> absHandler = GetSIOHandler(driveno);
-			if (!absHandler->IsAtrSIOHandler()) {
-				Assert(false);
-				return false;
-			}
-			RCPtr<AtrSIOHandler> atrHandler = RCPtrStaticCast<AtrSIOHandler>(absHandler);
-			RCPtr<DiskImage> diskImage = atrHandler->GetDiskImage();
-			RCPtr<const VirtualImageObserver> observer;
-			RCPtr<const Dos2xUtils> rootdir;
-			if (!diskImage->IsVirtualImage()) {
-				return false;
-			}
-
-			RCPtr<AtrImage> atrImage = RCPtrStaticCast<AtrImage>(diskImage);
-			observer = atrHandler->GetVirtualImageObserver();
-			rootdir = observer->GetRootDirectoryObserver();
-
-			diskFormat = atrImage->GetDiskFormat();
-			path = strdup(diskImage->GetFilename());
-			seclen = diskImage->GetSectorLength();
-			sectors = diskImage->GetNumberOfSectors();
-
-			dosFormat = rootdir->GetDosFormat();
-		}
-
-		// hack to create a MyDos disk
-		if (dosFormat == Dos2xUtils::eMyDos) {
-			diskFormat = eUserDefDisk;
-		}
-
-		UnloadDiskImage(driveno);
-		if (diskFormat == eUserDefDisk) {
-			unsigned int estimatedSectors = Dos2xUtils::EstimateDiskSize(path, seclen, true);
-			if (estimatedSectors > sectors) {
-				sectors = estimatedSectors;
-			}
-			ok = CreateVirtualDrive(driveno, path, seclen, sectors);
-		} else {
-			ok = CreateVirtualDrive(driveno, path, diskFormat);
-		}
-		free(path);
 	}
 	return ok;
 }

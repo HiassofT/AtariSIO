@@ -1899,15 +1899,15 @@ void CursesFrontend::ProcessWriteDrive()
 	UpdateScreen();
 }
 
-void CursesFrontend::ProcessReloadVirtualDrive()
+void CursesFrontend::ProcessReloadDrive()
 {
 	ShowDriveInputHint(eDriveInputHintAll);
 	ClearInputLine();
-	waddstr(fInputLineWindow, "reload virtual drive: ");
+	waddstr(fInputLineWindow, "reload drive: ");
 	ShowCursor(true);
 	UpdateScreen();
 
-	DeviceManager::EDriveNumber d = InputVirtualDriveNumber(eDriveInputAll);
+	DeviceManager::EDriveNumber d = InputUsedDriveNumber(eDriveInputAll);
 
 	if (d == DeviceManager::eNoDrive) {
 		AbortInput();
@@ -1916,7 +1916,7 @@ void CursesFrontend::ProcessReloadVirtualDrive()
 
 	ShowDriveNumber(d, false);
 
-	fDeviceManager->ReloadVirtualDrive(d);
+	fDeviceManager->ReloadDrive(d);
 
 	ShowCursor(false);
 	DisplayDriveStatus(d);

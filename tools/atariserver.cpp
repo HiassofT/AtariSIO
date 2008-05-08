@@ -485,7 +485,7 @@ int main(int argc, char** argv)
 			}
 			break;
 		case 'r':
-			frontend->ProcessReloadVirtualDrive();
+			frontend->ProcessReloadDrive();
 			break;
 		case 's':
 			frontend->ProcessSetHighSpeed();

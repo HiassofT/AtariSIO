@@ -65,11 +65,12 @@ public:
 	static RCPtr<DiskImage> LoadDiskImage(const char* filename, bool beQuiet = false);
 	bool LoadDiskImage(EDriveNumber driveno, const char* filename, bool beQuiet = false, bool forceUnload = false);
 
+	bool ReloadDrive(EDriveNumber driveno);
+
 	bool CreateVirtualDrive(
 		EDriveNumber driveno, const char* path, EDiskFormat format, bool forceUnload = false);
 	bool CreateVirtualDrive(
 		EDriveNumber driveno, const char* path, ESectorLength density, unsigned int sectors, bool MyDosFormat=true, bool forceUnload = false);
-	bool ReloadVirtualDrive(EDriveNumber driveno);
 
 	bool CreateAtrMemoryImage(EDriveNumber driveno, EDiskFormat format, bool forceUnload = false);
 	bool CreateAtrMemoryImage(EDriveNumber driveno, ESectorLength density, unsigned int sectors, bool forceUnload = false);
