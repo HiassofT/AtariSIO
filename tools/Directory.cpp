@@ -146,17 +146,22 @@ int Directory::ReadDirectory(const char* path, bool sortDir, bool alwaysStatFile
 			char * str = new char[plen + strlen(de->d_name) + 2];
 			sprintf(str,"%s/%s", path, de->d_name);
 			if (sortDir || alwaysStatFiles) {
+/*
 #ifdef WINVER
 				if (stat(str, &statbuf) == 0) {
 #else
 				if (lstat(str, &statbuf) == 0) {
 #endif
+*/
+				if (stat(str, &statbuf) == 0) {
 					if (S_ISREG(statbuf.st_mode)) {
 						AddEntry(de->d_name, DirEntry::eFile, statbuf.st_size);
+/*
 #ifndef WINVER
 					} else if (S_ISLNK(statbuf.st_mode)) {
 						AddEntry(de->d_name, DirEntry::eLink, statbuf.st_size);
 #endif
+*/
 					} else if (S_ISDIR(statbuf.st_mode)) {
 						AddEntry(de->d_name, DirEntry::eDirectory, statbuf.st_size);
 					}
