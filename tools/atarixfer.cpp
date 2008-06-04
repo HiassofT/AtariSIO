@@ -319,7 +319,6 @@ static int read_image(char* filename)
 			printf(" ERROR => double density disk\n");
 			image.CreateImage(e180kDisk);
 		}
-		image.CreateImage(e360kDisk);
 	} else if (total_sectors == 1440 && sector_length == 256) {
 		printf("reading sector 721 ..."); fflush(stdout);
 
