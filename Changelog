@@ -128,4 +128,4 @@ AtariSIO changelog:
   - atarisio: added support for kernel >= 2.6.22
   - fixed UART lock-up after framing errors
   - atariserver: added tape emulation support
-
+  - atarisio: added support for kernel 2.6.26
