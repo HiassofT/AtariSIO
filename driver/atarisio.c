@@ -2,7 +2,7 @@
    atarisio V1.02
    a kernel module for handling the Atari 8bit SIO protocol
 
-   Copyright (C) 2002-2007 Matthias Reichl <hias@horus.com>
+   Copyright (C) 2002-2008 Matthias Reichl <hias@horus.com>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -105,6 +105,11 @@
 #define DBG_PRINTK(level, x...) \
 	if (debug >= level) { \
 		PRINTK(x); \
+	}
+
+#define DBG_PRINTK_NODEV(level, x...) \
+	if (debug >= level) { \
+		PRINTK_NODEV(x); \
 	}
 
 #ifdef ATARISIO_DEBUG_TIMING
@@ -2555,6 +2560,16 @@ int free_atarisio_dev(unsigned int id)
 	return 0;
 }
 
+static long ioctl_wrapper(struct file* f, unsigned int cmd, unsigned long arg)
+{
+#ifdef HAVE_UNLOCKED_IOCTL
+	if (f->f_op->unlocked_ioctl) {
+		return f->f_op->unlocked_ioctl(f, cmd, arg);
+	}
+#endif
+	return f->f_op->ioctl(f->f_dentry->d_inode, f, cmd, arg);
+}
+
 static int disable_serial_port(struct atarisio_dev* dev)
 {
 	mm_segment_t fs;
@@ -2571,13 +2586,17 @@ static int disable_serial_port(struct atarisio_dev* dev)
 		DBG_PRINTK(DEBUG_STANDARD, "error opening serial port %s\n", dev->port);
 		goto fail;
 	}
+#ifdef HAVE_UNLOCKED_IOCTL
+	if (f->f_op && (f->f_op->ioctl || f->f_op->unlocked_ioctl) ) {
+#else
 	if (f->f_op && f->f_op->ioctl) {
+#endif
 		if (f->f_dentry && f->f_dentry->d_inode) {
-			if (f->f_op->ioctl(f->f_dentry->d_inode, f, TIOCGSERIAL, (unsigned long) &ss)) {
+			if (ioctl_wrapper(f, TIOCGSERIAL, (unsigned long) &ss)) {
 				DBG_PRINTK(DEBUG_STANDARD, "TIOCGSERIAL failed\n");
 				goto fail_close;
 			}
-			if (f->f_op->ioctl(f->f_dentry->d_inode, f, TIOCGSERIAL, (unsigned long) &dev->orig_serial_struct)) {
+			if (ioctl_wrapper(f, TIOCGSERIAL, (unsigned long) &dev->orig_serial_struct)) {
 				DBG_PRINTK(DEBUG_STANDARD, "TIOCGSERIAL failed\n");
 				goto fail_close;
 			}
@@ -2603,7 +2622,7 @@ static int disable_serial_port(struct atarisio_dev* dev)
 			// disable serial driver by setting the uart type to none
 			ss.type = PORT_UNKNOWN;
 
-			if (f->f_op->ioctl(f->f_dentry->d_inode, f, TIOCSSERIAL, (unsigned long) &ss)) {
+			if (ioctl_wrapper(f, TIOCSSERIAL, (unsigned long) &ss)) {
 				DBG_PRINTK(DEBUG_STANDARD, "TIOCSSERIAL failed\n");
 				goto fail_close;
 			}
@@ -2656,9 +2675,13 @@ static int reenable_serial_port(struct atarisio_dev* dev)
 		DBG_PRINTK(DEBUG_STANDARD, "error opening serial port %s\n", dev->port);
 		goto fail;
 	}
+#ifdef HAVE_UNLOCKED_IOCTL
+	if (f->f_op && (f->f_op->ioctl || f->f_op->unlocked_ioctl) ) {
+#else
 	if (f->f_op && f->f_op->ioctl) {
+#endif
 		if (f->f_dentry && f->f_dentry->d_inode) {
-			if (f->f_op->ioctl(f->f_dentry->d_inode, f, TIOCSSERIAL, (unsigned long) &dev->orig_serial_struct)) {
+			if (ioctl_wrapper(f, TIOCSSERIAL, (unsigned long) &dev->orig_serial_struct)) {
 				DBG_PRINTK(DEBUG_STANDARD, "TIOCSSERIAL failed\n");
 				goto fail_close;
 			}
