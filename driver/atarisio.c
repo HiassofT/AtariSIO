@@ -2623,6 +2623,10 @@ static int disable_serial_port(struct atarisio_dev* dev)
 				dev->irq = ss.irq;
 			}
 
+			if (dev->serial_config.baud_base == 0) {
+				dev->serial_config.baud_base = ss.baud_base;
+			}
+
 			// disable serial driver by setting the uart type to none
 			ss.type = PORT_UNKNOWN;
 
@@ -2766,9 +2770,9 @@ static int check_register_atarisio(struct atarisio_dev* dev)
 	}
 
 	if (dev->port) {
-		PRINTK("minor=%d port=%s io=0x%04x irq=%d\n", dev->miscdev->minor, dev->port, dev->io, dev->irq);
+		PRINTK("minor=%d port=%s io=0x%04x irq=%d baud_base=%ld\n", dev->miscdev->minor, dev->port, dev->io, dev->irq, dev->serial_config.baud_base);
 	} else {
-		PRINTK("minor=%d io=0x%04x irq=%d\n", dev->miscdev->minor, dev->io, dev->irq);
+		PRINTK("minor=%d io=0x%04x irq=%d baud_base=%ld\n", dev->miscdev->minor, dev->io, dev->irq, dev->serial_config.baud_base);
 	}
 	return 0;
 
@@ -2840,7 +2844,7 @@ static int atarisio_init_module(void)
 				dev->serial_config.baud_base = baud_base[i];
 				DBG_PRINTK(DEBUG_STANDARD, "using a baud_base of %ld\n", dev->serial_config.baud_base);
 			} else {
-				dev->serial_config.baud_base = 115200;
+				dev->serial_config.baud_base = 0;
 			}
 			if (port[i] && port[i][0]) {
 				dev->port = port[i];
@@ -2851,6 +2855,10 @@ static int atarisio_init_module(void)
 				} else {
 					DBG_PRINTK(DEBUG_STANDARD, "successfully disabled serial port %s\n", dev->port);
 				}
+			}
+
+			if (dev->serial_config.baud_base == 0) {
+				dev->serial_config.baud_base = 115200;
 			}
 
 			if (check_register_atarisio(dev)) {
