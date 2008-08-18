@@ -160,6 +160,7 @@ static int minor = ATARISIO_DEFAULT_MINOR;
 static char* port[ATARISIO_MAXDEV] = {0, };
 static int io[ATARISIO_MAXDEV] = {0, };
 static int irq[ATARISIO_MAXDEV] = {0, };
+static int baud_base[ATARISIO_MAXDEV] = {0, };
 static int debug = 0;
 static int debug_irq = 0;
 
@@ -168,6 +169,7 @@ MODULE_PARM(minor,"i");
 MODULE_PARM(port,"1-" __MODULE_STRING(ATARISIO_MAXDEV) "s");
 MODULE_PARM(io,"1-" __MODULE_STRING(ATARISIO_MAXDEV) "i");
 MODULE_PARM(irq,"1-" __MODULE_STRING(ATARISIO_MAXDEV) "i");
+MODULE_PARM(baud_base,"1-" __MODULE_STRING(ATARISIO_MAXDEV) "i");
 MODULE_PARM(debug,"i");
 MODULE_PARM(debug_irq,"i");
 #else
@@ -175,6 +177,7 @@ module_param(minor, int, S_IRUGO);
 module_param_array(port, charp, 0, S_IRUGO);
 module_param_array(io, int, 0, S_IRUGO);
 module_param_array(irq, int, 0, S_IRUGO);
+module_param_array(baud_base, int, 0, S_IRUGO);
 module_param(debug, int, S_IRUGO | S_IWUSR);
 module_param(debug_irq, int, S_IRUGO | S_IWUSR);
 #endif
@@ -183,6 +186,7 @@ module_param(debug_irq, int, S_IRUGO | S_IWUSR);
 MODULE_PARM_DESC(port,"serial port (eg /dev/ttyS0, default: use supplied io/irq values)");
 MODULE_PARM_DESC(io,"io address of 16550 UART (eg 0x3f8)");
 MODULE_PARM_DESC(irq,"irq of 16550 UART (eg 4)");
+MODULE_PARM_DESC(baud_base,"base baudrate (default: 115200)");
 MODULE_PARM_DESC(minor,"minor device number (default: 240)");
 MODULE_PARM_DESC(debug,"debug level (default: 0)");
 MODULE_PARM_DESC(debug_irq,"interrupt debug level (default: 0)");
@@ -2365,7 +2369,7 @@ static int atarisio_open(struct inode* inode, struct file* filp)
 	spin_lock_irqsave(&dev->uart_lock, flags);
 	spin_lock(&dev->serial_config_lock);
 
-	dev->serial_config.baud_base = 115200;
+	/* dev->serial_config.baud_base = 115200; */
 	dev->serial_config.baudrate = dev->default_baudrate;
 	dev->serial_config.IER = UART_IER_RDI;
 	dev->serial_config.MCR = UART_MCR_OUT2;
@@ -2832,6 +2836,12 @@ static int atarisio_init_module(void)
 			dev->port = 0;
 			dev->io = io[i];
 			dev->irq = irq[i];
+			if (baud_base[i]) {
+				dev->serial_config.baud_base = baud_base[i];
+				DBG_PRINTK(DEBUG_STANDARD, "using a baud_base of %ld\n", dev->serial_config.baud_base);
+			} else {
+				dev->serial_config.baud_base = 115200;
+			}
 			if (port[i] && port[i][0]) {
 				dev->port = port[i];
 				if (disable_serial_port(dev)) {

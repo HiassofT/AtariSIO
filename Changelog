@@ -129,3 +129,4 @@ AtariSIO changelog:
   - fixed UART lock-up after framing errors
   - atariserver: added tape emulation support
   - atarisio: added support for kernel 2.6.26
+  - atarisio: support 16550 ports maximum baudrate higher than 115200
