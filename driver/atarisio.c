@@ -80,6 +80,7 @@
 /*
 #define ATARISIO_DEBUG_TIMING
 */
+#define ATARISIO_PRINT_TIMESTAMPS
 
 /*
  * if ATARISIO_EARLY_NOTIFICATION is defined, poll will indicate a
@@ -92,10 +93,19 @@
 
 #define PRINTK_NODEV(x...) printk(NAME ": " x)
 
+#ifdef ATARISIO_PRINT_TIMESTAMPS
+#define PRINTK(x...) do { \
+		struct timeval tv; \
+		do_gettimeofday(&tv); \
+		printk(NAME "%d: [%lu.%06lu] ", dev->id, tv.tv_sec, tv.tv_usec); \
+		printk(x); \
+	} while(0)
+#else
 #define PRINTK(x...) do { \
 		printk(NAME "%d: ", dev->id); \
 		printk(x); \
 	} while(0)
+#endif
 
 #define IRQ_PRINTK(level, x...) \
 	if (debug_irq >= level) { \
@@ -117,7 +127,7 @@
 	do { \
 		struct timeval tv; \
 		do_gettimeofday(&tv); \
-		printk(NAME "%d: %s (%lu:%lu)\n", dev->id msg, tv.tv_sec, tv.tv_usec);\
+		printk(NAME "%d: %s (%lu:%lu)\n", dev->id, msg, tv.tv_sec, tv.tv_usec);\
 	} while (0)
 #else
 #define PRINT_TIMESTAMP(msg) do { } while(0)
@@ -674,7 +684,7 @@ static inline void send_chars(struct atarisio_dev* dev)
 	if (lsr & UART_LSR_THRE) {
 		spin_lock(&dev->tx_lock);
 		while ( (count > 0) && (dev->tx_buf.head != dev->tx_buf.tail) ) {
-			IRQ_PRINTK(DEBUG_VERY_NOISY, "transmit char 0x%02x\n",dev->tx_buf.buf[dev->tx_buf.head]);
+			IRQ_PRINTK(DEBUG_VERY_NOISY, "transmit char 0x%02x\n",dev->tx_buf.buf[dev->tx_buf.tail]);
 
 			serial_out(dev, UART_TX, dev->tx_buf.buf[dev->tx_buf.tail]);
 			dev->tx_buf.tail = (dev->tx_buf.tail+1) % IOBUF_LENGTH;
@@ -1038,7 +1048,10 @@ static inline int wait_send(struct atarisio_dev* dev, unsigned int len)
 	/*
 	 * now wait for the 16550 FIFO and transmitter to empty
 	 */
-	while ((jiffies < max_jiffies) && !(serial_in(dev, UART_LSR) & UART_LSR_TEMT)) {
+
+#define BOTH_EMPTY (UART_LSR_TEMT | UART_LSR_THRE)
+
+	while ((jiffies < max_jiffies) && ((serial_in(dev, UART_LSR) & BOTH_EMPTY) != BOTH_EMPTY)) {
 	}
 
 	timestamp_uart_finished(dev);

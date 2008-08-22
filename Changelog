@@ -130,3 +130,4 @@ AtariSIO changelog:
   - atariserver: added tape emulation support
   - atarisio: added support for kernel 2.6.26
   - atarisio: support 16550 ports maximum baudrate higher than 115200
+  - atarisio: fix for broken Moschip 9835 UART
