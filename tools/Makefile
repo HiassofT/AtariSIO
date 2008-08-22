@@ -169,6 +169,9 @@ smag24: $(SMAG24_OBJS)
 atarisio: $(ALL_IN_ONE_OBJS)
 	$(CXX) $(LDFLAGS) -o $@ $(ALL_IN_ONE_OBJS) $(ATARISERVER_LIBS)
 
+txtiming: txtiming.cpp
+	$(CXX) -O2 -W -Wall -g -o $@ txtiming.cpp
+
 cleanthis:
 	rm -f *.o $(EXECUTABLES)
 
