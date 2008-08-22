@@ -101,8 +101,8 @@ CFLAGS = -g -W -Wall -DATARISIO_DEBUG
 #CXXFLAGS = -O3 -W -Wall $(ZLIB_CXX_FLAGS)
 #CFLAGS = -O3 -W -Wall
 
-LDFLAGS =
-#LDFLAGS = -static
+LDFLAGS = -g
+#LDFLAGS = -g -static
 
 COMMON_LIBS = $(ZLIB_LD_FLAGS)
 
