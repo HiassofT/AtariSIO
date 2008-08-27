@@ -635,8 +635,17 @@ static inline void receive_chars(struct atarisio_dev* dev)
 		}
 		c = serial_in(dev, UART_RX);
 
-		if (lsr & UART_LSR_FE) {
-			IRQ_PRINTK(DEBUG_NOISY, "got framing error\n");
+		if (lsr & (UART_LSR_FE | UART_LSR_BI | UART_LSR_PE) ) {
+			if (lsr & UART_LSR_FE) {
+				IRQ_PRINTK(DEBUG_NOISY, "got framing error\n");
+			}
+			if (lsr & UART_LSR_PE) {
+				IRQ_PRINTK(DEBUG_NOISY, "got parity error (?)\n");
+			}
+			if (lsr & UART_LSR_BI) {
+				IRQ_PRINTK(DEBUG_NOISY, "got break\n");
+			}
+
 			if (dev->cmdframe_buf.receiving) {
 				dev->cmdframe_buf.error_counter++;
 			}
@@ -1045,12 +1054,19 @@ static inline int wait_send(struct atarisio_dev* dev, unsigned int len)
 
 	timestamp_transmission_wakeup(dev);
 
-	/*
-	 * now wait for the 16550 FIFO and transmitter to empty
-	 */
 
+	/*
+	 * workaround for buggy Moschip 9835 (and other?) UARTs:
+	 * the 9835 sets TEMT for a short time after each byte,
+	 * no matter if the FIFO contains data or not. So we have
+	 * to check if both the FIFO (using the THRE flag) and
+	 * the shift register are empty.
+	 */
 #define BOTH_EMPTY (UART_LSR_TEMT | UART_LSR_THRE)
 
+	/*
+	 * now wait until the transmission is completely finished
+	 */
 	while ((jiffies < max_jiffies) && ((serial_in(dev, UART_LSR) & BOTH_EMPTY) != BOTH_EMPTY)) {
 	}
 

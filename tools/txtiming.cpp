@@ -39,6 +39,7 @@ void serial_out(unsigned int offset, unsigned char val)
 }
 
 unsigned char old_lsr = 0;
+unsigned char old_msr = 0;
 
 void print_timestamp()
 {
@@ -47,13 +48,34 @@ void print_timestamp()
 	printf("%ld.%06ld: ", tv.tv_sec, tv.tv_usec);
 }
 
+void print_bin(unsigned char c)
+{
+	int i;
+	char buf[9];
+	buf[8] = 0;
+	for (i=0; i<8; i++) {
+		if (c & (1<<(7-i))) {
+			buf[i] = '1';
+		} else {
+			buf[i] = '0';
+		}
+	}
+	printf("%s", buf);
+}
+
 void print_lsr()
 {
 	unsigned char lsr = serial_in(UART_LSR);
-	if (lsr != old_lsr) {
+	unsigned char msr = serial_in(UART_MSR);
+	if ( (lsr != old_lsr) || (msr != old_msr) ) {
 		print_timestamp();
-		printf("%02x\n", lsr);
+		printf("LSR: ");
+		print_bin(lsr);
+		printf(" MSR: ");
+		print_bin(msr);
+		printf("\n");
 		old_lsr = lsr;
+		old_msr = msr;
 	}
 }
 
@@ -134,7 +156,7 @@ void do_test()
 
 int main(int argc, char** argv)
 {
-	int i,j;
+	int i;
 	
 	if (argc != 2) {
 		printf("usage: txtiming port\n");
