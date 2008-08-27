@@ -80,7 +80,9 @@
 /*
 #define ATARISIO_DEBUG_TIMING
 */
+/*
 #define ATARISIO_PRINT_TIMESTAMPS
+*/
 
 /*
  * if ATARISIO_EARLY_NOTIFICATION is defined, poll will indicate a
