@@ -38,7 +38,8 @@
     <para><command>dir2atr</command> creates an Atari DOS 2.x or MyDOS
     compatible disk image containing the files from
     <replaceable>directory</replaceable>. Despite the name,
-    <command>dir2atr</command> can create ATR, DCM and XFD images.</para>
+    <command>dir2atr</command> can create ATR, DCM and XFD images, depending
+    on the extension of the image filename.</para>
   </refsect1>
 
   <refsect1>
@@ -86,43 +87,54 @@
 
           <variablelist>
             <varlistentry>
-              <term><userinput>Dos20</userinput>,
-              <userinput>Dos25</userinput>, <userinput>MyDos453</userinput>,
-              <userinput>TurboDos21</userinput>,
-              <userinput>TurboDos21HS</userinput></term>
+              <term><option>Dos20</option>,
+              <option>Dos25</option>, <option>MyDos453</option>,
+              <option>TurboDos21</option>,
+              <option>TurboDos21HS</option></term>
 
               <listitem>
                 <para>for Atari Dos 2.0, Atari Dos 2.5, MyDos 4.53, TurboDos
                 2.1 and TurboDos 2.1HS, respectively.</para>
 
-                <para><emphasis>Note:</emphasis> The directory must already
-                contain a matching <filename>DOS.SYS</filename> file!</para>
+                <para>When using one of these options, the directory must
+                already contain a matching <filename>DOS.SYS</filename>
+                file!</para>
               </listitem>
             </varlistentry>
 
             <varlistentry>
-              <term><userinput>MyPicoDos403</userinput>,
-              <userinput>MyPicoDos403HS</userinput>,
-              <userinput>MyPicoDos404</userinput>,
-              <userinput>MyPicoDos404N</userinput>,
-              <userinput>MyPicoDos404R</userinput>,
-              <userinput>MyPicoDos404RN</userinput>,
-              <userinput>MyPicoDos404B</userinput></term>
+              <term><option>MyPicoDos403</option>,
+              <option>MyPicoDos403HS</option>,
+              <option>MyPicoDos404</option>,
+              <option>MyPicoDos404N</option>,
+              <option>MyPicoDos404R</option>,
+              <option>MyPicoDos404RN</option>,
+              <option>MyPicoDos404B</option></term>
 
               <listitem>
                 <para>for MyPicoDos version 4.03 standard, 4.03 highspeed or
-                MyPicoDos 4.04. As for version 4.04 the suffix
-                <userinput>N</userinput> means normal speed SIO (instead of
-                highspeed SIO), <userinput>R</userinput> versions include the
-                AtariSIO remote console and the <userinput>B</userinput> is
-                the "barebone" version without highspeed SIO support and
-                without remote console.</para>
+                MyPicoDos 4.04. As for version 4.04 the suffixes have the
+                following meaning:</para>
 
-                <para><emphasis>Note:</emphasis> <command>dir2atr</command>
-                automatically adds the <filename>PICODOS.SYS</filename> file
-                to the disk image. It is recommended that you also add the
-                <option>-p</option> option to add a
-                <filename>PICONAME.TXT</filename> file.</para>
+                <para><option>N</option> defaults to normal speed SIO
+                (instead of highspeed SIO). The highspeed SIO code is still
+                present but disabled by default. It can later be enabled in
+                the MyPicoDos menu with the <option>H</option> key. This
+                can be helpful if you plan to use the image with an Atari
+                emulator on your PC which often don't emulate highspeed SIO
+                properly.</para>
+
+                <para><option>R</option> versions include the AtariSIO
+                remote console.</para>
+
+                <para><option>B</option> is the "barebone" without
+                highspeed SIO code and without AtariSIO remote console.</para>
+
+                <para>When using one of these options,
+                <command>dir2atr</command> automatically adds the
+                <filename>PICODOS.SYS</filename> file to the disk image. It is
+                recommended that you also add the <option>-p</option> option
+                to add a <filename>PICONAME.TXT</filename> file.</para>
               </listitem>
             </varlistentry>
           </variablelist>
@@ -183,13 +195,28 @@
   </refsect1>
 
   <refsect1>
+    <title>Notes</title>
+
+    <para>The maximum supported size for Atari 8-bit disks is 16MB (65535
+    double density sectors).</para>
+
+    <para>MyDOS and most other DOS2.x compatible DOSes support a maximum of 64
+    entries per (sub-)directory. If you create a bootable MyPicoDos disk image
+    keep in mind that the first entry of the root directory is used by the
+    <filename>PICODOS.SYS</filename> file.</para>
+
+    <para>If you use the <option>-p</option> option, a
+    <filename>PICONAME.TXT</filename> file is added at the end of each
+    directory. So, a bootable MyPicoDos disk can store 62 entries (files,
+    subdirectories) in the root directory and 63 entries in each
+    subdirectory.</para>
+  </refsect1>
+
+  <refsect1>
     <title>See also</title>
 
-    <para>
-      <xref linkend="refadir" />,
-      <xref linkend="refatariserver" />,
-      <xref linkend="refatarixfer" />
-    </para>
+    <para><xref linkend="refadir" />, <xref linkend="refatariserver" />, <xref
+    linkend="refatarixfer" /></para>
 
     <para>AtariSIO website: <ulink
     url="http://www.horus.com/~hias/atari/"></ulink></para>

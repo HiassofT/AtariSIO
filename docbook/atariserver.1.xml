@@ -16,20 +16,28 @@
     <cmdsynopsis>
       <command>atariserver</command>
 
-      <arg>-f <replaceable>device</replaceable></arg>
+      <arg><option>-f</option> <replaceable>device</replaceable></arg>
 
-      <arg>options</arg>
+      <arg><group choice="plain" rep="repeat">
+          <option>options</option>
+        </group></arg>
 
-      <arg><replaceable>filename</replaceable></arg>
+      <group rep="repeat">
+        <arg choice="plain"><option>-V</option>
+        <replaceable>density</replaceable>
+        <replaceable>directory</replaceable> </arg>
 
+        <arg choice="plain"><replaceable>filename</replaceable></arg>
+      </group>
     </cmdsynopsis>
   </refsynopsisdiv>
 
   <refsect1>
     <title>Description</title>
 
-    <para><command>atariserver</command></para>
-
+    <para><command>atariserver</command> is a SIO server, similar to SIO2PC or
+    APE for DOS/Windows PCs. It can emulate up to 8 Atari disk drives (D1: to
+    D8:), a printer (P:) and also play back CAS (tape) files.</para>
   </refsect1>
 
   <refsect1>
@@ -41,21 +49,120 @@
 
         <listitem>
           <para>Use alternative AtariSIO device (default:
-          <filename>/dev/atarisio0</filename>).</para>
+          <filename>/dev/atarisio0</filename>). <emphasis>Note:</emphasis>
+          this must be the very first option!</para>
         </listitem>
       </varlistentry>
 
+      <varlistentry>
+        <term>-h</term>
+
+        <listitem>
+          <para>Display help.</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>-c</term>
+
+        <listitem>
+          <para>Use alternative SIO2PC cable with COMMAND line connected to
+          DSR (default is RING).</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>-C</term>
+
+        <listitem>
+          <para>Use alternative SIO2PC/nullmodem cable with COMMAND line
+          connected to CTS.</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>-m</term>
+
+        <listitem>
+          <para>Monochrome mode (default: color curses frontend).</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>-o <replaceable>file</replaceable></term>
+
+        <listitem>
+          <para>Save trace/log output to
+          <replaceable>file</replaceable>.</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>-s</term>
+
+        <listitem>
+          <para>Slow mode, disable highspeed SIO (default is enabled).</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>-S</term>
+
+        <listitem>
+          <para>Highspeed SIO mode with short pauses between bytes.</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>-X</term>
+
+        <listitem>
+          <para>Enable XF551 commands (default: disabled).</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>-t</term>
+
+        <listitem>
+          <para>Increase trace level (default level is 0). May be specified up
+          to 3 times for maximum trace output.</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>-V <replaceable>density</replaceable>
+        <replaceable>directory</replaceable></term>
+
+        <listitem>
+          <para></para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>-P <replaceable>conversion</replaceable>
+        <replaceable>filename</replaceable></term>
+
+        <listitem>
+          <para></para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term></term>
+
+        <listitem>
+          <para></para>
+        </listitem>
+      </varlistentry>
     </variablelist>
   </refsect1>
 
   <refsect1>
     <title>See also</title>
 
-    <para>
-      <xref linkend="refatarixfer" />,
-      <xref linkend="refadir" />,
-      <xref linkend="refdir2atr" />
-    </para>
+    <para><xref linkend="refatarixfer" />, <xref linkend="refadir" />, <xref
+    linkend="refdir2atr" /></para>
 
     <para>AtariSIO website: <ulink
     url="http://www.horus.com/~hias/atari/"></ulink></para>

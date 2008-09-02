@@ -17,18 +17,20 @@
     <cmdsynopsis>
       <command>atarixfer</command>
 
-      <arg>-f <replaceable>device</replaceable></arg>
+      <arg><option>-f</option> <replaceable>device</replaceable></arg>
 
-      <arg>-p</arg>
+      <arg><option>-p</option></arg>
 
-      <arg>-d</arg>
+      <arg><option>-d</option></arg>
 
       <arg>-<replaceable>driveno</replaceable></arg>
 
       <group choice="plain">
-        <arg choice="plain">-r <replaceable>imagefile</replaceable></arg>
+        <arg choice="plain"><option>-r</option>
+        <replaceable>imagefile</replaceable></arg>
 
-        <arg choice="plain">-w <replaceable>imagefile</replaceable></arg>
+        <arg choice="plain"><option>-w</option>
+        <replaceable>imagefile</replaceable></arg>
       </group>
     </cmdsynopsis>
   </refsynopsisdiv>
@@ -111,11 +113,8 @@
   <refsect1>
     <title>See also</title>
 
-    <para>
-      <xref linkend="refatariserver" />,
-      <xref linkend="refadir" />,
-      <xref linkend="refdir2atr" />
-    </para>
+    <para><xref linkend="refatariserver" />, <xref linkend="refadir" />, <xref
+    linkend="refdir2atr" /></para>
 
     <para>AtariSIO website: <ulink
     url="http://www.horus.com/~hias/atari/"></ulink></para>
