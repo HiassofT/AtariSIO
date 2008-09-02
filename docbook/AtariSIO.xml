@@ -1,12 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1"?>
-<!DOCTYPE book PUBLIC "-//OASIS//DTD DocBook XML V4.2//EN"
-"http://www.oasis-open.org/docbook/xml/4.2/docbookx.dtd" [
-<!ENTITY intro SYSTEM "intro.xml">
-<!ENTITY refatariserver SYSTEM "atariserver.1.xml">
-<!ENTITY refatarixfer SYSTEM "atarixfer.1.xml">
-<!ENTITY refadir SYSTEM "adir.1.xml">
-<!ENTITY refdir2atr SYSTEM "dir2atr.1.xml">
-]>
+<!DOCTYPE book PUBLIC "-//OASIS//DTD DocBook XML V4.5//EN"
+"http://www.oasis-open.org/docbook/xml/4.5/docbookx.dtd">
 <book>
   <bookinfo>
     <title>AtariSIO</title>
@@ -28,7 +22,7 @@
     </copyright>
   </bookinfo>
 
-  &intro;
+  <xi:include href="intro.xml" xmlns:xi="http://www.w3.org/2001/XInclude" />
 
   <reference id="ref">
     <referenceinfo>
@@ -41,9 +35,9 @@
 
     <title>AtariSIO man pages</title>
 
-    &refatariserver;
-    &refatarixfer;
-    &refadir;
-    &refdir2atr;
+  <xi:include href="atariserver.1.xml" xmlns:xi="http://www.w3.org/2001/XInclude" />
+  <xi:include href="atarixfer.1.xml" xmlns:xi="http://www.w3.org/2001/XInclude" />
+  <xi:include href="adir.1.xml" xmlns:xi="http://www.w3.org/2001/XInclude" />
+  <xi:include href="dir2atr.1.xml" xmlns:xi="http://www.w3.org/2001/XInclude" />
   </reference>
 </book>

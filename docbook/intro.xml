@@ -1,8 +1,12 @@
-  <chapter id="chapintro">
-    <title>Introduction</title>
-    <sect1 id="intro">
-      <title>this is a test</title>
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!DOCTYPE chapter PUBLIC "-//OASIS//DTD DocBook XML V4.5//EN"
+"http://www.oasis-open.org/docbook/xml/4.5/docbookx.dtd">
 
-      <para>bla bla bla</para>
-    </sect1>
-  </chapter>
+<chapter id="chapintro">
+  <title>Introduction</title>
+  <sect1 id="intro">
+    <title>this is a test</title>
+
+    <para>bla bla bla</para>
+  </sect1>
+</chapter>
