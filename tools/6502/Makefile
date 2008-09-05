@@ -27,8 +27,8 @@ mypicodoscode.c: mypdos-atarisio.bin bootloader.bin dumpmypdoscode
 dumphscode: dumphscode.o
 	$(CC) -o dumphscode dumphscode.o
 
-atarisio-highsio.bin: atarisio-highsio.src
-	$(ATASM) -dRELOCTABLE -dSIOADR=4096 -oatarisio-highsio.bin atarisio-highsio.src
+atarisio-highsio.bin: hisio.src hisio.inc hisiocode.src hisiodet.src
+	$(ATASM) -dRELOCTABLE -dSTART=4096 -oatarisio-highsio.bin hisio.src
 
 atarisio-highsio.c: atarisio-highsio.bin dumphscode
 	./dumphscode

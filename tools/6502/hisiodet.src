@@ -1,0 +1,121 @@
+;  highsiodet.src - check for highspeed drives
+;
+;  Copyright (c) by ABBUC e.V. (www.abbuc.de) and Matthias Reichl
+;
+;  This program is free software; you can redistribute it and/or modify
+;  it under the terms of the GNU General Public License as published by
+;  the Free Software Foundation; either version 2 of the License, or
+;  (at your option) any later version.
+;
+;  This program is distributed in the hope that it will be useful,
+;  but WITHOUT ANY WARRANTY; without even the implied warranty of
+;  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;  GNU General Public License for more details.
+;
+;  You should have received a copy of the GNU General Public License
+;  along with this program; if not, write to the Free Software
+;  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+;
+
+HISIO
+
+	LDA DUNIT
+	BNE ?DOSIO
+
+	LDX #7		; DUNIT = 0 clears speed table
+?ABS01
+?CLRLP	STA SPEEDTB,X
+	DEX
+	BPL ?CLRLP
+	RTS
+
+?DOSIO	LDX DUNIT
+?ABS02	LDA SPEEDTB-1,X
+	BEQ ?DOCHK
+
+?ABS03	STA SIOSPEED
+?ABS04	JMP DOHISIO
+
+?DOCHK	
+	LDA SOUNDR
+	PHA
+	LDA #0
+	STA SOUNDR
+
+	LDA #STDSPD
+?ABS05	STA SIOSPEED
+	LDY #$09
+?SAVCMD	LDA DCOMND,Y
+	PHA 
+?ABS06	LDA ?CMD3F,Y	; Happy/Speedy Ultra SIO mode?
+	STA DCOMND,Y
+	DEY 
+	BPL ?SAVCMD
+
+?ABS07	JSR ?DODET
+
+	; for testing happy 810 mode, uncomment this and connect a happy 1050
+	;LDY #$FF
+
+	BMI ?NOULTRA
+
+?ABS08	LDA HIBUF
+	CMP #$0A	; speed byte $0A is most certainly a Happy 1050
+	BNE ?SETSP2
+
+	; enable fast write for Happy 1050 (but not for other drives),
+	; otherwise data might be corrupted
+	; stupid, stupid Happy...
+?ABS09	JSR ?CHKHAP
+
+?ABS10	LDA HIBUF
+?ABS11	JMP ?SETSP2
+
+?NOULTRA LDA #TURFLG	; Turbo 1050?
+?ABS12	JSR ?GETST
+	BPL ?SETSPD
+
+	LDA #XFFLG	; XF551?
+?ABS13	JSR ?GETST
+	BPL ?SETSPD
+
+	LDA #HAPFLG	; Happy 810?
+?ABS14	STA SIOSPEED
+?ABS15	JSR ?CHKHAP
+	BPL ?SETSPD
+
+	LDA #STDSPD	; no, just use standard SIO speed
+	BNE ?SETSP2
+
+?ABS16
+?GETST	STA SIOSPEED
+	LDA #4
+	STA DBYTLO
+	LDX #$53
+	LDA #$40
+?DOIMM	STX DCOMND
+	STA DSTATS
+?DODET	LDA #1
+?ABS17	JMP DOHIDET
+
+?CHKHAP	LDX #$48	; check for happy 810
+	LDA #0
+	BEQ ?DOIMM
+
+?ABS18
+?SETSPD	LDA SIOSPEED
+?SETSP2	LDX DUNIT	
+?ABS19	STA SPEEDTB-1,X
+
+?RESCMD	LDY #$00
+?RESLP	PLA 
+	STA DCOMND,Y
+	INY 
+	CPY #$0A
+	BCC ?RESLP
+	PLA
+	STA SOUNDR
+?ABS20	JMP ?DOSIO
+
+?CMD3F	.BYTE $3F,$40
+?ABS21	.WORD HIBUF,1,1,$20

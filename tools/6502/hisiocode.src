@@ -1,0 +1,545 @@
+;  highsiocode.src - highspeed SIO routine
+;
+;  Copyright (c) by ABBUC e.V. (www.abbuc.de) and Matthias Reichl
+;
+;  This program is free software; you can redistribute it and/or modify
+;  it under the terms of the GNU General Public License as published by
+;  the Free Software Foundation; either version 2 of the License, or
+;  (at your option) any later version.
+;
+;  This program is distributed in the hope that it will be useful,
+;  but WITHOUT ANY WARRANTY; without even the implied warranty of
+;  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;  GNU General Public License for more details.
+;
+;  You should have received a copy of the GNU General Public License
+;  along with this program; if not, write to the Free Software
+;  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+;
+
+DOHISIO	
+
+.if .def DIAGSIO
+	LDA #$01
+.else
+	LDA #$02
+.endif
+
+; internal entry point for highspeed SIO detection:
+; load A with 1, only 1 retry and no speed fallback
+
+DOHIDET	STA DRETRY
+
+	SEI
+	LDA #$01
+	STA CRITIC
+	CLC
+	LDA DDEVIC
+	ADC DUNIT
+	ADC #$FF
+	STA CDEVIC
+
+	TSX 
+	STX STACKP
+?ABS50	LDA SIOSPEED
+	STA MYSPEED
+
+?DRETLP	LDA #$0D
+	STA CRETRY
+
+.if .def DIAGSIO
+	LDA #0
+	STA ?DIAGER
+.endif
+
+	LDA DAUX1
+	STA CAUX1
+	LDA DAUX2
+	STA CAUX2
+
+	LDA DCOMND
+	STA CCOMND
+
+	LDX MYSPEED
+	BPL ?NOTUR
+
+	LDA CAUX2
+	ORA #$80
+	STA CAUX2
+	BNE ?CRETLP
+
+?NOTUR	CPX #HAPFLG	; happy warp speed?
+	BEQ ?WARP
+	CPX #XFFLG	; XF551?
+	BEQ ?XFCMD
+	CPX #$0A	; check for happy 1050 speed
+	BNE ?CRETLP
+
+; the happy 1050 doesn't like the $48 happy command in highspeed...
+	CMP #$48
+	BEQ ?DOSLOW
+	BNE ?CRETLP
+
+?XFCMD	ORA #$80
+	STA CCOMND
+	CMP #$A1
+	BEQ ?DOSLOW
+	CMP #$A2
+	BNE ?CRETLP
+?DOSLOW	LDA #STDSPD
+	STA MYSPEED
+	BNE ?CRETLP
+
+?WARP	CMP #$50
+	BEQ ?WARP1
+	CMP #$52
+	BEQ ?WARP1
+	CMP #$57
+	BNE ?DOSLOW
+?WARP1	ORA #$20
+	STA CCOMND
+
+?CRETLP	
+
+.if .def DIAGSIO
+; phase 00 : send command frame and wait for ACK
+	LDA #0
+	STA ?DIAGST
+	STA ?DIAGBT
+.endif
+
+	LDA MYSPEED
+	CMP #$40
+	BCC ?DOSIO2
+	LDA #STDSPD
+?DOSIO2	STA AUDF3
+	LDA #$34	; set command line
+	STA PBCTL
+	LDA #$00
+	STA STATUS
+	STA BFENHI
+	STA AUDF4
+	LDA #$3A	; < CDEVIC
+	STA BUFRLO
+	LDA #$02	; > CDEVIC
+	STA BUFRHI
+	ASL 
+	STA BFENLO
+
+; setup pokey
+	LDA #$28
+	STA AUDCTL
+	LDX #$A0
+	LDA SOUNDR
+	BEQ ?NOSND
+	LDX #$A8
+?NOSND	STX AUDC4
+
+; transmit command frame
+?ABS51	JSR ?SENDBLK
+
+	BIT MYSPEED
+	BPL ?NOTUR1	; 1050 Turbo?
+	LDA #TURSPD	; yes, set highspeed before receiving ACK/NAK
+	STA AUDF3
+
+?NOTUR1	
+
+?ABS52	JSR ?CHKST	; read command frame ACK/NAK
+?ABS53	JSR ?CLRTIM1	; got ACK, clear timer
+
+.if .def DIAGSIO
+; phase 01 : send data frame (only if write operation)
+	INC ?DIAGST
+.endif
+
+	BIT MYSPEED
+	BVC ?NOXF	; XF551 / Happy Warp?
+
+	LDA #XFSPD	; yes, set highspeed before DATA
+	STA AUDF3
+
+?NOXF	LDA #1
+	STA CRETRY	; no more command-frame retries
+	LDA DBUFLO
+	STA BUFRLO
+	LDA DBUFHI
+	STA BUFRHI
+	LDA DBYTLO
+	STA BFENLO
+	LDA DBYTHI
+	STA BFENHI
+	LDA DSTATS
+	BPL ?NOSEND
+
+?ABS54	JSR ?SENDBLK	; transmit data frame
+
+.if .def DIAGSIO
+; phase 02 (write) : receive data frame ACK
+	INC ?DIAGST
+.endif
+
+?ABS55	JSR ?CHKST	; receive data frame ACK/NAK
+
+?NOSEND	
+
+.if .def DIAGSIO
+; phase 02 (read) / 03 (write) : receive command complete
+	INC ?DIAGST
+.endif
+
+?ABS56	JSR ?WAITCPL	; set command timeout and wait for command complete
+	BIT DSTATS
+	BVC ?SIOEND
+
+.if .def DIAGSIO
+; phase 03 (read) / 04 (write) : read data frame (only if read operation)
+	INC ?DIAGST
+.endif
+
+?ABS57	JSR ?GETBLK	; receive data block
+
+?ABS58
+?SIOEND	JSR ?CLEANUP	; reset timers and pokey
+	LDY STATUS	; was the command successful?
+	BEQ ?ENDCMD	; yes, we are done
+
+	DEC CRETRY	; retry sending command frame?
+	BEQ ?CHKDR	; no, already tried 13 times
+?ABS59	JMP ?CRETLP	; yes, we have some more retries
+?CHKDR	
+
+	DEC DRETRY	; any more command retries?
+	BEQ ?ENDCMD	; no, we are finished
+	CPY #ERRDEV
+	BEQ ?GODR	; don't fallback speed on command errors
+	LDA #STDSPD	; try it with standard speed this time
+	STA MYSPEED
+?ABS60
+?GODR	JMP ?DRETLP	; yes, try it again
+?ENDCMD	
+
+	LDA #0
+	STA CRITIC
+	LDA POKMSK
+	STA IRQEN
+
+	LDY STATUS
+	BNE ?ERRCMD
+
+	INY
+?ERRCMD	STY DSTATS
+	CLI 
+	RTS 
+
+?SENDBLK	LDY #$00	; short delay before sending data
+?WT1	INY 
+	BNE ?WT1
+	LDA #SKSEND	; set pokey to transmit data mode
+	STA SKCTL
+	STA SKREST
+	LDA #MSKSEND
+	STA IRQEN
+	LDA (BUFRLO),Y	; start transmission by sending first byte
+	STA CHKSUM
+	STA SEROUT
+	INY
+	BNE ?SND2	; always
+	
+?SND1	LDA (BUFRLO),Y
+?ABS61	JSR ?SENDBYT	; normal send, wait for pokey clear
+	INY 
+	BNE ?SND2
+	INC BUFRHI
+	DEC BFENHI
+
+; wait a litte after sending a full page, needed by some
+; drives when sending more than 256 bytes
+
+	LDX #$E0
+?WT2	INX 
+	BNE ?WT2
+?SND2	CPY BFENLO
+	BNE ?SND1
+	LDA BFENHI
+	BNE ?SND1
+	LDA CHKSUM
+?ABS62	JSR ?SENDBYT
+?WTSND	LDA IRQST
+	AND #IMSCPL	; wait until transmit complete
+	BNE ?WTSND
+	RTS
+
+?GETBLK	LDY #$00
+	STY CHKSUM
+
+; note: pokey is already set to receive mode (in rdquit),
+; so we don't need to do the setup again
+
+?ABS63
+?GETLP	JSR ?GETBYTE
+	STA (BUFRLO),Y
+?ABS64	JSR ?ADDSUM
+	INY 
+	BNE ?GET1
+	INC BUFRHI
+	DEC BFENHI
+?GET1	CPY BFENLO
+	BNE ?GETLP
+	LDA BFENHI
+	BNE ?GETLP
+?ABS65	JSR ?GETBYTE
+
+.if .def DIAGSIO
+	STA ?DIAGBT
+.endif
+	CMP CHKSUM
+	BNE ?ERRCHK
+	RTS 
+
+; cleanup, in case of error or end of transmission
+
+?CLEANUP LDA #$A0	; reset pokey
+	STA AUDC4
+	LDA #$3C	; clear command line
+	STA PBCTL
+
+; clear timer1
+?CLRTIM1	LDY #$00
+
+; set timer1 with Y*256 cycles
+?STIMOUT	LDX #$00
+
+; set timer1 Y*256 + X cycles
+?STIMOU2	LDA #1
+	JSR SETVBV
+.if .def RELOCTABLE
+?ABS66	LDA ?ERRTOA
+	STA CDTMA1
+?ABS67	LDA ?ERRTOA+1
+	STA CDTMA1+1
+.else
+	LDA #<?ERRTO
+	STA CDTMA1
+	LDA #>?ERRTO
+	STA CDTMA1+1
+.endif
+?RDOK	LDA #0
+	RTS
+
+.if .def RELOCTABLE
+?ABS68
+?ERRTOA	.WORD ?ERRTO
+.endif
+
+; read ACK/NAK, handle ERROR as NAK
+; used when waiting for command frame ACK and data frame ACK
+
+?CHKST	
+	LDY #$02
+?ABS69	JSR ?STIMOUT
+	LDA #MSKRECV
+	STA IRQEN
+?ABS70	JSR ?RDACK
+	BNE ?ERRNAK	; catch ERROR and handle it like NAK
+?CHKOK	RTS
+
+; set command timeout and wait for command complete
+
+?WAITCPL	LDA DTIMLO
+	ROR 
+	ROR 
+	TAY 
+	AND #$3F
+	TAX 
+	TYA 
+	ROR 
+	AND #$C0
+	TAY 
+?ABS71	JSR ?STIMOU2
+
+; receive ACK/NAK, COMPLETE/ERROR
+
+?RDACK	LDA #SKRECV	; set pokey to receive async mode
+	STA SKCTL
+	STA SKREST
+	LDA #$3C	; clear command line
+	STA PBCTL
+?ABS72	JSR ?GETBYTE
+
+.if .def DIAGSIO
+	STA ?DIAGBT
+.endif
+
+	CMP #'A		; ACK
+	BEQ ?RDOK
+?NOACK	CMP #'C		; COMPLETE
+	BEQ ?RDOK
+	CMP #'E		; command ERROR
+	BEQ ?RDERR
+
+?ERRNAK LDY #ERRNAK	; NAK or any other error -> set code $8B
+
+	.BYTE $2C	; BIT xxx (skip next 2 bytes)
+?ERRFRM	LDY #ERRFRM	; framing error
+
+	.BYTE $2C	; BIT xxx (skip next 2 bytes)
+?ERROVR	LDY #ERROVR	; data input overrun
+
+	.BYTE $2C	; BIT xxx (skip next 2 bytes)
+?ERRCHK	LDY #ERRCHK	; checksum error
+
+	.BYTE $2C	; BIT xxx (skip next 2 bytes)
+?ERRTO	LDY #ERRTO	; timeout error
+
+; general error routine, code in Y
+
+?ERR	STY STATUS
+
+.if .def DIAGSIO
+	LDX ?DIAGER
+	TYA
+	STA ?DIAGE,X
+	LDA ?DIAGST
+	STA ?DIAGS,X
+	LDA ?DIAGBT
+	STA ?DIAGB,X
+	INC ?DIAGER
+.endif
+
+	LDX STACKP
+	TXS
+?ABS73	JMP ?SIOEND	; we got an error, cleanup and try to restart
+
+?RDERR	LDY #ERRDEV	; command error
+	STY STATUS
+	RTS
+
+; break handler
+
+?ERRBRK	LDA #RMBRK	; reset break interrupt flag
+	STA IRQEN
+	LDA POKMSK	; set default pokey interrupt mask
+	STA IRQEN
+	LDX STACKP
+	TXS
+?ABS74	JSR ?CLEANUP
+	LDY #ERRBRK	; set error code $80
+	STY STATUS
+?ABS75	JMP ?ENDCMD	; end command without retrying
+
+; read a byte
+
+?GETBYTE LDA #IMRECV
+?GETBY1	BIT IRQST
+	BPL ?ERRBRK	; break key pressed?
+	BNE ?GETBY1
+	LDA #RMRECV	; reset data-receive IRQ bit
+	STA IRQEN
+	LDA #MSKRECV	; enable data-receive IRQ
+	STA IRQEN
+	LDA SKSTAT
+	STA SKREST
+	BPL ?ERRFRM	; framing error
+	AND #$20
+	BEQ ?ERROVR	; data input overrun
+	LDA SERIN
+	RTS 
+
+; send a byte. Note. we don't check for the break key
+; here since it confuses several drives (eg. speedy 1050)
+
+?SENDBYT	TAX
+	LDA #IMSEND
+?WPUT	BIT IRQST
+	BNE ?WPUT
+	LDA #RMSEND
+	STA IRQEN
+	LDA #MSKSEND
+	STA IRQEN
+	TXA 
+	STA SEROUT
+
+?ADDSUM	CLC 
+	ADC CHKSUM
+	ADC #$00
+	STA CHKSUM
+	RTS 
+
+; the code starting here is only for diagnostic purposes and is
+; normally not included
+
+.if .def DIAGSIO
+?DIAGS	.DC $20 0
+?DIAGB	.DC $20 0
+?DIAGE	.DC $20 0
+?DIAGBT	.BYTE 0
+?DIAGST	.BYTE 0
+?DIAGER	.BYTE 0
+
+PDIAG	LDA ?DIAGER
+	BEQ ?PDIAG0
+
+	LDA #0
+	STA ?DIAGBT
+?PDIAG1	LDX ?DIAGBT
+	CPX #$0C
+	BEQ ?PDIAG2
+	LDA $0300,X
+	JSR ?PHEX
+	LDA #$20
+	JSR ?PUTCHR
+	INC ?DIAGBT
+	BNE ?PDIAG1
+?PDIAG2	LDA #155
+	JSR ?PUTCHR
+
+	LDA #0
+	STA ?DIAGBT
+?PDIAG3	LDX ?DIAGBT
+	CPX ?DIAGER
+	BEQ ?PDIAG0
+	LDA ?DIAGS,X
+	JSR ?PHEX
+	LDA #$20
+	JSR ?PUTCHR
+	LDX ?DIAGBT
+	LDA ?DIAGE,X
+	JSR ?PHEX
+	LDA #$20
+	JSR ?PUTCHR
+	LDX ?DIAGBT
+	LDA ?DIAGB,X
+	JSR ?PHEX
+	LDA #155
+	JSR ?PUTCHR
+	INC ?DIAGBT
+	BNE ?PDIAG3
+
+?PDIAG0	RTS
+
+?PHEX	PHA
+	LSR
+	LSR
+	LSR
+	LSR
+	TAX
+	LDA ?HEXTAB,X
+	JSR ?PUTCHR
+	PLA
+	AND #$0F
+	TAX
+	LDA ?HEXTAB,X
+
+?PUTCHR	TAY
+	LDA $E407
+	PHA
+	LDA $E406
+	PHA
+	TYA
+	RTS
+
+?HEXTAB	.BYTE "0123456789ABCDEF"
+
+.endif
+

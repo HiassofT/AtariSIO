@@ -1,4 +1,4 @@
-enum { eSIOCodeLength = 545,
-       eRelocatorLength = 27,
+enum { eSIOCodeLength = 787,
+       eRelocatorLength = 47,
        eOriginalAddress = 0x1000
 };
