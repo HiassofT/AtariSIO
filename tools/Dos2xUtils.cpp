@@ -1929,7 +1929,7 @@ bool  Dos2xUtils::AllocSectors(unsigned int num, unsigned int * secnums, bool al
 	return (num == 0);
 }
 
-static void EstimateDirectorySize(const char* directory, ESectorLength seclen, bool withPiconame,
+static void EstimateDirectorySize(const char* in_directory, ESectorLength seclen, bool withPiconame,
 	bool reserveBootEntry, unsigned int& numSectors)
 {
 	numSectors += 8;
@@ -1938,7 +1938,18 @@ static void EstimateDirectorySize(const char* directory, ESectorLength seclen, b
 	unsigned int filesize;
 	unsigned int picosize = 0;
 	char fullpath[PATH_MAX];
+	char directory[PATH_MAX];
 	char* shortstring;
+
+	strncpy(directory, in_directory, PATH_MAX);
+	directory[PATH_MAX-1] = 0;
+
+	size_t dir_len = strlen(directory);
+	if (dir_len) {
+		if (directory[dir_len-1] == '/') {
+			directory[dir_len-1] = 0;
+		}
+	}
 
 	struct stat statbuf;
 	if (stat(directory, &statbuf) != 0) {
@@ -1985,7 +1996,7 @@ static void EstimateDirectorySize(const char* directory, ESectorLength seclen, b
 			} else {
 				dirname++;
 			}
-			shortstring = ShortenFilename(dirname, 40);
+			shortstring = ShortenFilename(dirname, 38);
 			picosize = strlen(shortstring) + 1;
 		}
 	}
