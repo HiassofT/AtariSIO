@@ -180,12 +180,12 @@ void FileInput::ShowMatches()
 				col++;
 				if (col == columns) {
 					col = 0;
-					ALOG(tmpstr);
+					ALOG("%s", tmpstr);
 				}
 			}
 		}
 		if (col != 0) {
-			ALOG(tmpstr);
+			ALOG("%s", tmpstr);
 		}
 		delete[] tmpstr;
 	}

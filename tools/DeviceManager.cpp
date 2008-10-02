@@ -998,7 +998,7 @@ bool DeviceManager::InstallPrinterHandler(const char* dest, PrinterHandler::EEOL
 			return false;
 		}
 	} catch (ErrorObject& err) {
-		AERROR(err.AsString());
+		AERROR("%s", err.AsString());
 		return false;
 	}
 	ALOG("installed printer handler");

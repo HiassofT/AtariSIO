@@ -34,7 +34,7 @@ public:
 
 	virtual void AddString(const char* string)
 	{
-		fprintf(fFile, string);
+		fputs(string, fFile);
 	}
 
 	virtual void FlushOutput()
@@ -45,7 +45,7 @@ public:
 protected:
 	virtual void ReallyEndTraceLine()
 	{
-		fprintf(fFile, "\n");
+		fputs("\n", fFile);
 	}
 
 private:
