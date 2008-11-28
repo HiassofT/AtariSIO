@@ -243,6 +243,7 @@ typedef struct SIO_data_frame_struct {
 typedef struct SIO_timestamp_struct {
 	unsigned long long system_entering; /* set inside the ioctl() */
 	unsigned long long transmission_start; /* only set on send operations */
+	unsigned long long transmission_send_irq; /* timestamp of first send-char interrupt */
 	unsigned long long transmission_end; /* set in interrupt, only on send operations */
 	unsigned long long transmission_wakeup; /* set in kernel driver after sleeping */
 	unsigned long long uart_finished; /* set when uart has finished transmitting all bits */

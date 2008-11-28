@@ -64,13 +64,14 @@ typedef struct my_timestamp_struct {
 
 static void calc_relative_timestamps(MyTimestamps& ts)
 {
-	ts.sio.system_entering     -= ts.start;
-	ts.sio.transmission_start  -= ts.start;
-	ts.sio.transmission_end    -= ts.start;
-	ts.sio.transmission_wakeup -= ts.start;
-	ts.sio.uart_finished       -= ts.start;
-	ts.sio.system_leaving      -= ts.start;
-	ts.end                     -= ts.start;
+	ts.sio.system_entering        -= ts.start;
+	ts.sio.transmission_start     -= ts.start;
+	ts.sio.transmission_send_irq  -= ts.start;
+	ts.sio.transmission_end       -= ts.start;
+	ts.sio.transmission_wakeup    -= ts.start;
+	ts.sio.uart_finished          -= ts.start;
+	ts.sio.system_leaving         -= ts.start;
+	ts.end                        -= ts.start;
 }
 
 static MyTimestamps min_ts, max_ts, avg_ts;
@@ -82,6 +83,9 @@ static void check_ts_min(MyTimestamps& ts)
 	}
 	if (ts.sio.transmission_start < min_ts.sio.transmission_start) {
 		min_ts.sio.transmission_start = ts.sio.transmission_start;
+	}
+	if (ts.sio.transmission_send_irq < min_ts.sio.transmission_send_irq) {
+		min_ts.sio.transmission_send_irq = ts.sio.transmission_send_irq;
 	}
 	if (ts.sio.transmission_end < min_ts.sio.transmission_end) {
 		min_ts.sio.transmission_end = ts.sio.transmission_end;
@@ -108,6 +112,9 @@ static void check_ts_max(MyTimestamps& ts)
 	if (ts.sio.transmission_start > max_ts.sio.transmission_start) {
 		max_ts.sio.transmission_start = ts.sio.transmission_start;
 	}
+	if (ts.sio.transmission_send_irq > max_ts.sio.transmission_send_irq) {
+		max_ts.sio.transmission_send_irq = ts.sio.transmission_send_irq;
+	}
 	if (ts.sio.transmission_end > max_ts.sio.transmission_end) {
 		max_ts.sio.transmission_end = ts.sio.transmission_end;
 	}
@@ -130,6 +137,7 @@ static void init_ts_avg()
 {
 	avg_ts.sio.system_entering = 0;
 	avg_ts.sio.transmission_start = 0;
+	avg_ts.sio.transmission_send_irq = 0;
 	avg_ts.sio.transmission_end = 0;
 	avg_ts.sio.transmission_wakeup = 0;
 	avg_ts.sio.uart_finished = 0;
@@ -142,6 +150,7 @@ static void add_ts_avg(MyTimestamps& ts)
 {
 	avg_ts.sio.system_entering += ts.sio.system_entering;
 	avg_ts.sio.transmission_start += ts.sio.transmission_start;
+	avg_ts.sio.transmission_send_irq += ts.sio.transmission_send_irq;
 	avg_ts.sio.transmission_end += ts.sio.transmission_end;
 	avg_ts.sio.transmission_wakeup += ts.sio.transmission_wakeup;
 	avg_ts.sio.uart_finished += ts.sio.uart_finished;
@@ -156,6 +165,7 @@ static void avg_ts_divide(unsigned int count)
 	}
 	avg_ts.sio.system_entering /= count;
 	avg_ts.sio.transmission_start /= count;
+	avg_ts.sio.transmission_send_irq /= count;
 	avg_ts.sio.transmission_end /= count;
 	avg_ts.sio.transmission_wakeup /= count;
 	avg_ts.sio.uart_finished /= count;
@@ -165,9 +175,10 @@ static void avg_ts_divide(unsigned int count)
 
 static void print_ts(MyTimestamps& ts)
 {
-	printf("%6lld %6lld %6lld %6lld %6lld %6lld %6lld",
+	printf("%6lld %6lld %6lld %6lld %6lld %6lld %6lld %6lld",
 		ts.sio.system_entering,
 		ts.sio.transmission_start,
+		ts.sio.transmission_send_irq,
 		ts.sio.transmission_end,
 		ts.sio.transmission_wakeup,
 		ts.sio.uart_finished,
@@ -177,8 +188,8 @@ static void print_ts(MyTimestamps& ts)
 
 static void print_ts_info()
 {
-	//      123456 123456 123456 123456 123456 123456 123456
-	printf(" enter xstart   xend wakeup finish  leave    end");
+	//      123456 123456 123456 123456 123456 123456 123456 123456
+	printf(" enter xstart   xirq   xend wakeup finish  leave    end");
 }
 
 enum EOutputMode {
@@ -351,8 +362,34 @@ int main(int argc, char** argv)
 	sioTracer->SetTraceGroup(SIOTracer::eTraceDebug, true, tracer);
 	sioTracer->SetTraceGroup(SIOTracer::eTraceVerboseCommands, true, tracer);
 
+	EOutputMode outputMode = eOutputSummary;
+	bool calcLatencyParameters = false;
+
+	int c;
+	while ((c = getopt(argc, argv, "vgl")) > 0) {
+		switch(c) {
+		case 'v': 
+			outputMode = eOutputFull;
+			break;
+		case 'g': 
+			outputMode = eOutputGnuplot;
+			break;
+		case 'l':
+			calcLatencyParameters = true;
+			break;
+		default: break;
+		}
+	}
+	const char* siodev = 0;
+
+	if (optind < argc) {
+		siodev = argv[optind];
+		optind++;
+		printf("using SIO device %s\n", siodev);
+	}
+
 	try {
-		SIO = new SIOWrapper;
+		SIO = new SIOWrapper(siodev);
 	}
 	catch (ErrorObject& err) {
 		fprintf(stderr, "%s\n", err.AsString());
@@ -376,24 +413,6 @@ int main(int argc, char** argv)
 		return 1;
 	}
 
-	EOutputMode outputMode = eOutputSummary;
-	bool calcLatencyParameters = false;
-
-	int c;
-	while ((c = getopt(argc, argv, "vgl")) > 0) {
-		switch(c) {
-		case 'v': 
-			outputMode = eOutputFull;
-			break;
-		case 'g': 
-			outputMode = eOutputGnuplot;
-			break;
-		case 'l':
-			calcLatencyParameters = true;
-			break;
-		default: break;
-		}
-	}
 
 	if (calcLatencyParameters) {
 		// calculate latency and transmission speed
@@ -428,6 +447,7 @@ int main(int argc, char** argv)
 			measure_latency( 128, count, outputMode);
 			measure_latency( 129, count, outputMode);
 			measure_latency( 256, count, outputMode);
+			measure_latency( 257, count, outputMode);
 			measure_latency(1024, count, outputMode);
 		} else {
 			while (optind < argc) {

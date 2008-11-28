@@ -278,6 +278,7 @@ struct atarisio_dev {
 	unsigned char last_msr; /* =0; */
 
 	int enable_timestamp_recording; /* = 0; */
+	int got_send_irq_timestamp;
 	SIO_timestamps timestamps;
 
 	/* receive buffer */
@@ -422,10 +423,12 @@ static inline void timestamp_entering_ioctl(struct atarisio_dev* dev)
 	if (dev->enable_timestamp_recording) {
 		dev->timestamps.system_entering = get_timestamp();
 		dev->timestamps.transmission_start = dev->timestamps.system_entering;
+		dev->timestamps.transmission_send_irq = dev->timestamps.system_entering;
 		dev->timestamps.transmission_end = dev->timestamps.system_entering;
 		dev->timestamps.transmission_wakeup = dev->timestamps.system_entering;
 		dev->timestamps.uart_finished = dev->timestamps.system_entering;
 		dev->timestamps.system_leaving = dev->timestamps.system_entering;
+		dev->got_send_irq_timestamp = 0;
 	}
 }
 
@@ -433,6 +436,14 @@ static inline void timestamp_transmission_start(struct atarisio_dev* dev)
 {
 	if (dev->enable_timestamp_recording) {
 		dev->timestamps.transmission_start = get_timestamp();
+	}
+}
+
+static inline void timestamp_transmission_send_irq(struct atarisio_dev* dev)	/* note: only the first occurrence will be recorded */
+{
+	if (dev->enable_timestamp_recording && !dev->got_send_irq_timestamp) {
+		dev->timestamps.transmission_send_irq = get_timestamp();
+		dev->got_send_irq_timestamp = 1;
 	}
 }
 
@@ -693,6 +704,8 @@ static inline void send_chars(struct atarisio_dev* dev)
 		IRQ_PRINTK(DEBUG_STANDARD, "overrun error\n");
 	}
 	if (lsr & UART_LSR_THRE) {
+		timestamp_transmission_send_irq(dev);	/* note: only the first occurrence will be recorded */
+
 		spin_lock(&dev->tx_lock);
 		while ( (count > 0) && (dev->tx_buf.head != dev->tx_buf.tail) ) {
 			IRQ_PRINTK(DEBUG_VERY_NOISY, "transmit char 0x%02x\n",dev->tx_buf.buf[dev->tx_buf.tail]);
