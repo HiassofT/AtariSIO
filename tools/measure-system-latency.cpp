@@ -202,7 +202,7 @@ enum EOutputMode {
 // set blocksize to 0..1024 for raw send timing measurement,
 // setting it to a negative value means time ioctl latency only
 
-static unsigned long measure_latency(int blocksize, unsigned int count,  EOutputMode outputMode)
+static unsigned long measure_latency(int blocksize, unsigned int count,  EOutputMode outputMode, unsigned int baudrate=19200)
 {
 	if (blocksize > MAX_BLOCKSIZE) {
 		fprintf(stderr, "illegal blocksize %d\n", blocksize);
@@ -292,7 +292,7 @@ static unsigned long measure_latency(int blocksize, unsigned int count,  EOutput
 	}
 	TimestampType calculatedEndTime = 0;
 	if (blocksize > 0) {
-       		calculatedEndTime = ((TimestampType)blocksize * 10 * 1000 * 1000) / 19200;
+       		calculatedEndTime = ((TimestampType)blocksize * 10 * 1000 * 1000) / baudrate;
 	}
 
 	TimestampType realEndTime;
@@ -364,10 +364,17 @@ int main(int argc, char** argv)
 
 	EOutputMode outputMode = eOutputSummary;
 	bool calcLatencyParameters = false;
+	bool highspeedMode = false;
+
+	const char* siodev = 0;
 
 	int c;
-	while ((c = getopt(argc, argv, "vgl")) > 0) {
+	while ((c = getopt(argc, argv, "vglhd:")) > 0) {
 		switch(c) {
+		case 'd': 
+			siodev = optarg;
+			printf("using device %s\n", siodev);
+			break;
 		case 'v': 
 			outputMode = eOutputFull;
 			break;
@@ -377,15 +384,11 @@ int main(int argc, char** argv)
 		case 'l':
 			calcLatencyParameters = true;
 			break;
+		case 'h': 
+			highspeedMode = true;
+			break;
 		default: break;
 		}
-	}
-	const char* siodev = 0;
-
-	if (optind < argc) {
-		siodev = argv[optind];
-		optind++;
-		printf("using SIO device %s\n", siodev);
 	}
 
 	try {
@@ -413,6 +416,15 @@ int main(int argc, char** argv)
 		return 1;
 	}
 
+	unsigned int baudrate = 19200;
+	if (highspeedMode) {
+		baudrate = 57600;
+	}
+
+	if (SIO->SetBaudrate(baudrate)) {
+		printf("cannot set baudrate\n");
+		return 1;
+	}
 
 	if (calcLatencyParameters) {
 		// calculate latency and transmission speed
@@ -421,8 +433,8 @@ int main(int argc, char** argv)
 
 		unsigned int count = 50;
 
-		unsigned long t1 = measure_latency(b1, count, eOutputNone);
-		unsigned long t2 = measure_latency(b2, count, eOutputNone);
+		unsigned long t1 = measure_latency(b1, count, eOutputNone, baudrate);
+		unsigned long t2 = measure_latency(b2, count, eOutputNone, baudrate);
 
 		long intLatency;
 		long intSpeed;
@@ -441,14 +453,14 @@ int main(int argc, char** argv)
 		unsigned int count = 10;
 
 		if (optind==argc) {
-			measure_latency(  -1, count, outputMode);
-			measure_latency(   0, count, outputMode);
-			measure_latency(   1, count, outputMode);
-			measure_latency( 128, count, outputMode);
-			measure_latency( 129, count, outputMode);
-			measure_latency( 256, count, outputMode);
-			measure_latency( 257, count, outputMode);
-			measure_latency(1024, count, outputMode);
+			measure_latency(  -1, count, outputMode, baudrate);
+			measure_latency(   0, count, outputMode, baudrate);
+			measure_latency(   1, count, outputMode, baudrate);
+			measure_latency( 128, count, outputMode, baudrate);
+			measure_latency( 129, count, outputMode, baudrate);
+			measure_latency( 256, count, outputMode, baudrate);
+			measure_latency( 257, count, outputMode, baudrate);
+			measure_latency(1024, count, outputMode, baudrate);
 		} else {
 			while (optind < argc) {
 				int blocksize;
@@ -457,7 +469,7 @@ int main(int argc, char** argv)
 				} else {
 			       		blocksize = atoi(argv[optind]);
 				}
-				measure_latency(blocksize, 10, outputMode);
+				measure_latency(blocksize, 10, outputMode, baudrate);
 				optind++;
 			}
 		}
