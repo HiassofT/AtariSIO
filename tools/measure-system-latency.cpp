@@ -295,28 +295,33 @@ static unsigned long measure_latency(int blocksize, unsigned int count,  EOutput
        		calculatedEndTime = ((TimestampType)blocksize * 10 * 1000 * 1000) / baudrate;
 	}
 
-	TimestampType realEndTime;
+	TimestampType realEndTime, realTransmissionTime;
 
 	if (blocksize > 0) {
 		realEndTime = avg_ts.sio.uart_finished;
+		realTransmissionTime = avg_ts.sio.uart_finished - avg_ts.sio.transmission_send_irq;
 	} else {
 		realEndTime = avg_ts.end;
+		realTransmissionTime = avg_ts.end;
 	}
 
 	switch (outputMode) {
 	case eOutputGnuplot:
-		printf("%d %lld", blocksize, realEndTime);
+		//printf("%d %lld", blocksize, realEndTime);
+		printf("%d %lld", blocksize, realTransmissionTime);
 		break;
 	case eOutputFull:
-		printf("\navg. end time:");
+		printf("\navg. xmit time:");
 	case eOutputSummary:
-		printf(" %7lld usec", realEndTime);
+		printf(" %7lld usec", realTransmissionTime);
+		//printf(" %7lld usec", realEndTime);
 		break;
 	default: break;
 	}
 
 	if (calculatedEndTime) {
-		signed long timeDiff = (signed long)realEndTime - (signed long)calculatedEndTime;
+		//signed long timeDiff = (signed long)realEndTime - (signed long)calculatedEndTime;
+		signed long timeDiff = (signed long)realTransmissionTime - (signed long)calculatedEndTime;
 		double error = ((double)timeDiff / (double)calculatedEndTime) * 100.0;
 		switch (outputMode) {
 		case eOutputSummary:
@@ -456,6 +461,9 @@ int main(int argc, char** argv)
 			measure_latency(  -1, count, outputMode, baudrate);
 			measure_latency(   0, count, outputMode, baudrate);
 			measure_latency(   1, count, outputMode, baudrate);
+			measure_latency(   2, count, outputMode, baudrate);
+			measure_latency(   3, count, outputMode, baudrate);
+			measure_latency(   4, count, outputMode, baudrate);
 			measure_latency( 128, count, outputMode, baudrate);
 			measure_latency( 129, count, outputMode, baudrate);
 			measure_latency( 256, count, outputMode, baudrate);
