@@ -80,9 +80,8 @@
 /*
 #define ATARISIO_DEBUG_TIMING
 */
-/*
+
 #define ATARISIO_PRINT_TIMESTAMPS
-*/
 
 /*
  * if ATARISIO_EARLY_NOTIFICATION is defined, poll will indicate a
@@ -306,12 +305,17 @@ struct atarisio_dev {
 	volatile struct cmdframe_buf_struct {
 		unsigned char buf[5];
 		unsigned int is_valid;
-		unsigned int serial_number;
 		unsigned int receiving;
 		unsigned int pos;
-		unsigned int error_counter;
+
+		unsigned int ok_chars; /* correctly received chars */
+		unsigned int error_chars; /* received chars with (i.e. framing) errors */
+		unsigned int break_chars; /* received breaks */
+
 		unsigned long long start_reception_time; /* in usec */
 		unsigned long long end_reception_time; /* in usec */
+
+		unsigned int serial_number;
 		unsigned int missed_count;
 	} cmdframe_buf;
 
@@ -340,6 +344,9 @@ struct atarisio_dev {
 		unsigned char LCR;
 		unsigned char FCR;
 		unsigned long baud_base;
+
+		unsigned int just_switched_baud; /* true if we just switched baud rates */
+		/* this flag is cleared after successful reception of a command frame */
 	} serial_config;
 
 	spinlock_t serial_config_lock; /* = SPIN_LOCK_UNLOCKED; */
@@ -506,7 +513,8 @@ static inline void reset_tx_buf(struct atarisio_dev* dev)
 	spin_unlock_irqrestore(&dev->tx_lock, flags);
 }
 
-static inline void reset_cmdframe_buf(struct atarisio_dev* dev, int do_lock)
+/* reset command frame buffer data so that a new reception can start */
+static inline void reset_cmdframe_buf_data(struct atarisio_dev* dev, int do_lock)
 {
 	unsigned long flags = 0;
 	if (do_lock) {
@@ -514,12 +522,32 @@ static inline void reset_cmdframe_buf(struct atarisio_dev* dev, int do_lock)
 	}
 
 	dev->cmdframe_buf.is_valid = 0;
-	dev->cmdframe_buf.serial_number=0;
 	dev->cmdframe_buf.receiving = 0;
 	dev->cmdframe_buf.pos = 0;
-	dev->cmdframe_buf.error_counter=0;
+	dev->cmdframe_buf.ok_chars = 0;
+	dev->cmdframe_buf.error_chars = 0;
+	dev->cmdframe_buf.break_chars = 0;
 	dev->cmdframe_buf.start_reception_time=0;
 	dev->cmdframe_buf.end_reception_time=0;
+
+	if (do_lock) {
+		spin_unlock_irqrestore(&dev->cmdframe_lock, flags);
+	}
+}
+
+/* init commandframe buffer and statistics like counters etc. */
+static inline void init_cmdframe_buf(struct atarisio_dev* dev, int do_lock)
+{
+	unsigned long flags = 0;
+	if (do_lock) {
+		spin_lock_irqsave(&dev->cmdframe_lock, flags);
+	}
+
+	/* clear all values */
+	reset_cmdframe_buf_data(dev, 0);
+
+	/* reset statistics */
+	dev->cmdframe_buf.serial_number=0;
 	dev->cmdframe_buf.missed_count=0;
 
 	if (do_lock) {
@@ -589,6 +617,8 @@ static int set_baudrate(struct atarisio_dev* dev, unsigned int baudrate, int do_
 	}
 
 	dev->serial_config.baudrate = baudrate;
+	dev->serial_config.just_switched_baud = 1;
+
 	divisor = dev->serial_config.baud_base / baudrate;
 
 	serial_out(dev, UART_LCR, dev->serial_config.LCR | UART_LCR_DLAB);
@@ -624,6 +654,10 @@ static inline void reset_fifos(struct atarisio_dev* dev)
 
 	serial_out(dev, UART_FCR, 0);
 	serial_out(dev, UART_FCR, dev->serial_config.FCR | UART_FCR_CLEAR_RCVR | UART_FCR_CLEAR_XMIT);
+
+	/* read LSR and MSR to clear any remaining status bits */
+	(void) serial_in(dev, UART_LSR);
+	(void) serial_in(dev, UART_MSR);
 }
 
 static inline void receive_chars(struct atarisio_dev* dev)
@@ -651,27 +685,33 @@ static inline void receive_chars(struct atarisio_dev* dev)
 		if (lsr & (UART_LSR_FE | UART_LSR_BI | UART_LSR_PE) ) {
 			if (lsr & UART_LSR_FE) {
 				IRQ_PRINTK(DEBUG_NOISY, "got framing error\n");
+				if (dev->cmdframe_buf.receiving) {
+					dev->cmdframe_buf.error_chars++;
+				}
 			}
 			if (lsr & UART_LSR_PE) {
 				IRQ_PRINTK(DEBUG_NOISY, "got parity error (?)\n");
+				if (dev->cmdframe_buf.receiving) {
+					dev->cmdframe_buf.error_chars++;
+				}
 			}
 			if (lsr & UART_LSR_BI) {
 				IRQ_PRINTK(DEBUG_NOISY, "got break\n");
+				if (dev->cmdframe_buf.receiving) {
+					dev->cmdframe_buf.break_chars++;
+				}
 			}
-
-			if (dev->cmdframe_buf.receiving) {
-				dev->cmdframe_buf.error_counter++;
-			}
+			IRQ_PRINTK(DEBUG_VERY_NOISY, "received (broken) character 0x%02x\n",c);
 		} else {
 			if (dev->cmdframe_buf.receiving) {
 				if (dev->cmdframe_buf.pos<5) {
 					dev->cmdframe_buf.buf[dev->cmdframe_buf.pos] = c;
+					dev->cmdframe_buf.pos++;
 					IRQ_PRINTK(DEBUG_VERY_NOISY, "received cmdframe character 0x%02x\n",c);
 				} else {
 					IRQ_PRINTK(DEBUG_VERY_NOISY, "sinking cmdframe character 0x%02x\n",c);
-					dev->cmdframe_buf.error_counter++;
 				}
-				dev->cmdframe_buf.pos++;
+				dev->cmdframe_buf.ok_chars++;
 			} else {
 				if ( (dev->rx_buf.head+1) % IOBUF_LENGTH != dev->rx_buf.tail ) {
 					dev->rx_buf.buf[dev->rx_buf.head] = c;
@@ -765,7 +805,7 @@ static inline void check_modem_lines_before_receive(struct atarisio_dev* dev, un
 {
 	if (dev->current_mode == MODE_SIOSERVER) {
 		if ( (new_msr & dev->sioserver_command_line) != (dev->last_msr & dev->sioserver_command_line)) {
-			IRQ_PRINTK(DEBUG_VERY_NOISY, "msr changed from 0x%02x to 0x%02x [%ld]\n",dev->last_msr, new_msr, jiffies);
+			IRQ_PRINTK(DEBUG_VERY_NOISY, "msr changed from 0x%02x to 0x%02x\n",dev->last_msr, new_msr);
 			if (new_msr & dev->sioserver_command_line) {
 				PRINT_TIMESTAMP("start of command frame");
 				/* start of a new command frame */
@@ -778,11 +818,9 @@ static inline void check_modem_lines_before_receive(struct atarisio_dev* dev, un
 				if (dev->cmdframe_buf.receiving) {
 					IRQ_PRINTK(DEBUG_STANDARD, "restarted reception of command frame (detected new frame)\n");
 				}
+				reset_cmdframe_buf_data(dev, 0);
 				dev->cmdframe_buf.receiving = 1;
 				dev->cmdframe_buf.start_reception_time = timeval_to_usec(&dev->irq_timestamp);
-				dev->cmdframe_buf.pos = 0;
-				dev->cmdframe_buf.is_valid = 0;
-				dev->cmdframe_buf.error_counter = 0;
 				dev->cmdframe_buf.serial_number++;
 
 				spin_unlock(&dev->cmdframe_lock);
@@ -796,20 +834,115 @@ static inline void check_modem_lines_before_receive(struct atarisio_dev* dev, un
 }
 
 #define DEBUG_PRINT_CMDFRAME_BUF(dev) \
-	"cmdframe_buf: %02x %02x %02x %02x %02x err: %d pos=%d\n",\
+	"cmdframe_buf: %02x %02x %02x %02x %02x pos=%d rx=%d er=%d brk=%d\n",\
 	dev->cmdframe_buf.buf[0],\
 	dev->cmdframe_buf.buf[1],\
 	dev->cmdframe_buf.buf[2],\
 	dev->cmdframe_buf.buf[3],\
 	dev->cmdframe_buf.buf[4],\
-	dev->cmdframe_buf.error_counter,\
-	dev->cmdframe_buf.pos
+	dev->cmdframe_buf.pos,\
+	dev->cmdframe_buf.ok_chars,\
+	dev->cmdframe_buf.error_chars,\
+	dev->cmdframe_buf.break_chars
+
+enum command_frame_quality {
+	command_frame_ok = 0,
+	command_frame_minor_error = 1,	/* for example checksum error, ignore them */
+	command_frame_normal_error = 2,	/* a few (framing) errors, countermeasure may be needed */
+	command_frame_major_error = 3	/* severe error, take immediate contermeasures */
+};
+
+static enum command_frame_quality check_command_frame_quality(struct atarisio_dev* dev)
+{
+	/* break characters may indicate that our speed is too high */
+	if (dev->cmdframe_buf.break_chars > 1) {
+		return command_frame_major_error;
+	}
+
+	/* 7 or more received charaters usually means our speed is too high */
+	if (dev->cmdframe_buf.ok_chars + dev->cmdframe_buf.error_chars + dev->cmdframe_buf.break_chars >= 7) {
+		return command_frame_major_error;
+	}
+
+	/* 3 or less characters may indicate our speed is too low */
+	if (dev->cmdframe_buf.ok_chars + dev->cmdframe_buf.error_chars <= 3) {
+		return command_frame_major_error;
+	}
+
+	/* a single break can mean anything, handle it as a normal error */
+	if (dev->cmdframe_buf.break_chars) {
+		return command_frame_normal_error;
+	}
+
+	/* 5 characters without errors, validate the checksum */
+	if (dev->cmdframe_buf.ok_chars == 5 && dev->cmdframe_buf.error_chars == 0) {
+		unsigned char checksum = calculate_checksum((unsigned char*)dev->cmdframe_buf.buf, 0, 4, 5);
+		if (dev->cmdframe_buf.buf[4] == checksum) {
+			IRQ_PRINTK(DEBUG_NOISY, "found command frame\n");
+			return command_frame_ok;
+		} else {
+			IRQ_PRINTK(DEBUG_STANDARD, "command frame checksum error\n");
+			return command_frame_minor_error;
+		}
+	}
+
+	/* if we got up to here, we have received 4 to 6 characters in total */
+
+	/* a single framing error, but 5 bytes in total - ignore it */
+	if (dev->cmdframe_buf.ok_chars == 4 && dev->cmdframe_buf.error_chars == 1) {
+		return command_frame_minor_error;
+	}
+
+	/* default: a normal error */
+	return command_frame_normal_error;
+}
+
+/* check if the command frame is OK (return 1 in this case) and take possible counter-measures */
+static inline int validate_command_frame(struct atarisio_dev* dev)
+{
+	int last_switchbaud;
+	enum command_frame_quality quality;
+
+	spin_lock(&dev->serial_config_lock);
+	last_switchbaud = dev->serial_config.just_switched_baud;
+	dev->serial_config.just_switched_baud = 0;
+	spin_unlock(&dev->serial_config_lock);
+
+	if (dev->cmdframe_buf.receiving) {
+		quality = check_command_frame_quality(dev);
+		if (quality == command_frame_ok) {
+			return 1;
+		}
+	} else {
+		IRQ_PRINTK(DEBUG_NOISY, "indicated end of command frame, but I'm not currently receiving\n");
+		/* the UART might have locked up, try resetting the FIFOs */
+		reset_fifos(dev);
+		return 0;
+	}
+
+	reset_fifos(dev);
+
+	if (quality == command_frame_minor_error) {
+		return 0;
+	}
+
+	if (quality == command_frame_normal_error) {
+		/* don't switch baudrates too fast, wait until the next command frame */
+		if (last_switchbaud) {
+			return 0;
+		}
+	}
+
+	try_switchbaud(dev);	/* this also sets just_switched_baud */
+
+	reset_fifos(dev);
+
+	return 0;
+}
 
 static inline void check_modem_lines_after_receive(struct atarisio_dev* dev, unsigned char new_msr)
 {
 	int do_wakeup = 0;
-	int OK = 1;
-	unsigned char checksum;
 
 	if (dev->current_mode == MODE_SIOSERVER) {
 		/*
@@ -832,66 +965,15 @@ static inline void check_modem_lines_after_receive(struct atarisio_dev* dev, uns
 			dev->rx_buf.tail = dev->rx_buf.head; /* flush input buffer */
 			dev->tx_buf.tail = dev->tx_buf.head; /* flush output buffer */
 
-			if (dev->cmdframe_buf.pos != 5) {
-				if (dev->cmdframe_buf.pos <=3 || dev->cmdframe_buf.pos >=7) {
-					dev->cmdframe_buf.error_counter+=5;
-				} else {
-					dev->cmdframe_buf.error_counter++;
-				}
-				IRQ_PRINTK(DEBUG_NOISY, "got %d chars for this command frame\n",
-					dev->cmdframe_buf.pos);
-				OK = 0;
-			}
-
-			if (! dev->cmdframe_buf.receiving) {
-			 	IRQ_PRINTK(DEBUG_NOISY, "indicated end of command frame, but I'm not currently receiving\n");
-				/* the UART might have locked up, try resetting the FIFOs */
-				reset_fifos(dev);
-				OK = 0;
-			}
-
-			if (dev->cmdframe_buf.error_counter>0) {
-				OK = 0;
-			}
-
-			if (OK) {
-				IRQ_PRINTK(DEBUG_NOISY, DEBUG_PRINT_CMDFRAME_BUF(dev));
-
-				checksum = calculate_checksum((unsigned char*)dev->cmdframe_buf.buf, 0, 4, 5);
-
-				if (dev->cmdframe_buf.buf[4] == checksum) {
-					PRINT_TIMESTAMP("found command frame");
-					IRQ_PRINTK(DEBUG_NOISY, "found command frame [%ld]\n", jiffies);
-					do_wakeup = 1;
-
-					dev->cmdframe_buf.is_valid = 1;
-					dev->cmdframe_buf.end_reception_time = timeval_to_usec(&dev->irq_timestamp);
-					dev->cmdframe_buf.error_counter = 0;
-
-				} else {
-					IRQ_PRINTK(DEBUG_STANDARD, "command frame checksum error [%ld]\n",jiffies);
-					IRQ_PRINTK(DEBUG_NOISY, DEBUG_PRINT_CMDFRAME_BUF(dev));
-
-					dev->cmdframe_buf.is_valid = 0;
-					dev->cmdframe_buf.error_counter++;
-					dev->cmdframe_buf.pos=0;
-				}
+			IRQ_PRINTK(DEBUG_NOISY, DEBUG_PRINT_CMDFRAME_BUF(dev));
+			if (validate_command_frame(dev)) {
+				do_wakeup = 1;
+				dev->cmdframe_buf.is_valid = 1;
+				dev->cmdframe_buf.end_reception_time = timeval_to_usec(&dev->irq_timestamp);
 			} else {
-				IRQ_PRINTK(DEBUG_STANDARD, "errors in command frame reception\n");
-				IRQ_PRINTK(DEBUG_NOISY, DEBUG_PRINT_CMDFRAME_BUF(dev));
+				dev->cmdframe_buf.is_valid = 0;
 			}
 
-			if (dev->cmdframe_buf.error_counter >= 3) {
-				IRQ_PRINTK(DEBUG_NOISY, "error counter exceeded limit [%d]\n",dev->cmdframe_buf.error_counter);
-				try_switchbaud(dev);
-
-				/* some 16550 chips get confused if we switch the baudrate too
-				 * fast. clearing the FIFOs solves this problem, but don't ask
-				 * me why...
-				 */
-				reset_fifos(dev);
-
-			}
 			dev->cmdframe_buf.receiving = 0;
 
 			spin_unlock(&dev->cmdframe_lock);
@@ -1196,7 +1278,7 @@ static inline int send_command_frame(struct atarisio_dev* dev, SIO_parameters* p
 	cmd_frame[4] = calculate_checksum(cmd_frame, 0, 4, 5);
 
 	while (retry < MAX_COMMAND_FRAME_RETRIES) {
-		DBG_PRINTK(DEBUG_NOISY, "initiating command frame [%ld]\n",jiffies);
+		DBG_PRINTK(DEBUG_NOISY, "initiating command frame\n");
 
 		dev->rx_buf.tail = dev->rx_buf.head; /* clear rx-buffer */
 
@@ -1238,7 +1320,7 @@ static inline int send_command_frame(struct atarisio_dev* dev, SIO_parameters* p
 				DBG_PRINTK(DEBUG_STANDARD, "wait_receive returned %d\n",w);
 				return w;
 			} else {
-				DBG_PRINTK(DEBUG_STANDARD, "waiting for command frame ACK timed out [%ld]\n", jiffies);
+				DBG_PRINTK(DEBUG_STANDARD, "waiting for command frame ACK timed out\n");
 
 				last_err = -EATARISIO_COMMAND_TIMEOUT;
 				goto again;
@@ -1597,7 +1679,7 @@ static void set_1050_2_pc_mode(struct atarisio_dev* dev, int do_locks)
 		}
 	}
 
-	reset_cmdframe_buf(dev, 1);
+	init_cmdframe_buf(dev, 1);
 }
 
 static void set_prosystem_mode(struct atarisio_dev* dev, int do_locks)
@@ -1631,7 +1713,7 @@ static void set_prosystem_mode(struct atarisio_dev* dev, int do_locks)
 		}
 	}
 
-	reset_cmdframe_buf(dev, 1);
+	init_cmdframe_buf(dev, 1);
 }
 
 /* clear DTR and RTS to make autoswitching Atarimax interface work */
@@ -1665,7 +1747,7 @@ static void set_sioserver_mode(struct atarisio_dev* dev, int do_locks)
 		spin_unlock_irqrestore(&dev->uart_lock, flags);
 	}
 
-	reset_cmdframe_buf(dev, 1);
+	init_cmdframe_buf(dev, 1);
 }
 
 static void set_sioserver_mode_dsr(struct atarisio_dev* dev, int do_locks)
@@ -1692,7 +1774,7 @@ static void set_sioserver_mode_dsr(struct atarisio_dev* dev, int do_locks)
 		spin_unlock_irqrestore(&dev->uart_lock, flags);
 	}
 
-	reset_cmdframe_buf(dev, 1);
+	init_cmdframe_buf(dev, 1);
 }
 
 static void set_sioserver_mode_cts(struct atarisio_dev* dev, int do_locks)
@@ -1719,7 +1801,7 @@ static void set_sioserver_mode_cts(struct atarisio_dev* dev, int do_locks)
 		spin_unlock_irqrestore(&dev->uart_lock, flags);
 	}
 
-	reset_cmdframe_buf(dev, 1);
+	init_cmdframe_buf(dev, 1);
 }
 
 
@@ -2079,10 +2161,12 @@ static void print_status(struct atarisio_dev* dev)
 		dev->cmdframe_buf.serial_number,
 		dev->cmdframe_buf.missed_count);
 
-	PRINTK("cmdframe: receiving=%d pos=%d error_counter=%d\n",
+	PRINTK("cmdframe: receiving=%d pos=%d rx=%d er=%d brk=%d\n",
 		dev->cmdframe_buf.receiving,
 		dev->cmdframe_buf.pos,
-		dev->cmdframe_buf.error_counter);
+		dev->cmdframe_buf.ok_chars,
+		dev->cmdframe_buf.error_chars,
+		dev->cmdframe_buf.break_chars);
 
 	PRINTK("serial_config: baudrate=%d\n",
 		dev->serial_config.baudrate);
@@ -2403,7 +2487,7 @@ static int atarisio_open(struct inode* inode, struct file* filp)
 
 	reset_rx_buf(dev);
 	reset_tx_buf(dev);
-	reset_cmdframe_buf(dev, 1);
+	init_cmdframe_buf(dev, 1);
 
 	dev->do_autobaud = 0;
 	dev->default_baudrate = ATARISIO_STANDARD_BAUDRATE;
@@ -2415,6 +2499,7 @@ static int atarisio_open(struct inode* inode, struct file* filp)
 
 	/* dev->serial_config.baud_base = 115200; */
 	dev->serial_config.baudrate = dev->default_baudrate;
+	dev->serial_config.just_switched_baud = 1;
 	dev->serial_config.IER = UART_IER_RDI;
 	dev->serial_config.MCR = UART_MCR_OUT2;
 			/* OUT2 is essential for enabling interrupts - when it's required :-) */
