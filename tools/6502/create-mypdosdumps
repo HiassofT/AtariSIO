@@ -1,0 +1,19 @@
+#!/bin/sh
+
+if [ $# -ne 2 ] ; then
+	echo "usage: $0 mypdos-directory version"
+	exit 1
+fi
+
+MYDIR="$1"
+MYVER="$2"
+
+do_dump()
+{
+	dd if="${MYDIR}/${1}" bs=1 count=384 | xxd -i > "boot${2}${MYVER}.c"
+	dd if="${MYDIR}/${1}" bs=1 skip=384 | xxd -i > "pico${2}${MYVER}.c"
+}
+
+do_dump mypdos.bin std
+do_dump mypdosr.bin rem
+do_dump mypdosb.bin bare

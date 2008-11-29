@@ -60,11 +60,21 @@ public:
 		eBootTurboDos21HS = 5,
 		eBootMyPicoDos403 = 6,
 		eBootMyPicoDos403HS = 7,
+
 		eBootMyPicoDos404 = 8,
 		eBootMyPicoDos404N = 9,
 		eBootMyPicoDos404R = 10,
 		eBootMyPicoDos404RN = 11,
 		eBootMyPicoDos404B = 12,
+
+		eBootMyPicoDos405 = 13,
+		eBootMyPicoDos405N = 14,
+		eBootMyPicoDos405R = 15,
+		eBootMyPicoDos405RN = 16,
+		eBootMyPicoDos405B = 17,
+
+		ePicoBoot405 = 18,
+
 		eBootDefault = eBootAtariSIOMyPicoDos
 	};
 

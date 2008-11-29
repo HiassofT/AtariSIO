@@ -203,6 +203,7 @@ else
 	install -o root -g users -m 4750 atarixfer $(INST_DIR)/bin/atarixfer
 	install -o root -g users -m 755 adir $(INST_DIR)/bin/adir
 	install -o root -g users -m 755 dir2atr $(INST_DIR)/bin/dir2atr
+	install -o root -g users -m 755 ataricom $(INST_DIR)/bin/ataricom
 #ifdef ENABLE_ATP
 #	install -o root -g users -m 755 atr2atp $(INST_DIR)/bin/atr2atp
 #	install -o root -g users -m 755 atpdump $(INST_DIR)/bin/atpdump
@@ -219,6 +220,7 @@ uninstall:
 #	rm -f $(INST_DIR)/bin/atpdump
 	rm -f $(INST_DIR)/bin/adir
 	rm -f $(INST_DIR)/bin/dir2atr
+	rm -f $(INST_DIR)/bin/ataricom
 
 dep:
 	rm -f .depend
