@@ -2,7 +2,7 @@
    atarisio V1.03
    a kernel module for handling the Atari 8bit SIO protocol
 
-   Copyright (C) 2002-2008 Matthias Reichl <hias@horus.com>
+   Copyright (C) 2002-2009 Matthias Reichl <hias@horus.com>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -71,6 +71,40 @@
 #define irqreturn_t void
 #define IRQ_RETVAL(foo)
 #endif
+
+/* additional definitions that are not present in 2.2 kernels */
+#ifndef UART_ICR
+#define UART_ICR	0x05    /* Index Control Register */
+#endif
+
+#ifndef UART_ACR
+#define UART_ACR	0x00    /* Additional Control Register */
+#endif
+
+#ifndef UART_ACR_ICRRD
+#define UART_ACR_ICRRD	0x40    /* ICR Read enable */
+#endif
+
+#ifndef UART_ID1
+#define UART_ID1        0x08    /* ID #1 */
+#endif
+
+#ifndef UART_ID2
+#define UART_ID2        0x09    /* ID #2 */
+#endif
+
+#ifndef UART_ID3
+#define UART_ID3        0x0A    /* ID #3 */
+#endif
+
+#ifndef UART_REV
+#define UART_REV        0x0B    /* Revision */
+#endif
+
+#ifndef UART_CSR
+#define UART_CSR        0x0C    /* Channel Software Reset */
+#endif
+
 
 /* debug levels: */
 #define DEBUG_STANDARD 1
@@ -2820,14 +2854,12 @@ static int disable_serial_port(struct atarisio_dev* dev)
 			switch (ss.type) {
 			case PORT_16550:
 			case PORT_16550A:
-				break;
 #ifdef PORT_16C950
 			case PORT_16C950:
-				dev->is_16c950 = 1;
-				break;
 #endif
+				break;
 			default:
-				PRINTK("illegal port type - only 16550(A) is supported\n");
+				PRINTK("illegal port type %d - only 16550(A) and 16C950 are supported\n", ss.type);
 				goto fail_close;
 			}
 
