@@ -269,9 +269,6 @@ struct atarisio_dev {
 	/* flag if the UART is a 16C950, not a 16C550 */
 	int is_16c950;
 
-	/* shadow of 16c950 ACR register - cannot be read back */
-	u8 shadow_acr;
-
 	/* lock for UART hardware registers */
 	spinlock_t uart_lock; /* = SPIN_LOCK_UNLOCKED; */
 
@@ -346,11 +343,12 @@ struct atarisio_dev {
 
 	volatile struct serial_config_struct {
 		unsigned int baudrate;
-		unsigned char IER;
-		unsigned char MCR;
-		unsigned char LCR;
-		unsigned char FCR;
 		unsigned long baud_base;
+		u8 IER;
+		u8 MCR;
+		u8 LCR;
+		u8 FCR;
+		u8 ACR;	/* for 16C950 UARTs */
 
 		unsigned int just_switched_baud; /* true if we just switched baud rates */
 		/* this flag is cleared after successful reception of a command frame */
@@ -427,11 +425,6 @@ static inline void write_icr(struct atarisio_dev* dev, u8 index, u8 value)
 {
 	serial_out(dev, UART_SCR, index);
 	serial_out(dev, UART_ICR, value);
-	/*
-	if (index == UART_ACR) {
-		dev->shadow_acr = value;
-	}
-	*/
 }
 
 static inline u8 read_icr(struct atarisio_dev* dev, u8 index)
@@ -439,39 +432,47 @@ static inline u8 read_icr(struct atarisio_dev* dev, u8 index)
 	u8 ret;
 
 	/* first enable read access to the ICRs */
-	write_icr(dev, UART_ACR, dev->shadow_acr | UART_ACR_ICRRD);
+	write_icr(dev, UART_ACR, dev->serial_config.ACR | UART_ACR_ICRRD);
 
 	/* access the ICR register */
 	serial_out(dev, UART_SCR, index);
 	ret = serial_in(dev, UART_ICR);
 
 	/* disable read access to the ICRs */
-	write_icr(dev, UART_ACR, dev->shadow_acr & ~UART_ACR_ICRRD);
+	write_icr(dev, UART_ACR, dev->serial_config.ACR);
 
 	return ret;
 }
 
 /*
- * try to detect a 16c950 chip
+ * try to detect a 16C950 chip
  */
 static int detect_16c950(struct atarisio_dev* dev)
 {
 	u8 id1,id2,id3,rev;
+
+	/* according to 8250.c of the Linux kernel enhanced mode must be enabled
+	 * for the 16C952 rev B, otherwise detection will fail
+	 */
+	serial_out(dev, UART_LCR, 0xBF);
+	serial_out(dev, UART_EFR, UART_EFR_ECB);
+	serial_out(dev, UART_LCR, 0);
+
 	id1=read_icr(dev, UART_ID1);
 	id2=read_icr(dev, UART_ID2);
 	id3=read_icr(dev, UART_ID3);
 	rev=read_icr(dev, UART_REV);
 
 	if ((id1 == id2) && (id1 == id3) && (id1 == rev)) {
-		DBG_PRINTK(DEBUG_STANDARD, "not a 16c950, ID registers all contain %02x\n", id1);
+		DBG_PRINTK(DEBUG_STANDARD, "not a 16C950, ID registers all contain %02x\n", id1);
 		return 0;
 	}
 	if ((id1 == 0x16) && (id2 == 0xc9) && ( (id3 & 0xf0) == 0x50)) {
-		PRINTK("detected 16c950: id = %02x%02x%02x rev = %02x\n",
+		PRINTK("detected 16C950: id = %02X%02X%02X rev = %02X\n",
 			id1, id2, id3, rev);
 		return 1;
 	} else {
-		DBG_PRINTK(DEBUG_STANDARD,"unknown (possible 16c950) chip: id = %02x%02x%02x rev = %02x\n",
+		DBG_PRINTK(DEBUG_STANDARD,"unknown (possible 16C950) chip: id = %02X%02X%02X rev = %02X\n",
 			id1, id2, id3, rev);
 		return 0;
 	}
@@ -2565,6 +2566,19 @@ static int atarisio_open(struct inode* inode, struct file* filp)
 	spin_lock_irqsave(&dev->uart_lock, flags);
 	spin_lock(&dev->serial_config_lock);
 
+	if (dev->is_16c950) {
+		dev->serial_config.ACR = 0;
+
+		/* now reset the 16c950 so we are in a known state */
+		write_icr(dev, UART_CSR, 0);
+
+		/* clear the EFR to set 16C550 mode */
+		serial_out(dev, UART_LCR, 0xbf);
+		serial_out(dev, UART_FCR, 0);
+		serial_out(dev, UART_LCR, 0);
+	}
+
+
 	/* dev->serial_config.baud_base = 115200; */
 	dev->serial_config.baudrate = dev->default_baudrate;
 	dev->serial_config.just_switched_baud = 1;
@@ -2696,7 +2710,7 @@ struct atarisio_dev* alloc_atarisio_dev(unsigned int id)
 
 	atarisio_devices[id] = dev;
 	dev->is_16c950 = 0;
-	dev->shadow_acr = 0;
+	dev->serial_config.ACR = 0;
 	dev->busy = 0;
 	dev->id = id;
 	dev->uart_lock = SPIN_LOCK_UNLOCKED;
@@ -2965,16 +2979,6 @@ static int check_register_atarisio(struct atarisio_dev* dev)
 
 	if (detect_16c950(dev)) {
 		dev->is_16c950 = 1;
-		/* now reset the 16c950 so we are in a known state */
-		write_icr(dev, UART_CSR, 0);
-
-		/* just to be sure: explicitly set 16c550 mode */
-
-		/* clear the EFR (guarded by LCR=0xbf) */
-		serial_out(dev, UART_LCR, 0xbf);
-		serial_out(dev, UART_FCR, 0);
-		serial_out(dev, UART_LCR, 0);
-
 	} else {
 		dev->is_16c950 = 0;
 	}
@@ -2988,23 +2992,6 @@ static int check_register_atarisio(struct atarisio_dev* dev)
 		ret = -ENODEV;
 		goto failure_release;
 	}
-
-#if 0
-	if (dev->is_16c950) {
-		serial_out(dev, UART_LCR, UART_LCR_WLEN8);
-		/* set ACR = 0 */
-		serial_out(dev, UART_SCR, 0);
-		serial_out(dev, UART_LSR, 0);
-
-		serial_out(dev, UART_LCR, 0xbf);
-		serial_out(dev, UART_FCR, 16); /* set enhanced mode, disable enhanced flow control etc. */
-
-		serial_out(dev, UART_MCR, 0); /* clear bit 8 - disable clock prescaling */
-
-		serial_out(dev, UART_FCR, 0); /* disable enhanced feature mode */
-		serial_out(dev, UART_LCR, UART_LCR_WLEN8);
-	}
-#endif
 
 	if (dev->port) {
 		PRINTK("minor=%d port=%s io=0x%04x irq=%d baud_base=%ld\n", dev->miscdev->minor, dev->port, dev->io, dev->irq, dev->serial_config.baud_base);
