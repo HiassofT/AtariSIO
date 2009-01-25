@@ -2,10 +2,10 @@
 #define ATARISIO_H
 
 /*
-   atarisio V1.02
+   atarisio V1.04
    a kernel module for handling the Atari 8bit SIO protocol
 
-   Copyright (C) 2002-2007 Matthias Reichl <hias@horus.com>
+   Copyright (C) 2002-2009 Matthias Reichl <hias@horus.com>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -23,7 +23,7 @@
 */
 
 #define ATARISIO_MAJOR_VERSION 1
-#define ATARISIO_MINOR_VERSION 3
+#define ATARISIO_MINOR_VERSION 4
 #define ATARISIO_VERSION_MAGIC 42
 
 #define ATARISIO_VERSION ( ( (ATARISIO_VERSION_MAGIC) << 16) | ( (ATARISIO_MAJOR_VERSION) << 8) | (ATARISIO_MINOR_VERSION) )

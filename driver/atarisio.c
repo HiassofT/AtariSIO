@@ -1,5 +1,5 @@
 /*
-   atarisio V1.03
+   atarisio V1.04
    a kernel module for handling the Atari 8bit SIO protocol
 
    Copyright (C) 2002-2009 Matthias Reichl <hias@horus.com>
@@ -115,7 +115,9 @@
 #define ATARISIO_DEBUG_TIMING
 */
 
+/*
 #define ATARISIO_PRINT_TIMESTAMPS
+*/
 
 /*
  * if ATARISIO_EARLY_NOTIFICATION is defined, poll will indicate a
@@ -3081,7 +3083,7 @@ static int atarisio_init_module(void)
 	int numtried = 0;
 	atarisio_is_initialized = 0;
 
-	printk("AtariSIO kernel driver V%d.%02d (c) 2008 Matthias Reichl\n",
+	printk("AtariSIO kernel driver V%d.%02d (c) 2002-2009 Matthias Reichl\n",
 		ATARISIO_MAJOR_VERSION, ATARISIO_MINOR_VERSION);
 
 	for (i=0;i<ATARISIO_MAXDEV;i++) {
