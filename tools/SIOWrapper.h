@@ -120,6 +120,7 @@ public:
 	int SendDataFrameXF551(unsigned char* buf, unsigned int length);
 
 	int SetBaudrate(unsigned int baudrate);
+	int SetHighSpeedBaudrate(unsigned int baudrate);
 	int SetAutobaud(unsigned int on);
 	int SetHighSpeedPause(unsigned int on);
 

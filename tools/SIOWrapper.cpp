@@ -550,6 +550,19 @@ int SIOWrapper::SetBaudrate(unsigned int baudrate)
 	return fLastResult;
 }
 
+int SIOWrapper::SetHighSpeedBaudrate(unsigned int baudrate)
+{
+	if (fDeviceFileNo < 0) {
+		fLastResult = ENODEV;
+	} else {
+		fLastResult = ioctl(fDeviceFileNo, ATARISIO_IOC_SET_HIGHSPEED_BAUDRATE, baudrate);
+		if (fLastResult == -1) {
+			fLastResult = errno;
+		}
+	}
+	return fLastResult;
+}
+
 int SIOWrapper::SetAutobaud(unsigned int on)
 {
 	if (fDeviceFileNo < 0) {
