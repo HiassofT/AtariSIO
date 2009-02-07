@@ -273,8 +273,13 @@ typedef struct SIO_timestamp_struct {
 
 #define ATARISIO_IOC_SEND_TAPE_BLOCK	_IOW( ATARISIO_IOC_MAGIC, 25, SIO_data_frame *)
 
+/*
+   Set the highspeed baudrate (the default is 57600 bit/sec)
+*/
+#define ATARISIO_IOC_SET_HIGHSPEED_BAUDRATE	_IOW( ATARISIO_IOC_MAGIC, 26, unsigned int)
 
-#define ATARISIO_IOC_MAXNR 25
+
+#define ATARISIO_IOC_MAXNR 26
 
 /*
    errno codes for DO_SIO, mainly according to

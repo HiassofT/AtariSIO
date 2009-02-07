@@ -413,6 +413,8 @@ struct atarisio_dev {
 	unsigned char command_line_high; /* = 0; */
 
 	unsigned int default_baudrate; /* = ATARISIO_STANDARD_BAUDRATE; */
+	unsigned int highspeed_baudrate; /* = ATARISIO_STANDARD_BAUDRATE; */
+
 	int do_autobaud; /* = 0; */
 	int add_highspeedpause; /* = 0; */
 	unsigned int tape_baudrate;
@@ -889,7 +891,7 @@ static inline void try_switchbaud(struct atarisio_dev* dev)
 
 	if (dev->do_autobaud) {
 		if (baud == ATARISIO_STANDARD_BAUDRATE) {
-			baud = ATARISIO_HIGHSPEED_BAUDRATE;
+			baud = dev->highspeed_baudrate;
 		/*
 		} else if (baud == 57600) {
 			baud = 38400;
@@ -2280,8 +2282,9 @@ static void print_status(struct atarisio_dev* dev)
 		dev->sioserver_command_line,
 		dev->sioserver_command_line_delta);
 
-	PRINTK("default_baudrate=%d do_autobaud=%d\n",
+	PRINTK("default_baudrate=%d highspeed_baudrate=%d do_autobaud=%d\n",
 		dev->default_baudrate,
+		dev->highspeed_baudrate,
 		dev->do_autobaud);
 
 	PRINTK("tape_baudrate=%d\n",
@@ -2351,6 +2354,10 @@ static int atarisio_ioctl(struct inode* inode, struct file* filp,
 	case ATARISIO_IOC_SET_BAUDRATE:
 		dev->default_baudrate = arg;
 		ret = set_baudrate(dev, dev->default_baudrate, 1);
+		break;
+	case ATARISIO_IOC_SET_HIGHSPEED_BAUDRATE:
+		dev->highspeed_baudrate = arg;
+		ret = set_baudrate(dev, dev->highspeed_baudrate, 1);
 		break;
 	case ATARISIO_IOC_SET_AUTOBAUD:
 		dev->do_autobaud = arg;
@@ -2596,6 +2603,7 @@ static int atarisio_open(struct inode* inode, struct file* filp)
 
 	dev->do_autobaud = 0;
 	dev->default_baudrate = ATARISIO_STANDARD_BAUDRATE;
+	dev->highspeed_baudrate = ATARISIO_HIGHSPEED_BAUDRATE;
 	dev->tape_baudrate = ATARISIO_TAPE_BAUDRATE;
 	dev->add_highspeedpause = 0;
 
