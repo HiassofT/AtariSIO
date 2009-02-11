@@ -73,6 +73,10 @@
 #endif
 
 /* additional definitions that are not present in 2.2 kernels */
+#ifndef UART_EFR
+#define UART_EFR	0x02    /* Enhanced Feature Register */
+#endif
+
 #ifndef UART_ICR
 #define UART_ICR	0x05    /* Index Control Register */
 #endif
@@ -83,6 +87,35 @@
 
 #ifndef UART_ACR_ICRRD
 #define UART_ACR_ICRRD	0x40    /* ICR Read enable */
+#endif
+
+#ifndef UART_CPR
+#define UART_CPR        0x01    /* Clock Prescalar Register */
+#endif
+
+#ifndef UART_TCR
+#define UART_TCR        0x02    /* Times Clock Register */
+#endif
+
+#ifndef UART_CKS
+#define UART_CKS        0x03    /* Clock Select Register */
+#endif
+
+
+#ifndef UART_TTL
+#define UART_TTL        0x04    /* Transmitter Interrupt Trigger Level */
+#endif 
+
+#ifndef UART_RTL
+#define UART_RTL        0x05    /* Receiver Interrupt Trigger Level */
+#endif
+
+#ifndef UART_FCL
+#define UART_FCL        0x06    /* Flow Control Level Lower */
+#endif
+
+#ifndef UART_FCH
+#define UART_FCH        0x07    /* Flow Control Level Higher */
 #endif
 
 #ifndef UART_ID1
@@ -105,6 +138,9 @@
 #define UART_CSR        0x0C    /* Channel Software Reset */
 #endif
 
+#ifndef UART_MCR_CLKSEL
+#define UART_MCR_CLKSEL         0x80 /* Divide clock by 4 (TI16C752, EFR[4]=1) */
+#endif
 
 /* debug levels: */
 #define DEBUG_STANDARD 1
@@ -304,6 +340,9 @@ struct atarisio_dev {
 
 	/* flag if the UART is a 16C950, not a 16C550 */
 	int is_16c950;
+
+	/* flag if extended 16C950 functions should be used */
+	int use_16c950_mode;
 
 	/* lock for UART hardware registers */
 	spinlock_t uart_lock; /* = SPIN_LOCK_UNLOCKED; */
@@ -713,6 +752,72 @@ static void set_lcr(struct atarisio_dev* dev, unsigned char lcr, int do_locks)
 	}
 }
 
+typedef struct {
+	unsigned int baudrate;
+	u8 tcr;
+	u8 cpr;
+	unsigned int divisor;
+} baudrate_entry_16c950; 
+
+/* pre-calculated baud-rate table for 16c950 chips running at 921600 bit/sec */
+static baudrate_entry_16c950 baudrate_table_16c950[] = {
+	{ 125762, 14,  67,   1}, /* ( 126674.82:  0.73%) ( 127840.91:  1.65%) */
+	{ 126030, 13,   0,   9}, /* ( 126674.82:  0.51%) ( 127840.91:  1.44%) */
+	{ 110765,  5, 213,   1}, /* ( 110840.47:  0.07%) ( 111860.80:  0.99%) */
+	{  98304, 15,   0,  10}, /* (  98524.86:  0.22%) (  99431.82:  1.15%) */
+	{  88628, 11,  11,  11}, /* (  88672.38:  0.05%) (  89488.64:  0.97%) */
+	{  80577, 12,  61,   2}, /* (  80611.25:  0.04%) (  81353.31:  0.96%) */
+
+	{  58982,  8, 125,   2},
+	{ 110869,  8,  19,   7},
+	{ 110453,  6,  89,   2},
+	{  98385, 11, 109,   1}, /* (  98524.86:  0.14%) (  99431.82:  1.06%) */
+	{      0,  0,   0,   0}
+};
+
+static unsigned int calc_16c950_baudrate(struct atarisio_dev* dev, unsigned int baudrate)
+{
+	unsigned int divisor;
+	int i;
+
+	if (dev->serial_config.baud_base == 921600) {
+		for (i=0; baudrate_table_16c950[i].baudrate; i++) {
+			if (baudrate_table_16c950[i].baudrate == baudrate) {
+				if (baudrate_table_16c950[i].cpr) {
+					dev->serial_config.MCR |= UART_MCR_CLKSEL;
+					write_icr(dev, UART_CPR, baudrate_table_16c950[i].cpr);
+				} else {
+					dev->serial_config.MCR &= ~UART_MCR_CLKSEL;
+				}
+				serial_out(dev, UART_MCR, dev->serial_config.MCR);
+				write_icr(dev, UART_TCR, baudrate_table_16c950[i].tcr);
+				DBG_PRINTK(DEBUG_STANDARD, "setting baudrate %d TCR=%d, CPR=%d, divisor %d\n",
+					 baudrate,
+					 baudrate_table_16c950[i].tcr,
+					 baudrate_table_16c950[i].cpr,
+					 baudrate_table_16c950[i].divisor);
+				return baudrate_table_16c950[i].divisor;
+			}
+		}
+	}
+
+	dev->serial_config.MCR &= ~UART_MCR_CLKSEL; /* disable clock prescaler */
+	serial_out(dev, UART_MCR, dev->serial_config.MCR);
+
+	divisor = dev->serial_config.baud_base * 2 / baudrate;
+	if (dev->serial_config.baud_base * 2 / divisor == baudrate) {
+		/* configure 8 clocks per bit */
+		write_icr(dev, UART_TCR, 8);
+		DBG_PRINTK(DEBUG_STANDARD, "setting baudrate %d TCR=8, CPR=0, divisor %d\n", baudrate, divisor);
+	} else {
+		/* configure 4 clocks per bit */
+		divisor = dev->serial_config.baud_base * 4 / baudrate;
+		write_icr(dev, UART_TCR, 4);
+		DBG_PRINTK(DEBUG_STANDARD, "setting baudrate %d TCR=4, CPR=0, divisor %d\n", baudrate, divisor);
+	}
+	return divisor;
+}
+
 static int set_baudrate(struct atarisio_dev* dev, unsigned int baudrate, int do_locks)
 {
 	unsigned long flags=0;
@@ -727,6 +832,17 @@ static int set_baudrate(struct atarisio_dev* dev, unsigned int baudrate, int do_
 	dev->serial_config.just_switched_baud = 1;
 
 	divisor = dev->serial_config.baud_base / baudrate;
+	if (dev->use_16c950_mode) {
+		if (dev->serial_config.baud_base / divisor == baudrate) {
+			dev->serial_config.MCR &= ~UART_MCR_CLKSEL; /* disable clock prescaler */
+			serial_out(dev, UART_MCR, dev->serial_config.MCR);
+			/* configure standard mode: 16 clocks per bit */
+			write_icr(dev, UART_TCR, 0);
+			DBG_PRINTK(DEBUG_STANDARD, "setting baudrate %d TCR=16, CPR=0, divisor %d\n", baudrate, divisor);
+		} else {
+			divisor = calc_16c950_baudrate(dev, baudrate);
+		}
+	}
 
 	serial_out(dev, UART_LCR, dev->serial_config.LCR | UART_LCR_DLAB);
 	serial_out(dev, UART_DLL, divisor & 0xff);
@@ -2011,11 +2127,11 @@ static int perform_send_data_frame(struct atarisio_dev* dev, unsigned long arg)
 
 
 	if (frame.data_length) {
-		if (dev->add_highspeedpause && (dev->serial_config.baudrate != ATARISIO_STANDARD_BAUDRATE)) {
+		if ((dev->add_highspeedpause & ATARISIO_HIGHSPEEDPAUSE_BYTE_DELAY) && (dev->serial_config.baudrate != ATARISIO_STANDARD_BAUDRATE)) {
 			set_lcr(dev, dev->slow_lcr, 1);
 		}
 		if ((ret=setup_send_data_frame(dev, frame.data_length, frame.data_buffer)) ) {
-			if (dev->add_highspeedpause && (dev->serial_config.baudrate != ATARISIO_STANDARD_BAUDRATE)) {
+			if ((dev->add_highspeedpause & ATARISIO_HIGHSPEEDPAUSE_BYTE_DELAY) && (dev->serial_config.baudrate != ATARISIO_STANDARD_BAUDRATE)) {
 				set_lcr(dev, dev->standard_lcr, 1);
 			}
 			return ret;
@@ -2026,13 +2142,13 @@ static int perform_send_data_frame(struct atarisio_dev* dev, unsigned long arg)
 
 		PRINT_TIMESTAMP("perform_send_data_frame: begin wait_send");
 		if ((w=wait_send(dev, frame.data_length+1))) {
-			if (dev->add_highspeedpause && (dev->serial_config.baudrate != ATARISIO_STANDARD_BAUDRATE)) {
+			if ((dev->add_highspeedpause & ATARISIO_HIGHSPEEDPAUSE_BYTE_DELAY) && (dev->serial_config.baudrate != ATARISIO_STANDARD_BAUDRATE)) {
 				set_lcr(dev, dev->standard_lcr, 1);
 			}
 			DBG_PRINTK(DEBUG_STANDARD, "send data frame returned %d\n",w);
 			return w;
 		}
-		if (dev->add_highspeedpause && (dev->serial_config.baudrate != ATARISIO_STANDARD_BAUDRATE)) {
+		if ((dev->add_highspeedpause & ATARISIO_HIGHSPEEDPAUSE_BYTE_DELAY) && (dev->serial_config.baudrate != ATARISIO_STANDARD_BAUDRATE)) {
 			set_lcr(dev, dev->standard_lcr, 1);
 		}
 		PRINT_TIMESTAMP("perform_send_data_frame: end wait_send");
@@ -2117,11 +2233,11 @@ static int perform_send_raw_frame(struct atarisio_dev* dev, unsigned long arg)
 	}
 
 	if (frame.data_length) {
-		if (dev->add_highspeedpause && (dev->serial_config.baudrate != ATARISIO_STANDARD_BAUDRATE)) {
+		if ((dev->add_highspeedpause & ATARISIO_HIGHSPEEDPAUSE_BYTE_DELAY) && (dev->serial_config.baudrate != ATARISIO_STANDARD_BAUDRATE)) {
 			set_lcr(dev, dev->slow_lcr, 1);
 		}
 		if ((ret=setup_send_raw_frame(dev, frame.data_length, frame.data_buffer)) ) {
-			if (dev->add_highspeedpause && (dev->serial_config.baudrate != ATARISIO_STANDARD_BAUDRATE)) {
+			if ((dev->add_highspeedpause & ATARISIO_HIGHSPEEDPAUSE_BYTE_DELAY) && (dev->serial_config.baudrate != ATARISIO_STANDARD_BAUDRATE)) {
 				set_lcr(dev, dev->standard_lcr, 1);
 			}
 			return ret;
@@ -2132,13 +2248,13 @@ static int perform_send_raw_frame(struct atarisio_dev* dev, unsigned long arg)
 
 		PRINT_TIMESTAMP("perform_send_raw_frame: begin wait_send");
 		if ((w=wait_send(dev, frame.data_length))) {
-			if (dev->add_highspeedpause && (dev->serial_config.baudrate != ATARISIO_STANDARD_BAUDRATE)) {
+			if ((dev->add_highspeedpause & ATARISIO_HIGHSPEEDPAUSE_BYTE_DELAY) && (dev->serial_config.baudrate != ATARISIO_STANDARD_BAUDRATE)) {
 				set_lcr(dev, dev->standard_lcr, 1);
 			}
 			DBG_PRINTK(DEBUG_STANDARD, "send raw frame returned %d\n",w);
 			return w;
 		}
-		if (dev->add_highspeedpause && (dev->serial_config.baudrate != ATARISIO_STANDARD_BAUDRATE)) {
+		if ((dev->add_highspeedpause & ATARISIO_HIGHSPEEDPAUSE_BYTE_DELAY) && (dev->serial_config.baudrate != ATARISIO_STANDARD_BAUDRATE)) {
 			set_lcr(dev, dev->standard_lcr, 1);
 		}
 		PRINT_TIMESTAMP("perform_send_raw_frame: end wait_send");
@@ -2416,7 +2532,7 @@ static int atarisio_ioctl(struct inode* inode, struct file* filp,
 			break;
 		}
 		PRINT_TIMESTAMP("start sending complete");
-		if (dev->add_highspeedpause) {
+		if (dev->add_highspeedpause & ATARISIO_HIGHSPEEDPAUSE_FRAME_DELAY) {
 			udelay(DELAY_T5_MIN_SLOW);
 		} else {
 			udelay(DELAY_T5_MIN);
@@ -2431,7 +2547,7 @@ static int atarisio_ioctl(struct inode* inode, struct file* filp,
 		if ((ret = check_new_command_frame(dev))) {
 			break;
 		}
-		if (dev->add_highspeedpause) {
+		if (dev->add_highspeedpause & ATARISIO_HIGHSPEEDPAUSE_FRAME_DELAY) {
 			udelay(DELAY_T5_MIN_SLOW);
 		} else {
 			udelay(DELAY_T5_MIN);
@@ -2605,21 +2721,59 @@ static int atarisio_open(struct inode* inode, struct file* filp)
 	dev->default_baudrate = ATARISIO_STANDARD_BAUDRATE;
 	dev->highspeed_baudrate = ATARISIO_HIGHSPEED_BAUDRATE;
 	dev->tape_baudrate = ATARISIO_TAPE_BAUDRATE;
-	dev->add_highspeedpause = 0;
+	dev->add_highspeedpause = ATARISIO_HIGHSPEEDPAUSE_OFF;
 
 	spin_lock_irqsave(&dev->uart_lock, flags);
 	spin_lock(&dev->serial_config_lock);
 
 	if (dev->is_16c950) {
+		dev->use_16c950_mode = 1;
+
 		dev->serial_config.ACR = 0;
 
 		/* now reset the 16c950 so we are in a known state */
 		write_icr(dev, UART_CSR, 0);
 
-		/* clear the EFR to set 16C550 mode */
-		serial_out(dev, UART_LCR, 0xbf);
-		serial_out(dev, UART_FCR, 0);
-		serial_out(dev, UART_LCR, 0);
+		if (dev->use_16c950_mode) {
+			/* set bit 4 of EFT to enable 16C950 mode */
+			serial_out(dev, UART_LCR, 0xbf);
+			serial_out(dev, UART_EFR, 0x10);
+
+			serial_out(dev, UART_LCR, 0);
+
+			/* enable 16C950 FIFO trigger levels */
+			dev->serial_config.ACR = 0x20; 
+			write_icr(dev, UART_ACR, dev->serial_config.ACR);
+
+			/* set receiver and transmitter trigger levels to 1 */
+			write_icr(dev, UART_RTL, 1);
+			write_icr(dev, UART_TTL, 1);
+
+			/* set clock prescaler to 4 instead of 16 */
+			/* write_icr(dev, UART_TCR, 4); */
+
+			PRINTK("MCR = %02x CPR = %02x\n",
+				serial_in(dev, UART_MCR),
+				read_icr(dev, UART_CPR));
+
+			/* TESTING CPR */
+			/* set clock prescaler to 1 */
+			/*
+			dev->serial_config.MCR |= 0x80;
+			serial_out(dev, UART_MCR, dev->serial_config.MCR);
+			write_icr(dev, UART_CPR, 8);
+			*/
+
+			/* PRINTK("CPR = %02x\n", read_icr(dev, UART_CPR)); */
+
+
+			PRINTK("using extended 16C950 mode\n");
+		} else {
+			/* clear the EFR to set 16C550 mode */
+			serial_out(dev, UART_LCR, 0xbf);
+			serial_out(dev, UART_EFR, 0);
+			serial_out(dev, UART_LCR, 0);
+		}
 	}
 
 
@@ -2754,6 +2908,7 @@ struct atarisio_dev* alloc_atarisio_dev(unsigned int id)
 
 	atarisio_devices[id] = dev;
 	dev->is_16c950 = 0;
+	dev->use_16c950_mode = 0;
 	dev->serial_config.ACR = 0;
 	dev->busy = 0;
 	dev->id = id;
@@ -2775,7 +2930,7 @@ struct atarisio_dev* alloc_atarisio_dev(unsigned int id)
 	dev->default_baudrate = ATARISIO_STANDARD_BAUDRATE;
 	dev->tape_baudrate = ATARISIO_TAPE_BAUDRATE;
 	dev->do_autobaud = 0;
-	dev->add_highspeedpause = 0;
+	dev->add_highspeedpause = ATARISIO_HIGHSPEEDPAUSE_OFF;
 	dev->standard_lcr = UART_LCR_WLEN8;
 	dev->slow_lcr = UART_LCR_WLEN8 | UART_LCR_STOP | UART_LCR_PARITY | UART_LCR_SPAR;
 	dev->need_reenable = 0;

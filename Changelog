@@ -132,4 +132,6 @@ AtariSIO changelog:
   - atarisio: support 16550 ports maximum baudrate higher than 115200
   - atarisio: fix for broken Moschip 9835 UART
   - atariserver: updated loadable highspeed SIO code to newest version
-  - atarisio: preliminary support for 16c950 UARTs
+  - atarisio: preliminary support for 16C950 UARTs
+  - atarisio: preliminary fine-grained baudrate selection for 16C950 UARTs
+  - atariserver: configurable highspeed selection

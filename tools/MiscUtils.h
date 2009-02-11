@@ -69,6 +69,8 @@ namespace MiscUtils {
 		}
 	}
 
+	bool ParseHighSpeedParameters(const char* string, unsigned int& baudrate, unsigned char& pokeyDivisor);
+
 };
 
 

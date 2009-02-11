@@ -81,6 +81,72 @@ char* MiscUtils::ShortenFilename(const char* filename, unsigned int maxlen)
 	}
 }
 
+// pokey divisor to baudrate table
+typedef struct {
+	unsigned char divisor;
+	unsigned int baudrate;
+} pokey_divisor_entry;
+
+static pokey_divisor_entry divisor_table[] = {
+	{ 0, 122880 },	// doesn't work
+	{ 1, 108423 },
+	{ 2, 97010 },
+	{ 3, 87771 },
+	{ 4, 80139 },
+	{ 5, 73728 },
+	{ 6, 67025 },
+	{ 7, 62481 },
+	//{ 8, 57600 },
+	{ 8, 59458 },
+	{ 9, 55020 },
+	{ 10, 51921 },
+	{ 16, 38400 },
+	{ 0, 0 }
+};
+
+// format is "divisor[,baudrate]"
+bool MiscUtils::ParseHighSpeedParameters(const char* string, unsigned int& baudrate, unsigned char& divisor)
+{
+	char* tmp;
+	long l;
+	l = strtol(string, &tmp, 10);
+	if (tmp == string) {
+		return false;
+	}
+	if (l < 0 || l > 255) {
+		return false;
+	}
+	divisor = l;
+
+	if (*tmp == 0) {
+		int i = 0;
+		while (divisor_table[i].divisor || divisor_table[i].baudrate) {
+			if (divisor_table[i].divisor == divisor) {
+				baudrate = divisor_table[i].baudrate;
+				return true;
+			}
+			i++;
+		}
+		return false;
+	}
+	if (*tmp != ',') {
+		return false;
+	}
+	string = tmp+1;
+	l = strtol(string, &tmp, 10);
+	if (tmp == string) {
+		return false;
+	}
+	if (l < 0 || l > 150000) {
+		return false;
+	}
+	baudrate = l;
+	if (*tmp != 0) {
+		return false;
+	}
+	return true;
+}
+
 #ifndef WINVER
 static void reserve_stack_memory()
 {

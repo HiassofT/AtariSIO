@@ -2,7 +2,7 @@
    atariserver.cpp - implementation of an Atari SIO server, using
    a curses frontend
 
-   Copyright (C) 2003-2008 Matthias Reichl <hias@horus.com>
+   Copyright (C) 2003-2009 Matthias Reichl <hias@horus.com>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -108,12 +108,46 @@ static void process_args(RCPtr<DeviceManager>& manager, CursesFrontend* frontend
 					trace_level++;
 					break;
 				case 's':
-					manager->SetHighSpeedMode(DeviceManager::eHighSpeedOff);
-					ALOG("disabling high-speed SIO");
+					if (i + 1 < argc) {
+						i++;
+						switch (argv[i][0]) {
+						case '0':
+							manager->SetHighSpeedMode(DeviceManager::eHighSpeedOff);
+							ALOG("disabling high-speed SIO");
+							break;
+						case '1':
+							manager->SetHighSpeedMode(DeviceManager::eHighSpeedOn);
+							ALOG("enabling high-speed SIO");
+							break;
+						case '2':
+							manager->SetHighSpeedMode(DeviceManager::eHighSpeedWithPause);
+							ALOG("enabling high-speed SIO mode with pauses");
+							break;
+						default:
+							AERROR("illegal parameter for -s: must be 0, 1 or 2");
+							break;
+						}
+					} else {
+						AERROR("-s needs a parameter!");
+					}
 					break;
 				case 'S':
-					manager->SetHighSpeedMode(DeviceManager::eHighSpeedWithPause);
-					ALOG("enabling high-speed SIO mode with pauses");
+					if (i + 1 < argc) {
+						i++;
+						unsigned int baud;
+						unsigned char divisor;
+						if (MiscUtils::ParseHighSpeedParameters(argv[i], baud, divisor)) {
+							if (manager->SetHighSpeedParameters(baud, divisor)) {
+								ALOG("Configured high speed mode to pokey divisor %d / baudrate %d", divisor, baud);
+							} else {
+								ALOG("setting high speed parameters failed!");
+							}
+						} else {
+							AERROR("invalid highspeed parameters in -S: use speed,divisor");
+						}
+					} else {
+						AERROR("-S needs a parameter!");
+					}
 					break;
 				case 'X':
 					manager->EnableXF551Mode(true);
@@ -350,7 +384,7 @@ int main(int argc, char** argv)
 	}
 
 	if (wantHelp) {
-		printf("atariserver " VERSION_STRING " (c) 2002-2008 Matthias Reichl\n");
+		printf("atariserver " VERSION_STRING " (c) 2002-2009 Matthias Reichl\n");
 		printf("usage: [-f device] [-cChmsStX] [-o file] [-P c|l|r file]\n");
 		printf("       [ [-12345678] [-p] (-V dens dir)|file  ... ]\n");
 		printf("-h            display help\n");
@@ -360,8 +394,8 @@ int main(int argc, char** argv)
 		printf("-m            monochrome mode\n");
 		printf("-o file       save trace output to <file>\n");
 		printf("-p            write protect the next image\n");
-		printf("-s            slow mode - disable highspeed SIO\n");
-		printf("-S            high speed SIO mode with pauses\n");
+		printf("-s mode       set high speed mode:i 0 = off, 1 = on, 2 = on with pauses\n");
+		printf("-S baud,div   high speed SIO parameters: baudrate and pokey divisor");
 		printf("-X            enable XF551 commands\n");
 		printf("-t            increase SIO trace level (default:0, max:3)\n");
 		printf("-1..-8        set current drive number (default: 1)\n"); 

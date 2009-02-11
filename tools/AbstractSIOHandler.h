@@ -53,6 +53,8 @@ public:
 	// something defined in ECommandStatus or other = internal error
 
 	virtual bool EnableHighSpeed(bool on) = 0;
+	virtual bool SetHighSpeedParameters(unsigned int baudrate, unsigned char pokeyDivisor) = 0;
+
 	virtual bool EnableXF551Mode(bool on) = 0;
 
 	virtual bool IsAtrSIOHandler() const;

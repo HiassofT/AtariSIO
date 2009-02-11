@@ -142,6 +142,20 @@ adir: $(ADIR_OBJS)
 dir2atr: $(DIR2ATR_OBJS)
 	$(CXX) $(LDFLAGS) -o $@ $(DIR2ATR_OBJS) $(COMMON_LIBS)
 
+DIR2ATR_OBJS = dir2atr.o $(COMMON_OBJS) $(ATRIMAGE_OBJS) \
+        Dos2xUtils.o VirtualImageObserver.o \
+        Directory.o MiscUtils.o MyPicoDosCode.o
+
+COMMON_OBJS = DiskImage.o FileIO.o SIOTracer.o FileTracer.o Error.o
+
+ATRIMAGE_OBJS = AtrImage.o AtrMemoryImage.o DCMCodec.o \
+        CasBlock.o CasImage.o
+
+dir2atr.exe: dir2atr.cpp DiskImage.cpp FileIO.cpp SIOTracer.cpp FileTracer.cpp Error.cpp \
+	AtrImage.cpp AtrMemoryImage.cpp DCMCodec.cpp CasBlock.cpp CasImage.cpp \
+	Dos2xUtils.cpp VirtualImageObserver.cpp Directory.cpp MiscUtils.cpp MyPicoDosCode.cpp
+	i586-mingw32msvc-g++ -W -Wall -DATARISIO_DEBUG -DWINVER -o $@ $^
+
 serialwatcher: $(SERIALWATCHER_OBJS)
 	$(CXX) $(LDFLAGS) -o $@ $(SERIALWATCHER_OBJS)
 

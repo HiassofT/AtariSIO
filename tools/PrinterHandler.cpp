@@ -360,6 +360,11 @@ bool PrinterHandler::EnableHighSpeed(bool)
 	return false;
 }
 
+bool PrinterHandler::SetHighSpeedParameters(unsigned int, unsigned char)
+{
+	return false;
+}
+
 bool PrinterHandler::EnableXF551Mode(bool)
 {
 	return false;

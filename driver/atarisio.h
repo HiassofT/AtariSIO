@@ -209,8 +209,13 @@ typedef struct SIO_data_frame_struct {
 #define ATARISIO_IOC_GET_BAUDRATE	_IO( ATARISIO_IOC_MAGIC, 14)
 
 /*
-   add additional inter-byte pauses in high-speed modes
+   add additional inter-byte pauses in high-speed modes and/or increase delays
  */
+#define ATARISIO_HIGHSPEEDPAUSE_OFF 0
+#define ATARISIO_HIGHSPEEDPAUSE_BYTE_DELAY 1
+#define ATARISIO_HIGHSPEEDPAUSE_FRAME_DELAY 2
+#define ATARISIO_HIGHSPEEDPAUSE_BOTH 3
+
 #define ATARISIO_IOC_SET_HIGHSPEEDPAUSE _IOW( ATARISIO_IOC_MAGIC, 15, unsigned int)
 
 /*

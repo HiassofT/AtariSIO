@@ -529,3 +529,8 @@ bool AtpSIOHandler::EnableXF551Mode(bool)
 {
 	return false;
 }
+
+bool AtpSIOHandler::SetHighSpeedParameters(unsigned int, unsigned char)
+{
+	return false;
+}

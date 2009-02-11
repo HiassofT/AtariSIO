@@ -38,6 +38,7 @@ public:
 	virtual int ProcessCommandFrame(SIO_command_frame& frame, const RCPtr<SIOWrapper>& wrapper);
 
 	virtual bool EnableHighSpeed(bool on);
+	virtual bool SetHighSpeedParameters(unsigned int baudrate, unsigned char pokeyDivisor);
 	virtual bool EnableXF551Mode(bool on);
 	virtual bool IsAtpSIOHandler() const;
 

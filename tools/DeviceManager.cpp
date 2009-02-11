@@ -44,7 +44,9 @@
 
 DeviceManager::DeviceManager(const char* devname)
 	: fSIOWrapper(new SIOWrapper(devname)),
-	  fSIOManager(new SIOManager(fSIOWrapper))
+	  fSIOManager(new SIOManager(fSIOWrapper)),
+          fHighSpeedBaudrate(ATARISIO_HIGHSPEED_BAUDRATE),
+	  fPokeyDivisor(8)
 {
 	if (!SetSioServerMode(SIOWrapper::eCommandLine_RI)) {
 		throw ErrorObject("unable to activate SIO server mode");
@@ -180,6 +182,7 @@ bool DeviceManager::LoadDiskImage(EDriveNumber driveno, const char* filename, bo
 	} else if (image->IsAtrImage()) {
 		handler = new AtrSIOHandler(RCPtrStaticCast<AtrImage>(image));
 		handler->EnableHighSpeed(fUseHighSpeed);
+		handler->SetHighSpeedParameters(fHighSpeedBaudrate, fPokeyDivisor);
 		handler->EnableXF551Mode(fEnableXF551Mode);
 	} else {
 		return false;
@@ -430,6 +433,7 @@ bool DeviceManager::CreateAtrMemoryImage(EDriveNumber driveno, EDiskFormat forma
 
 	RCPtr<AtrSIOHandler> handler(new AtrSIOHandler(img));
 	handler->EnableHighSpeed(fUseHighSpeed);
+	handler->SetHighSpeedParameters(fHighSpeedBaudrate, fPokeyDivisor);
 	handler->EnableXF551Mode(fEnableXF551Mode);
 
 	if (DriveInUse(driveno) && forceUnload) {
@@ -462,6 +466,7 @@ bool DeviceManager::CreateAtrMemoryImage(EDriveNumber driveno, ESectorLength den
 
 	RCPtr<AtrSIOHandler> handler(new AtrSIOHandler(img));
 	handler->EnableHighSpeed(fUseHighSpeed);
+	handler->SetHighSpeedParameters(fHighSpeedBaudrate, fPokeyDivisor);
 	handler->EnableXF551Mode(fEnableXF551Mode);
 
 	if (DriveInUse(driveno) && forceUnload) {
@@ -885,7 +890,7 @@ bool DeviceManager::SetHighSpeedMode(EHighSpeedMode mode)
 		fUseHighSpeed = false;
 		break;
 	case eHighSpeedOn:
-		if (fSIOWrapper->SetBaudrate(ATARISIO_HIGHSPEED_BAUDRATE)) {
+		if (fSIOWrapper->SetBaudrate(fHighSpeedBaudrate)) {
 			return false;
 		}
 		if (fSIOWrapper->SetAutobaud(1)) {
@@ -897,13 +902,14 @@ bool DeviceManager::SetHighSpeedMode(EHighSpeedMode mode)
 		fUseHighSpeed = true;
 		break;
 	case eHighSpeedWithPause:
-		if (fSIOWrapper->SetBaudrate(ATARISIO_HIGHSPEED_BAUDRATE)) {
+		if (fSIOWrapper->SetBaudrate(fHighSpeedBaudrate)) {
 			return false;
 		}
 		if (fSIOWrapper->SetAutobaud(1)) {
 			return false;
 		}
-		if (fSIOWrapper->SetHighSpeedPause(1)) {
+		//if (fSIOWrapper->SetHighSpeedPause(1)) {
+		if (fSIOWrapper->SetHighSpeedPause(ATARISIO_HIGHSPEEDPAUSE_BOTH)) {
 			return false;
 		}
 		fUseHighSpeed = true;
@@ -912,10 +918,19 @@ bool DeviceManager::SetHighSpeedMode(EHighSpeedMode mode)
 
 	for (int i=eMinDriveNumber; i<=eMaxDriveNumber; i++) {
 		if (DriveInUse(EDriveNumber(i))) {
+			GetSIOHandler((EDriveNumber)i)->SetHighSpeedParameters(fHighSpeedBaudrate, fPokeyDivisor);
 			GetSIOHandler((EDriveNumber)i)->EnableHighSpeed(fUseHighSpeed);
 		}
 	}
 	return true;
+}
+
+bool DeviceManager::SetHighSpeedParameters(unsigned int baudrate, unsigned char pokeyDivisor)
+{
+	fHighSpeedBaudrate = baudrate;
+	fPokeyDivisor = pokeyDivisor;
+	fSIOWrapper->SetHighSpeedBaudrate(baudrate);
+	return SetHighSpeedMode(fHighSpeedMode);
 }
 
 bool DeviceManager::EnableXF551Mode(bool on)

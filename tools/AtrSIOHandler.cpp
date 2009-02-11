@@ -35,16 +35,47 @@
  * ~57600 bit/sec uses a value of 8.
  */
 
+// OK
 #define SPEED_BYTE_19200 40
 #define SPEED_BYTE_38400 16
+#define SPEED_BYTE_41890 14
 #define SPEED_BYTE_57600 8
+#define SPEED_BYTE_61440 7
+#define SPEED_BYTE_68266 6
+#define SPEED_BYTE_73728 5
+
+// problematic with TurboDOS
+#define SPEED_BYTE_80139 4
+
+#define SPEED_BYTE_87771 3
+
+// pure insane :-)
+#define SPEED_BYTE_97010 2
+#define SPEED_BYTE_108423 1
+#define SPEED_BYTE_122880 0
+
+
+// invalid
+#define SPEED_BYTE_70892 5
+#define SPEED_BYTE_76800 4
 
 AtrSIOHandler::AtrSIOHandler(const RCPtr<AtrImage>& image)
 	: fImage(image),
 	  fEnableHighSpeed(false),
 	  fEnableXF551Mode(false),
-	  fSpeedByte(SPEED_BYTE_57600),
-	  fHighSpeedBaudrate(57600),
+
+//	  fSpeedByte(SPEED_BYTE_57600),
+//	  fHighSpeedBaudrate(57600),
+
+//	  fSpeedByte(SPEED_BYTE_108423),
+//	  fHighSpeedBaudrate(108423),
+
+	  fSpeedByte(SPEED_BYTE_97010),
+	  fHighSpeedBaudrate(97010),
+
+//	  fSpeedByte(SPEED_BYTE_87771),
+//	  fHighSpeedBaudrate(87771),
+
 	  fLastFDCStatus(0xff)
 {
 	if (fImage) {
@@ -1253,5 +1284,12 @@ bool AtrSIOHandler::EnableHighSpeed(bool on)
 bool AtrSIOHandler::EnableXF551Mode(bool on)
 {
 	fEnableXF551Mode = on;
+	return true;
+}
+
+bool AtrSIOHandler::SetHighSpeedParameters(unsigned int baudrate, unsigned char pokeyDivisor)
+{
+	fHighSpeedBaudrate = baudrate;
+	fSpeedByte = pokeyDivisor;
 	return true;
 }

@@ -317,6 +317,11 @@ bool RemoteControlHandler::EnableXF551Mode(bool)
 	return false;
 }
 
+bool RemoteControlHandler::SetHighSpeedParameters(unsigned int, unsigned char)
+{
+	return false;
+}
+
 void RemoteControlHandler::ResetResult()
 {
 	fResult = new DataContainer;
