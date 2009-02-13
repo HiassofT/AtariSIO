@@ -34,6 +34,7 @@
 #include <readline/history.h>
 #include <ctype.h>
 
+#include "OS.h"
 #include "AtrSIOHandler.h"
 #include "AtrMemoryImage.h"
 #include "SIOManager.h"
@@ -225,7 +226,7 @@ static void print_status(const RCPtr<DeviceManager>& manager)
 					/* try to shorten the filename */
 					const char *p=f+len-maxlen+3;
 					len=strlen(p)+3;
-					while (*p && *p!='/') {
+					while (*p && *p!= DIR_SEPARATOR) {
 						p++; len--;
 					}
 					if (*p) {

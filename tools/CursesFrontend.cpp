@@ -28,6 +28,7 @@
 #include <unistd.h>
 #include <string.h>
 
+#include "OS.h"
 #include "FileInput.h"
 #include "DeviceManager.h"
 #include "SIOTracer.h"
@@ -442,10 +443,10 @@ void CursesFrontend::SetTopLineFilename(const char* string, bool appendSlash)
 		char* str;
 
 		unsigned int len = strlen(string);
-		if (appendSlash && (len > 0) && (string[len-1] != '/') && (len < PATH_MAX-1)) {
+		if (appendSlash && (len > 0) && (string[len-1] != DIR_SEPARATOR) && (len < PATH_MAX-1)) {
 			char* str2 = new char[len+2];
 			strcpy(str2, string);
-			str2[len++] = '/';
+			str2[len++] = DIR_SEPARATOR;
 			str2[len] = 0;
 			str = MiscUtils::ShortenFilename(str2, fScreenWidth - x);
 			delete[] str2;
@@ -1722,7 +1723,7 @@ void CursesFrontend::ProcessLoadDrive()
 	int len = strlen(filename);
 	if (useVirtualDrive) {
 		bool ok;
-		if (len > 1 && (filename[len-1] == '/')) {
+		if (len > 1 && (filename[len-1] == DIR_SEPARATOR)) {
 			filename[len-1] = 0;
 		}
 		struct stat statbuf;

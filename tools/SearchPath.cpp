@@ -19,13 +19,14 @@
    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-#include "SearchPath.h"
-#include "AtariDebug.h"
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include "SearchPath.h"
+#include "AtariDebug.h"
+#include "OS.h"
 
 SearchPath::SearchPath(const char* searchPath)
 {
@@ -94,7 +95,7 @@ bool SearchPath::SearchForFile(const char* filename, char* buf, int buf_max, boo
 			Assert(ok);
 		} else {
 			if (fPathDirectories[i][0]) {
-				ok = (snprintf(buf, buf_max, "%s/%s", fPathDirectories[i], filename) != -1);
+				ok = (snprintf(buf, buf_max, "%s%c%s", fPathDirectories[i], DIR_SEPARATOR, filename) != -1);
 			} else {
 				Assert(false);
 			}

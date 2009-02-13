@@ -26,6 +26,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include "OS.h"
 #include "DeviceManager.h"
 #include "AtrMemoryImage.h"
 #include "AtrSIOHandler.h"
@@ -112,7 +113,7 @@ RCPtr<DiskImage> DeviceManager::LoadDiskImage(const char* filename, bool beQuiet
 	char myFilename[PATH_MAX];
 	bool foundFile = false;
 
-	if (strchr(filename,'/') == NULL) {
+	if (strchr(filename,DIR_SEPARATOR) == NULL) {
 		AtrSearchPath* sp = AtrSearchPath::GetInstance();
 		foundFile = sp->SearchForFile(filename, myFilename, PATH_MAX);
 	}
@@ -238,8 +239,8 @@ bool DeviceManager::CreateVirtualDrive(
 		return false;
 	}
 	int len = strlen(absPath);
-	if ((len > 0) && (absPath[len-1] != '/')) {
-		absPath[len] = '/';
+	if ((len > 0) && (absPath[len-1] != DIR_SEPARATOR)) {
+		absPath[len] = DIR_SEPARATOR;
 		absPath[len+1] = 0;
 	}
 

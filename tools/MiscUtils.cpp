@@ -18,15 +18,17 @@
    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-#include "MiscUtils.h"
-#include "AtariDebug.h"
-#include "Directory.h"
 #include <string.h>
 #include <stdio.h>
 #include <unistd.h>
 #include <sys/types.h>
 #include <stdlib.h>
 #include <limits.h>
+
+#include "OS.h"
+#include "MiscUtils.h"
+#include "AtariDebug.h"
+#include "Directory.h"
 
 #ifndef WINVER
 #include <sched.h>
@@ -60,7 +62,7 @@ char* MiscUtils::ShortenFilename(const char* filename, unsigned int maxlen)
 	} else {
 		if (maxlen > 3) {
 			const char *p=filename+len-maxlen+3;
-			while (*p && *p!='/') {
+			while (*p && *p!= DIR_SEPARATOR) {
 				p++;
 			}
 			if (*p) {
@@ -70,7 +72,7 @@ char* MiscUtils::ShortenFilename(const char* filename, unsigned int maxlen)
 			}
 		}
 
-		const char *fn = strrchr(filename,'/');
+		const char *fn = strrchr(filename, DIR_SEPARATOR);
 		if (fn == NULL) {
 			strncpy(s, filename, maxlen);
 		} else {

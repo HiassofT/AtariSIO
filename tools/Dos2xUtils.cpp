@@ -18,6 +18,16 @@
    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
+#include <stdio.h>
+#include <string.h>
+#include <limits.h>
+#include <stdlib.h>
+#include <ctype.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
+
+#include "OS.h"
 #include "Dos2xUtils.h"
 #include "AtariDebug.h"
 #include "Directory.h"
@@ -28,14 +38,6 @@ using namespace MiscUtils;
 #include "SIOTracer.h"
 #include "FileIO.h"
 
-#include <stdio.h>
-#include <string.h>
-#include <limits.h>
-#include <stdlib.h>
-#include <ctype.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <unistd.h>
 #include "winver.h"
 
 Dos2xUtils::Dos2xUtils(RCPtr<DiskImage> img,
@@ -58,10 +60,10 @@ Dos2xUtils::Dos2xUtils(RCPtr<DiskImage> img,
 		fDirectory = new char[len+1];
 		if (len) {
 			strcpy(fDirectory, directory);
-			if ((len == 1) && (*fDirectory == '/')) {
+			if ((len == 1) && (*fDirectory == DIR_SEPARATOR)) {
 				fIsRootDirectory = true;
 			} else {
-				if (fDirectory[len-1] == '/') {
+				if (fDirectory[len-1] == DIR_SEPARATOR) {
 					fDirectory[len-1] = 0;
 				}
 			}
@@ -107,10 +109,10 @@ Dos2xUtils::Dos2xUtils( DiskImage* img,
 	fDirectory = new char[len+1];
 	if (len) {
 		strcpy(fDirectory, directory);
-		if ((len == 1) && (*fDirectory == '/')) {
+		if ((len == 1) && (*fDirectory == DIR_SEPARATOR)) {
 			fIsRootDirectory = true;
 		} else {
-			if (fDirectory[len-1] == '/') {
+			if (fDirectory[len-1] == DIR_SEPARATOR) {
 				fDirectory[len-1] = 0;
 			}
 		}
@@ -173,7 +175,7 @@ void Dos2xUtils::AddFiles(bool createPiconame)
 				dirsec = AddDirectory(e->fName, entryNum);
 				if (dirsec != 0) {
 					char newpath[PATH_MAX];
-					snprintf(newpath, PATH_MAX-1, "%s/%s", fDirectory, e->fName);
+					snprintf(newpath, PATH_MAX-1, "%s%c%s", fDirectory, DIR_SEPARATOR, e->fName);
 					newpath[PATH_MAX-1] = 0;
 					fSubdir[entryNum] = new Dos2xUtils(fImage, newpath, fObserver, dirsec,
 						fDosFormat, fIsDos25EnhancedDensity, fUse16BitSectorLinks,
@@ -218,7 +220,7 @@ bool Dos2xUtils::AddFile(const char* name)
 		if (fIsRootDirectory) {
 			snprintf(p, PATH_MAX-1, "%s%s", fDirectory, name);
 		} else {
-			snprintf(p, PATH_MAX-1, "%s/%s", fDirectory, name);
+			snprintf(p, PATH_MAX-1, "%s%c%s", fDirectory, DIR_SEPARATOR, name);
 		}
 	} else {
 		if (realpath(name, p) == 0) {
@@ -227,7 +229,7 @@ bool Dos2xUtils::AddFile(const char* name)
 		}
 	}
 	p[PATH_MAX-1] = 0;
-	char* fn = strrchr(p,'/');
+	char* fn = strrchr(p,DIR_SEPARATOR);
 	if (!fn) {
 		AssertMsg(false, "file-path error in AddFile");
 		return false;
@@ -317,7 +319,7 @@ bool Dos2xUtils::AddFile(const char* name)
 unsigned int Dos2xUtils::AddDirectory(const char* name, unsigned int& entryNum)
 {
 	char p[PATH_MAX];
-	snprintf(p, PATH_MAX-1, "%s/%s", fDirectory, name);
+	snprintf(p, PATH_MAX-1, "%s%c%s", fDirectory, DIR_SEPARATOR, name);
 	p[PATH_MAX-1] = 0;
 
 	unsigned int seclen = fImage->GetSectorLength();
@@ -607,7 +609,7 @@ bool Dos2xUtils::CreatePiconame()
 		if (fIsRootDirectory) {
 			name = fDirectory;
 		} else {
-			name = strrchr(fDirectory, '/');
+			name = strrchr(fDirectory, DIR_SEPARATOR);
 			if (name == 0) {
 				name = fDirectory;
 			} else {
@@ -633,7 +635,7 @@ bool Dos2xUtils::CreatePiconame()
 				shtlen = 36;
 				isdir = true;
 			}
-			name = strrchr(fOrigName[e], '/');
+			name = strrchr(fOrigName[e], DIR_SEPARATOR);
 			if (name == 0) {
 				name = fOrigName[e];
 			} else {
@@ -865,7 +867,7 @@ char* Dos2xUtils::GetOrigName(unsigned int entryNum, const char* atariname)
 	if (strcmp(atariname,"           ") == 0) {
 		return 0;
 	}
-	if (strchr(atariname,'/')) {
+	if (strchr(atariname,DIR_SEPARATOR)) {
 		return 0;
 	}
 	if (fAtariName[entryNum] == 0 || strcmp(fAtariName[entryNum], atariname)) {
@@ -900,7 +902,7 @@ char* Dos2xUtils::GetOrigName(unsigned int entryNum, const char* atariname)
 		fOrigName[entryNum][pos] = 0;
 	}
 	char* name = new char[strlen(fDirectory) + strlen(fOrigName[entryNum]) + 2];
-	sprintf(name, "%s/%s", fDirectory, fOrigName[entryNum]);
+	sprintf(name, "%s%c%s", fDirectory, DIR_SEPARATOR, fOrigName[entryNum]);
 	return name;
 }
 
@@ -2040,7 +2042,7 @@ static void EstimateDirectorySize(const char* in_directory, ESectorLength seclen
 
 	size_t dir_len = strlen(directory);
 	if (dir_len) {
-		if (directory[dir_len-1] == '/') {
+		if (directory[dir_len-1] == DIR_SEPARATOR) {
 			directory[dir_len-1] = 0;
 		}
 	}
@@ -2081,10 +2083,10 @@ static void EstimateDirectorySize(const char* in_directory, ESectorLength seclen
 	}
 
 	if (withPiconame) {
-		if (directory[0] == '/' && directory[1] == 0) {
+		if (directory[0] == DIR_SEPARATOR && directory[1] == 0) {
 			picosize = 2;
 		} else {
-			const char* dirname = strrchr(directory, '/');
+			const char* dirname = strrchr(directory, DIR_SEPARATOR);
 			if (!dirname) {
 				dirname = directory;
 			} else {
@@ -2097,7 +2099,7 @@ static void EstimateDirectorySize(const char* in_directory, ESectorLength seclen
 
 	for (i=0;(count < maxEntries) && (i<num);i++) {
 		DirEntry* e = dir->Get(i);
-		snprintf(fullpath, PATH_MAX-1, "%s/%s", directory, e->fName);
+		snprintf(fullpath, PATH_MAX-1, "%s%c%s", directory, DIR_SEPARATOR, e->fName);
 		fullpath[PATH_MAX-1] = 0;
 		switch (e->fType) {
 		case DirEntry::eFile:

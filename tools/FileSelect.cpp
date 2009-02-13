@@ -18,10 +18,6 @@
    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-#include "FileSelect.h"
-#include "AtariDebug.h"
-#include "MiscUtils.h"
-#include "SIOTracer.h"
 #include <string.h>
 #include <limits.h>
 #include <stdlib.h>
@@ -29,6 +25,11 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include "OS.h"
+#include "FileSelect.h"
+#include "AtariDebug.h"
+#include "MiscUtils.h"
+#include "SIOTracer.h"
 #include "CursesFrontend.h"
 
 using namespace MiscUtils;
@@ -547,8 +548,8 @@ DirEntry::EEntryType FileSelect::BuildFilename(char* filename)
 	strncpy(filename, fPath, PATH_MAX-1);
 	filename[PATH_MAX-1] = 0;
 	unsigned int len=strlen(filename);
-	if ( (len > 0) && (filename[len-1] != '/')) {
-		filename[len++] = '/';
+	if ( (len > 0) && (filename[len-1] != DIR_SEPARATOR)) {
+		filename[len++] = DIR_SEPARATOR;
 		filename[len] = 0;
 	}
 	if (len < PATH_MAX-1) {

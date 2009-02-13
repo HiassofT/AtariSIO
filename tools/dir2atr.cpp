@@ -220,7 +220,7 @@ int main(int argc, char**argv)
 	SIOTracer::GetInstance()->RemoveAllTracers();
 	return 0;
 usage:
-	printf("dir2atr " VERSION_STRING " (c) 2004-2007 by Matthias Reichl\n");
+	printf("dir2atr " VERSION_STRING " (c) 2004-2009 by Matthias Reichl\n");
 	printf("usage: dir2atr [-d] [-m] [-p] [-b <DOS>] [sectors] atrfile directory\n");
 	printf("  -d        create double density image (default: single density)\n");
 	printf("  -m        create MyDOS image (default: DOS 2.x)\n");

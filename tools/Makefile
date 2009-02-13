@@ -153,8 +153,10 @@ ATRIMAGE_OBJS = AtrImage.o AtrMemoryImage.o DCMCodec.o \
 
 dir2atr.exe: dir2atr.cpp DiskImage.cpp FileIO.cpp SIOTracer.cpp FileTracer.cpp Error.cpp \
 	AtrImage.cpp AtrMemoryImage.cpp DCMCodec.cpp CasBlock.cpp CasImage.cpp \
-	Dos2xUtils.cpp VirtualImageObserver.cpp Directory.cpp MiscUtils.cpp MyPicoDosCode.cpp
+	Dos2xUtils.cpp VirtualImageObserver.cpp Directory.cpp MiscUtils.cpp MyPicoDosCode.cpp \
+	winver.cpp
 	i586-mingw32msvc-g++ -W -Wall -DATARISIO_DEBUG -DWINVER -o $@ $^
+	i586-mingw32msvc-strip $@
 
 serialwatcher: $(SERIALWATCHER_OBJS)
 	$(CXX) $(LDFLAGS) -o $@ $(SERIALWATCHER_OBJS)

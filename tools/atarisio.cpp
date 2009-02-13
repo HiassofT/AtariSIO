@@ -23,6 +23,7 @@
 #include <unistd.h>
 #include <string.h>
 
+#include "OS.h"
 #include "MiscUtils.h"
 #include "Version.h"
 
@@ -71,7 +72,7 @@ int main(int argc, char** argv)
 	main_type my_main;
 	bool drop_root;
 
-	basename = strrchr(argv[0],'/');
+	basename = strrchr(argv[0], DIR_SEPARATOR);
 	if (basename == 0) {
 		basename = argv[0];
 	} else {

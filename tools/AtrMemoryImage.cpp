@@ -37,6 +37,8 @@
 #include "Dos2xUtils.h"
 #include "MyPicoDosCode.h"
 
+#include "winver.h"
+
 AtrMemoryImage::AtrMemoryImage()
 	: fData(0)
 {

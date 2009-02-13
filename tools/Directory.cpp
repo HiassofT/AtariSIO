@@ -18,8 +18,6 @@
    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-#include "Directory.h"
-#include "SIOTracer.h"
 #include <string.h>
 #include <dirent.h>
 #include <sys/types.h>
@@ -29,7 +27,10 @@
 #include <limits.h>
 #include <stdio.h>
 
+#include "Directory.h"
+#include "OS.h"
 #include "AtariDebug.h"
+#include "SIOTracer.h"
 
 DirEntry::DirEntry()
 	: fName(0), fType(eUnknown)
@@ -144,7 +145,7 @@ int Directory::ReadDirectory(const char* path, bool sortDir, bool alwaysStatFile
 		if (   (strcmp(de->d_name,".") != 0)
 		    && (strcmp(de->d_name,"..") != 0) ) {
 			char * str = new char[plen + strlen(de->d_name) + 2];
-			sprintf(str,"%s/%s", path, de->d_name);
+			sprintf(str,"%s%c%s", path, DIR_SEPARATOR, de->d_name);
 			if (sortDir || alwaysStatFiles) {
 /*
 #ifdef WINVER

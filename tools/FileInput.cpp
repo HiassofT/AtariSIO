@@ -18,8 +18,6 @@
    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-#include "FileInput.h"
-#include "SIOTracer.h"
 #include <string.h>
 #include <limits.h>
 #include <sys/types.h>
@@ -28,6 +26,9 @@
 #include <stdlib.h>
 #include <pwd.h>
 
+#include "OS.h"
+#include "FileInput.h"
+#include "SIOTracer.h"
 #include "DirectoryCache.h"
 #include "AtariDebug.h"
 #include "CursesFrontend.h"
@@ -48,7 +49,7 @@ FileInput::~FileInput()
 void FileInput::SplitInputIntoPathAndFilename()
 {
 	int sepPos = fEditPos - 1;
-	while ( (sepPos >= 0) && (fString[sepPos] != '/') ) {
+	while ( (sepPos >= 0) && (fString[sepPos] != DIR_SEPARATOR) ) {
 		sepPos--;
 	}
 
@@ -75,7 +76,7 @@ void FileInput::SplitInputIntoPathAndFilename()
 			fFilename[fEditPos - sepPos - 1] = 0;
 		}
 	}
-	if ( (fPath[0]=='~') && ((fPath[1]=='/') || (fPath[1]==0)) ) {
+	if ( (fPath[0]=='~') && ((fPath[1]==DIR_SEPARATOR) || (fPath[1]==0)) ) {
 		char *home = getenv("HOME");
 		if (home == NULL) {
 			struct passwd *pw = getpwuid(getuid());
@@ -95,7 +96,7 @@ void FileInput::SplitInputIntoPathAndFilename()
 
 bool FileInput::PrepareForFinish()
 {
-	if ( (fString[0]=='~') && (fString[1]=='/') ) {
+	if ( (fString[0]=='~') && (fString[1]==DIR_SEPARATOR) ) {
 		char *home = getenv("HOME");
 		if (home == NULL) {
 			struct passwd *pw = getpwuid(getuid());
@@ -170,7 +171,7 @@ void FileInput::ShowMatches()
 				unsigned int pos = col*columnWidth;
 				strcpy(tmpstr+pos,e->fName);
 				if (e->IsDirectory()) {
-					tmpstr[pos+lastlen++] = '/';
+					tmpstr[pos+lastlen++] = DIR_SEPARATOR;
 					tmpstr[pos+lastlen] = 0;
 				}
 				if (e->IsLink()) {
@@ -207,7 +208,7 @@ StringInput::ECompletionResult FileInput::TryComplete(bool lastActionWasAlsoComp
 	}
 
 	if ( (fEditPos == 1) && (fString[0] == '~') ) {
-		if (InsertChar('/')) {
+		if (InsertChar(DIR_SEPARATOR)) {
 			fLastCompletionResult = eFullComplete;
 			return fLastCompletionResult;
 		} else {
@@ -246,7 +247,7 @@ StringInput::ECompletionResult FileInput::TryComplete(bool lastActionWasAlsoComp
 				first = false;
 
 				char fullPath[PATH_MAX];
-				snprintf(fullPath, PATH_MAX-1, "%s/%s", fPath, e->fName);
+				snprintf(fullPath, PATH_MAX-1, "%s%c%s", fPath, DIR_SEPARATOR, e->fName);
 				fullPath[PATH_MAX-1] = 0;
 
 				struct stat statbuf;

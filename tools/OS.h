@@ -1,10 +1,10 @@
-#ifndef VERSION_H
-#define VERSION_H
+#ifndef OS_H
+#define OS_H
 
 /*
-   Version.h - define the AtariSIO version string
+   OS - OS dependent definitions
 
-   Copyright (C) 2003-2009 Matthias Reichl <hias@horus.com>
+   Copyright (C) 2009 Matthias Reichl <hias@horus.com>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -21,7 +21,10 @@
    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-//#define VERSION_STRING "0.30-pre3"
-#define VERSION_STRING "0.30-090211"
+#ifdef WINVER
+#define DIR_SEPARATOR '\\'
+#else
+#define DIR_SEPARATOR '/'
+#endif
 
 #endif
