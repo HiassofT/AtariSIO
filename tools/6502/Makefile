@@ -28,7 +28,7 @@ dumphscode: dumphscode.o
 	$(CC) -o dumphscode dumphscode.o
 
 atarisio-highsio.bin: hisio.src hisio.inc hisiocode.src hisiodet.src
-	$(ATASM) -dRELOCTABLE -dSTART=4096 -oatarisio-highsio.bin hisio.src
+	$(ATASM) -dFASTVBI -dRELOCTABLE -dSTART=4096 -oatarisio-highsio.bin hisio.src
 
 atarisio-highsio.c: atarisio-highsio.bin dumphscode
 	./dumphscode

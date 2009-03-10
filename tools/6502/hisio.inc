@@ -36,6 +36,10 @@
 	MYSPEED = $3A
 	STACKP = $3B
 
+; flag if GETBYTE should return after receiving a single byte
+; 0 means no (we are in read loop), $80 means yes
+	GETFLG = $3C
+
 ;	CRETRY = $29C
 ;	DRETRY = $2BD
 ;	STACKP = $318
@@ -77,7 +81,7 @@
 
 ; IRQEN masks
 	IMBRK = $80	; break key pressed
-	IMKBD = $40	; break key pressed
+	IMKBD = $40	; key pressed
 	IMRECV = $20	; byte received
 	IMSEND = $10	; ready to send next byte
 	IMSCPL = $08	; transmission complete
@@ -88,8 +92,8 @@
 	RMSEND = $EF
 
 ; standard masks: break + send/receive + keyboard (kbd not handeled)
-	MSKRECV = $E0
-	MSKSEND = $D0
+	MSKRECV = $A0
+	MSKSEND = $90
 
 ; Pokey SKCTL value for transmitting data (sync. send)
 	SKSEND = $23

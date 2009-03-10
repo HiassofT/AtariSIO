@@ -33,6 +33,8 @@ HISIO
 ?ABS02	LDA SPEEDTB-1,X
 	BEQ ?DOCHK
 
+	SEC		; bytes in SIO table are now speed+1
+	SBC #1		; to prevent endless loop in case device sends speed byte 0
 ?ABS03	STA SIOSPEED
 ?ABS04	JMP DOHISIO
 
@@ -104,7 +106,9 @@ HISIO
 
 ?ABS18
 ?SETSPD	LDA SIOSPEED
-?SETSP2	LDX DUNIT	
+?SETSP2	LDX DUNIT
+	CLC		; add 1 to value to prevent endless loop
+	ADC #1		; if device sends a speed byte of 0
 ?ABS19	STA SPEEDTB-1,X
 
 ?RESCMD	LDY #$00

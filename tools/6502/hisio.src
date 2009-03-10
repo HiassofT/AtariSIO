@@ -63,6 +63,15 @@
 ;
 ;  09/05/2008 Matthias Reichl
 ;    - added ?ABSxx labels to make the code relocatable again
+;
+;  02/10/2009 Matthias Reichl
+;    - inlined checksum calculation into GETBLK to save
+;      a few cycles
+;    - added optional NMI patch to increase maximum speed
+;      up to 110kbit/sec (pokey divisor 1)
+;
+;  02/12/2009 Matthias Reichl
+;    - fix endless loop if device sends a speed byte of 0
 
 	.include "hisio.inc"
 
@@ -87,10 +96,21 @@ RELOC	.WORD ?ABS01+1, ?ABS02+1, ?ABS03+1, ?ABS04+1, ?ABS05+1
 ; note: ABS68 must be WITHOUT +1!
 	.WORD ?ABS50+1, ?ABS51+1, ?ABS52+1, ?ABS53+1, ?ABS54+1
 	.WORD ?ABS55+1, ?ABS56+1, ?ABS57+1, ?ABS58+1, ?ABS59+1
-	.WORD ?ABS60+1, ?ABS61+1, ?ABS62+1, ?ABS63+1, ?ABS64+1
-	.WORD ?ABS65+1, ?ABS66+1, ?ABS67+1, ?ABS68, ?ABS69+1
+	.WORD ?ABS60+1, ?ABS61+1, ?ABS62+1
+;	.WORD ?ABS63+1
+	.WORD ?ABS64+1
+
+.if .def NOCKSUM
+	.WORD ?ABS65+1
+.endif
+	.WORD ?ABS66+1, ?ABS67+1, ?ABS68, ?ABS69+1
 	.WORD ?ABS70+1, ?ABS71+1, ?ABS72+1, ?ABS73+1, ?ABS74+1
 	.WORD ?ABS75+1
+
+.if .def FASTVBI
+	.WORD ?ABSF01+1, ?ABSF02+1, ?ABSF03+1, ?ABSF04+1
+	.WORD ?ABSF05
+.endif
 
 RLEN	.WORD *-RELOC
 

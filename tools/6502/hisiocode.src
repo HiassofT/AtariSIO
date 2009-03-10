@@ -20,9 +20,30 @@
 DOHISIO	
 
 .if .def DIAGSIO
+
+.if .def DIAGTIM
+; record current timestamp
+        LDA #0
+        STA $D40E
+        LDA 18
+        STA ?TSTAMP
+        LDA 19
+        STA ?TSTAMP+1
+        LDA 20
+        STA ?TSTAMP+2
+        LDA $D40B
+        STA ?TSTAMP+3
+	LDA #$40
+	STA $D40E
+.endif
+
+	LDA #$01
+.else
+.if .def DIAGNORET
 	LDA #$01
 .else
 	LDA #$02
+.endif
 .endif
 
 ; internal entry point for highspeed SIO detection:
@@ -38,6 +59,28 @@ DOHIDET	STA DRETRY
 	ADC DUNIT
 	ADC #$FF
 	STA CDEVIC
+
+.if .def FASTVBI
+; save old immediate VBI handler
+	LDA $222
+	PHA
+	LDA $223
+	PHA
+; install fast immediate VBI handler if pokey divisor is below 5
+?ABSF01	LDA SIOSPEED
+	CMP #5
+	BCS ?NOVBI
+.if .def RELOCTABLE
+?ABSF02	LDY ?VBIADR
+?ABSF03	LDX ?VBIADR+1
+.else
+	LDY #<VBICODE
+	LDX #>VBICODE
+.endif
+	LDA #6
+	JSR $E45C
+?NOVBI
+.endif
 
 	TSX 
 	STX STACKP
@@ -219,6 +262,15 @@ DOHIDET	STA DRETRY
 ?GODR	JMP ?DRETLP	; yes, try it again
 ?ENDCMD	
 
+.if .def FASTVBI
+	PLA
+	TAX
+	PLA
+	TAY
+	LDA #6
+	JSR $E45C
+.endif
+
 	LDA #0
 	STA CRITIC
 	LDA POKMSK
@@ -265,37 +317,10 @@ DOHIDET	STA DRETRY
 	BNE ?SND1
 	LDA CHKSUM
 ?ABS62	JSR ?SENDBYT
-?WTSND	LDA IRQST
-	AND #IMSCPL	; wait until transmit complete
+	LDA #IMSCPL
+?WTSND	BIT IRQST	; wait until transmit complete
 	BNE ?WTSND
 	RTS
-
-?GETBLK	LDY #$00
-	STY CHKSUM
-
-; note: pokey is already set to receive mode (in rdquit),
-; so we don't need to do the setup again
-
-?ABS63
-?GETLP	JSR ?GETBYTE
-	STA (BUFRLO),Y
-?ABS64	JSR ?ADDSUM
-	INY 
-	BNE ?GET1
-	INC BUFRHI
-	DEC BFENHI
-?GET1	CPY BFENLO
-	BNE ?GETLP
-	LDA BFENHI
-	BNE ?GETLP
-?ABS65	JSR ?GETBYTE
-
-.if .def DIAGSIO
-	STA ?DIAGBT
-.endif
-	CMP CHKSUM
-	BNE ?ERRCHK
-	RTS 
 
 ; cleanup, in case of error or end of transmission
 
@@ -307,10 +332,10 @@ DOHIDET	STA DRETRY
 ; clear timer1
 ?CLRTIM1	LDY #$00
 
-; set timer1 with Y*256 cycles
+; set timer1 with Y cycles
 ?STIMOUT	LDX #$00
 
-; set timer1 Y*256 + X cycles
+; set timer1 X*256 + Y cycles
 ?STIMOU2	LDA #1
 	JSR SETVBV
 .if .def RELOCTABLE
@@ -365,6 +390,8 @@ DOHIDET	STA DRETRY
 	STA SKREST
 	LDA #$3C	; clear command line
 	STA PBCTL
+	LDA #$80
+	STA GETFLG
 ?ABS72	JSR ?GETBYTE
 
 .if .def DIAGSIO
@@ -378,28 +405,29 @@ DOHIDET	STA DRETRY
 	CMP #'E		; command ERROR
 	BEQ ?RDERR
 
-?ERRNAK LDY #ERRNAK	; NAK or any other error -> set code $8B
+?ERRNAK LDA #ERRNAK	; NAK or any other error -> set code $8B
 
 	.BYTE $2C	; BIT xxx (skip next 2 bytes)
-?ERRFRM	LDY #ERRFRM	; framing error
+?ERRFRM	LDA #ERRFRM	; framing error
 
 	.BYTE $2C	; BIT xxx (skip next 2 bytes)
-?ERROVR	LDY #ERROVR	; data input overrun
+?ERROVR	LDA #ERROVR	; data input overrun
 
 	.BYTE $2C	; BIT xxx (skip next 2 bytes)
-?ERRCHK	LDY #ERRCHK	; checksum error
+?ERRTO	LDA #ERRTO	; timeout error
 
-	.BYTE $2C	; BIT xxx (skip next 2 bytes)
-?ERRTO	LDY #ERRTO	; timeout error
+; general error routine, code in A
 
-; general error routine, code in Y
-
-?ERR	STY STATUS
+?ERR	STA STATUS
 
 .if .def DIAGSIO
+	STX ?DIAGX
 	LDX ?DIAGER
-	TYA
 	STA ?DIAGE,X
+	LDA ?DIAGX
+	STA ?DIAGB2,X
+	TYA
+	STA ?DIAGC,X
 	LDA ?DIAGST
 	STA ?DIAGS,X
 	LDA ?DIAGBT
@@ -411,8 +439,8 @@ DOHIDET	STA DRETRY
 	TXS
 ?ABS73	JMP ?SIOEND	; we got an error, cleanup and try to restart
 
-?RDERR	LDY #ERRDEV	; command error
-	STY STATUS
+?RDERR	LDA #ERRDEV	; command error
+	STA STATUS
 	RTS
 
 ; break handler
@@ -430,10 +458,20 @@ DOHIDET	STA DRETRY
 
 ; read a byte
 
+?GETBLK	LDY #$00
+	STY CHKSUM
+	STY GETFLG
+
+; note: pokey is already set to receive mode (in rdquit),
+; so we don't need to do the setup again
+
+?GETLP	
+
 ?GETBYTE LDA #IMRECV
 ?GETBY1	BIT IRQST
 	BPL ?ERRBRK	; break key pressed?
 	BNE ?GETBY1
+	LDX SERIN
 	LDA #RMRECV	; reset data-receive IRQ bit
 	STA IRQEN
 	LDA #MSKRECV	; enable data-receive IRQ
@@ -443,8 +481,44 @@ DOHIDET	STA DRETRY
 	BPL ?ERRFRM	; framing error
 	AND #$20
 	BEQ ?ERROVR	; data input overrun
-	LDA SERIN
-	RTS 
+	TXA
+	BIT GETFLG
+	BMI ?DORTS
+
+	STA (BUFRLO),Y
+;?ABS63	JSR ?ADDSUM
+
+.if .not .def NOCKSUM
+	CLC
+	ADC CHKSUM
+	ADC #$00
+	STA CHKSUM
+.endif
+
+	INY 
+	BNE ?GET1
+	INC BUFRHI
+	DEC BFENHI
+?GET1	CPY BFENLO
+	BNE ?GETLP
+	LDA BFENHI
+	BNE ?GETLP
+	LDA #$80
+	STA GETFLG
+?ABS64	JSR ?GETBYTE
+
+.if .def DIAGSIO
+	STA ?DIAGBT
+.endif
+.if .not .def NOCKSUM
+	CMP CHKSUM
+	BEQ ?DORTS
+	LDA #ERRCHK
+?ABS65	JMP ?ERR
+.endif
+?DORTS	RTS 
+
+
 
 ; send a byte. Note. we don't check for the break key
 ; here since it confuses several drives (eg. speedy 1050)
@@ -466,21 +540,65 @@ DOHIDET	STA DRETRY
 	STA CHKSUM
 	RTS 
 
+.if .def FASTVBI
+
+VBICODE	LDA CRITIC
+	BEQ ?NOCRIT
+
+	INC 20
+	BNE ?NOC1
+	INC 19
+	BNE ?NOC1
+	INC 18
+
+?NOC1	LDA CDTMV1	; check lo byte. if its != 0 timer is running and it must be decremented.
+	BNE ?TIDEC	; go decrement, hi byte unchanged because lo != 0
+	LDA CDTMV1+1	; this branch: lo = 0
+	BEQ ?TIEXIT	; timer is zero (disabled, expired), exit from here
+	DEC CDTMV1+1
+?TIDEC	DEC CDTMV1
+	BEQ ?TICHK	; lo reached 0, check if we hi also reached 0
+?TIEXIT	JMP $E462	; timer still running or expired
+?TICHK	LDA CDTMV1+1
+	BEQ ?RUNT1	; hi is also 0, execute timer vector
+	JMP $E462
+
+?ABSF04
+?RUNT1	JSR ?RUNT11
+	JMP $E462
+?RUNT11	JMP (CDTMA1)
+
+?NOCRIT	JMP $E45F
+
+.if .def RELOCTABLE
+?ABSF05
+?VBIADR	.WORD VBICODE
+.endif
+.endif
+
 ; the code starting here is only for diagnostic purposes and is
 ; normally not included
 
 .if .def DIAGSIO
 ?DIAGS	.DC $20 0
 ?DIAGB	.DC $20 0
+?DIAGB2	.DC $20 0
 ?DIAGE	.DC $20 0
+?DIAGC	.DC $20 0
 ?DIAGBT	.BYTE 0
+?DIAGX	.BYTE 0
 ?DIAGST	.BYTE 0
 ?DIAGER	.BYTE 0
 
-PDIAG	LDA ?DIAGER
-	BEQ ?PDIAG0
+.if .def DIAGTIM
+?TSTAMP	.DC 4 0
+.endif
 
-	LDA #0
+PDIAG	LDA ?DIAGER
+	BNE ?PDIAG0
+	RTS
+
+?PDIAG0	LDA #0
 	STA ?DIAGBT
 ?PDIAG1	LDX ?DIAGBT
 	CPX #$0C
@@ -494,11 +612,29 @@ PDIAG	LDA ?DIAGER
 ?PDIAG2	LDA #155
 	JSR ?PUTCHR
 
+.if .def DIAGTIM
+; print timestamp
+	LDA ?TSTAMP
+	JSR ?PHEX
+	LDA ?TSTAMP+1
+	JSR ?PHEX
+	LDA ?TSTAMP+2
+	JSR ?PHEX
+	LDA #'.
+	JSR ?PUTCHR
+	LDA ?TSTAMP+3
+	JSR ?PHEX
+	LDA #':
+	JSR ?PUTCHR
+	LDA #32
+	JSR ?PUTCHR
+.endif
+
 	LDA #0
 	STA ?DIAGBT
 ?PDIAG3	LDX ?DIAGBT
 	CPX ?DIAGER
-	BEQ ?PDIAG0
+	BEQ ?PDIAG4
 	LDA ?DIAGS,X
 	JSR ?PHEX
 	LDA #$20
@@ -511,12 +647,22 @@ PDIAG	LDA ?DIAGER
 	LDX ?DIAGBT
 	LDA ?DIAGB,X
 	JSR ?PHEX
+	LDA #$20
+	JSR ?PUTCHR
+	LDX ?DIAGBT
+	LDA ?DIAGC,X
+	JSR ?PHEX
+	LDA #$20
+	JSR ?PUTCHR
+	LDX ?DIAGBT
+	LDA ?DIAGB2,X
+	JSR ?PHEX
 	LDA #155
 	JSR ?PUTCHR
 	INC ?DIAGBT
 	BNE ?PDIAG3
 
-?PDIAG0	RTS
+?PDIAG4	RTS
 
 ?PHEX	PHA
 	LSR
