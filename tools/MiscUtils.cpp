@@ -90,8 +90,10 @@ typedef struct {
 } pokey_divisor_entry;
 
 static pokey_divisor_entry divisor_table[] = {
-	{ 0, 122880 },	// doesn't work
-	{ 1, 108423 },
+//	{ 0, 122880 },	// doesn't work
+//	{ 1, 108423 },
+	{ 0, 125494 },
+	{ 1, 110765 },
 	{ 2, 97010 },
 	{ 3, 87771 },
 	{ 4, 80139 },

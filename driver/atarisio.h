@@ -210,7 +210,7 @@ typedef struct SIO_data_frame_struct {
 
 /*
    add additional inter-byte pauses in high-speed modes and/or increase delays
- */
+*/
 #define ATARISIO_HIGHSPEEDPAUSE_OFF 0
 #define ATARISIO_HIGHSPEEDPAUSE_BYTE_DELAY 1
 #define ATARISIO_HIGHSPEEDPAUSE_FRAME_DELAY 2

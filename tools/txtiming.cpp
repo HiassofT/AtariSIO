@@ -19,11 +19,16 @@
 */
 
 #include <stdio.h>
+#include <string.h>
 #include <sys/io.h>
 #include <sys/ioctl.h>
 #include <sys/time.h>
+#include <sys/types.h>
 #include <linux/serial.h>
 #include <linux/serial_reg.h>
+
+#include <sched.h>
+#include <unistd.h>
 
 unsigned int serial_base = 0;
 unsigned int baud_base = 0;
@@ -107,7 +112,73 @@ void single_test(unsigned int chars)
 
 }
 
-void do_test()
+#define MAXRX 1000
+
+inline unsigned long long tv_to_ts(struct timeval& tv)
+{
+	return (unsigned long long)tv.tv_sec * 1000000 + tv.tv_usec;
+}
+
+static void set_realtime_scheduling()
+{
+	struct sched_param sp;
+	pid_t myPid;
+	myPid = getpid();
+
+	memset(&sp, 0, sizeof(struct sched_param));
+	sp.sched_priority = sched_get_priority_max(SCHED_RR);
+
+	if (sched_setscheduler(myPid, SCHED_RR, &sp) == 0) {
+		printf("activated realtime scheduling\n");
+	} else {
+		printf("setting realtime scheduling failed!\n");
+	}
+}
+
+void rxonly_test(unsigned int seconds)
+{
+	struct timeval tv;
+	struct timeval tv2;
+	unsigned int i = 0;
+	unsigned int j;
+
+	unsigned char* msr_list = new unsigned char[MAXRX];
+	unsigned long* ts_list = new unsigned long[MAXRX];
+
+	unsigned long long start_time, current_time;
+
+	unsigned char msr, old_msr;
+
+	sleep(1);
+	set_realtime_scheduling();
+
+	gettimeofday(&tv, NULL);
+	start_time = tv_to_ts(tv);
+
+	old_msr = serial_in(UART_MSR);
+
+	do {
+		msr = serial_in(UART_MSR);
+
+		gettimeofday(&tv2, NULL);
+		current_time = tv_to_ts(tv2);
+
+		if ((i == 0) || msr != old_msr) {
+			old_msr = msr;
+			msr_list[i] = msr;
+			ts_list[i] = current_time - start_time;
+			i++;
+		}
+	} while (i < MAXRX && current_time < start_time + seconds * 1000000);
+
+	for (j=0; j<i; j++) {
+		printf("%06ld: LSR: 00000000 MSR: ", ts_list[j]);
+		print_bin(msr_list[j]);
+		printf("\n");
+	}
+}
+
+void do_test(bool rxonly)
 {
 	/*
 	printf("iobase: %04x\n", serial_base);
@@ -147,20 +218,28 @@ void do_test()
 
 	old_lsr = serial_in(UART_LSR) ^ 0xff;
 
-	single_test(1);
-	single_test(2);
-	single_test(3);
-	single_test(14);
-
+	if (rxonly) {
+		rxonly_test(5);
+	} else {
+		single_test(1);
+		single_test(2);
+		single_test(3);
+		single_test(14);
+	}
 }
 
 int main(int argc, char** argv)
 {
 	int i;
+	bool rxonly = false;
 	
-	if (argc != 2) {
+	if (argc < 2) {
 		printf("usage: txtiming port\n");
 		return 1;
+	}
+
+	if (argc > 2) {
+		rxonly = true;
 	}
 
 	struct serial_struct orig_serial;
@@ -197,7 +276,7 @@ int main(int argc, char** argv)
 		goto fail_reenable;
 	}
 
-	do_test();
+	do_test(rxonly);
 
 fail_reenable:
 	f=fopen(argv[1],"rw");

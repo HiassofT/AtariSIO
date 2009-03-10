@@ -37,7 +37,7 @@ using namespace MiscUtils;
 
 #include "Version.h"
 
-#define MAX_BLOCKSIZE 2048
+#define MAX_BLOCKSIZE 8192
 
 static RCPtr<SIOWrapper> SIO;
 static SIOTracer* sioTracer = 0;
@@ -370,12 +370,19 @@ int main(int argc, char** argv)
 	EOutputMode outputMode = eOutputSummary;
 	bool calcLatencyParameters = false;
 	bool highspeedMode = false;
+	bool slowMode = false;
 
 	const char* siodev = 0;
 
+	unsigned int highbaud = 57600;
+
 	int c;
-	while ((c = getopt(argc, argv, "vglhd:")) > 0) {
+	while ((c = getopt(argc, argv, "vglhsd:b:")) > 0) {
 		switch(c) {
+		case 'b': 
+			highbaud = atoi(optarg);
+			printf("using highspeed baudrate %d\n", highbaud);
+			break;
 		case 'd': 
 			siodev = optarg;
 			printf("using device %s\n", siodev);
@@ -391,6 +398,9 @@ int main(int argc, char** argv)
 			break;
 		case 'h': 
 			highspeedMode = true;
+			break;
+		case 's':
+			slowMode = true;
 			break;
 		default: break;
 		}
@@ -421,9 +431,14 @@ int main(int argc, char** argv)
 		return 1;
 	}
 
+	if (slowMode) {
+		SIO->SetHighSpeedPause(ATARISIO_HIGHSPEEDPAUSE_BYTE_DELAY);
+		printf("enabled high speed pause\n");
+	}
+
 	unsigned int baudrate = 19200;
 	if (highspeedMode) {
-		baudrate = 57600;
+		baudrate = highbaud;
 	}
 
 	if (SIO->SetBaudrate(baudrate)) {
