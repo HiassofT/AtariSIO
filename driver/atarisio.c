@@ -3105,6 +3105,9 @@ static int disable_serial_port(struct atarisio_dev* dev)
 			switch (ss.type) {
 			case PORT_16550:
 			case PORT_16550A:
+#ifdef PORT_NS16550A
+			case PORT_NS16550A:
+#endif
 #ifdef PORT_16C950
 			case PORT_16C950:
 #endif
