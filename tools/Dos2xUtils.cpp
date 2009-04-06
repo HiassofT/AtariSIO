@@ -1674,7 +1674,7 @@ bool Dos2xUtils::WriteBootSectors(EBootType type)
 
 			case eBootMyPicoDos405:
 				memcpy(buf, BootSectorsMyPicoDos405, 384);
-				buf[0x0f]=1;
+				buf[0x0f]=0x81;
 				break;
 			case eBootMyPicoDos405N:
 				memcpy(buf, BootSectorsMyPicoDos405, 384);
@@ -1682,7 +1682,7 @@ bool Dos2xUtils::WriteBootSectors(EBootType type)
 				break;
 			case eBootMyPicoDos405R:
 				memcpy(buf, BootSectorsMyPicoDos405R, 384);
-				buf[0x0f]=1;
+				buf[0x0f]=0x81;
 				break;
 			case eBootMyPicoDos405RN:
 				memcpy(buf, BootSectorsMyPicoDos405R, 384);

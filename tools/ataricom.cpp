@@ -187,7 +187,7 @@ int main(int argc, char** argv)
 
 	RCPtr<AtariComMemory> memory;
 
-	std::cout << "ataricom V" << VERSION_STRING << " (c) 2008 by Matthias Reichl <hias@horus.com>" << std::endl;
+	std::cout << "ataricom V" << VERSION_STRING << " (c) 2008-2009 by Matthias Reichl <hias@horus.com>" << std::endl;
 
 	for (idx = 1; idx < argc; idx++) {
 		char * arg = argv[idx];
