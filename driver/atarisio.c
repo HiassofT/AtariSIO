@@ -240,12 +240,13 @@ MODULE_DESCRIPTION("Serial Atari 8bit SIO driver");
  * irq: interrupt number
  */
 static int minor = ATARISIO_DEFAULT_MINOR;
-static char* port[ATARISIO_MAXDEV] = {0, };
-static int io[ATARISIO_MAXDEV] = {0, };
-static int irq[ATARISIO_MAXDEV] = {0, };
-static int baud_base[ATARISIO_MAXDEV] = {0, };
-static int debug = 0;
-static int debug_irq = 0;
+static char* port[ATARISIO_MAXDEV]       = { [0 ... ATARISIO_MAXDEV-1] = 0 };
+static int   io[ATARISIO_MAXDEV]         = { [0 ... ATARISIO_MAXDEV-1] = 0 };
+static int   irq[ATARISIO_MAXDEV]        = { [0 ... ATARISIO_MAXDEV-1] = 0 };
+static int   baud_base[ATARISIO_MAXDEV]  = { [0 ... ATARISIO_MAXDEV-1] = 0 };
+static int   ext_16c950[ATARISIO_MAXDEV] = { [0 ... ATARISIO_MAXDEV-1] = 1 };
+static int   debug = 0;
+static int   debug_irq = 0;
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,10)
 MODULE_PARM(minor,"i");
@@ -253,6 +254,7 @@ MODULE_PARM(port,"1-" __MODULE_STRING(ATARISIO_MAXDEV) "s");
 MODULE_PARM(io,"1-" __MODULE_STRING(ATARISIO_MAXDEV) "i");
 MODULE_PARM(irq,"1-" __MODULE_STRING(ATARISIO_MAXDEV) "i");
 MODULE_PARM(baud_base,"1-" __MODULE_STRING(ATARISIO_MAXDEV) "i");
+MODULE_PARM(ext_16c950,"1-" __MODULE_STRING(ATARISIO_MAXDEV) "i");
 MODULE_PARM(debug,"i");
 MODULE_PARM(debug_irq,"i");
 #else
@@ -261,6 +263,7 @@ module_param_array(port, charp, 0, S_IRUGO);
 module_param_array(io, int, 0, S_IRUGO);
 module_param_array(irq, int, 0, S_IRUGO);
 module_param_array(baud_base, int, 0, S_IRUGO);
+module_param_array(ext_16c950, int, 0, S_IRUGO);
 module_param(debug, int, S_IRUGO | S_IWUSR);
 module_param(debug_irq, int, S_IRUGO | S_IWUSR);
 #endif
@@ -270,6 +273,7 @@ MODULE_PARM_DESC(port,"serial port (eg /dev/ttyS0, default: use supplied io/irq 
 MODULE_PARM_DESC(io,"io address of 16550 UART (eg 0x3f8)");
 MODULE_PARM_DESC(irq,"irq of 16550 UART (eg 4)");
 MODULE_PARM_DESC(baud_base,"base baudrate (default: 115200)");
+MODULE_PARM_DESC(ext_16c950,"use extended 16C950 features (default: 1)");
 MODULE_PARM_DESC(minor,"minor device number (default: 240)");
 MODULE_PARM_DESC(debug,"debug level (default: 0)");
 MODULE_PARM_DESC(debug_irq,"interrupt debug level (default: 0)");
@@ -2810,14 +2814,14 @@ static int atarisio_open(struct inode* inode, struct file* filp)
 	spin_lock(&dev->serial_config_lock);
 
 	if (dev->is_16c950) {
-		dev->use_16c950_mode = 1;
-
 		dev->serial_config.ACR = 0;
 
 		/* now reset the 16c950 so we are in a known state */
 		write_icr(dev, UART_CSR, 0);
 
 		if (dev->use_16c950_mode) {
+			DBG_PRINTK(DEBUG_STANDARD, "using extended 16C950 features\n");
+
 			/* set bit 4 of EFT to enable 16C950 mode */
 			serial_out(dev, UART_LCR, 0xbf);
 			serial_out(dev, UART_EFR, 0x10);
@@ -2848,10 +2852,8 @@ static int atarisio_open(struct inode* inode, struct file* filp)
 			*/
 
 			/* PRINTK("CPR = %02x\n", read_icr(dev, UART_CPR)); */
-
-
-			PRINTK("using extended 16C950 mode\n");
 		} else {
+			DBG_PRINTK(DEBUG_STANDARD, "disabled extended 16C950 features\n");
 			/* clear the EFR to set 16C550 mode */
 			serial_out(dev, UART_LCR, 0xbf);
 			serial_out(dev, UART_EFR, 0);
@@ -2991,7 +2993,7 @@ struct atarisio_dev* alloc_atarisio_dev(unsigned int id)
 
 	atarisio_devices[id] = dev;
 	dev->is_16c950 = 0;
-	dev->use_16c950_mode = 0;
+	dev->use_16c950_mode = 1;
 	dev->serial_config.ACR = 0;
 	dev->busy = 0;
 	dev->id = id;
@@ -3356,6 +3358,8 @@ static int atarisio_init_module(void)
 			} else {
 				dev->serial_config.baud_base = 0;
 			}
+			dev->use_16c950_mode = ext_16c950[i];
+
 			if (port[i] && port[i][0]) {
 				dev->port = port[i];
 				if (disable_serial_port(dev)) {
