@@ -64,14 +64,14 @@ AtrSIOHandler::AtrSIOHandler(const RCPtr<AtrImage>& image)
 	  fEnableHighSpeed(false),
 	  fEnableXF551Mode(false),
 
-//	  fSpeedByte(SPEED_BYTE_57600),
-//	  fHighSpeedBaudrate(57600),
+	  fSpeedByte(SPEED_BYTE_57600),
+	  fHighSpeedBaudrate(57600),
 
 //	  fSpeedByte(SPEED_BYTE_108423),
 //	  fHighSpeedBaudrate(108423),
 
-	  fSpeedByte(SPEED_BYTE_97010),
-	  fHighSpeedBaudrate(97010),
+//	  fSpeedByte(SPEED_BYTE_97010),
+//	  fHighSpeedBaudrate(97010),
 
 //	  fSpeedByte(SPEED_BYTE_87771),
 //	  fHighSpeedBaudrate(87771),
