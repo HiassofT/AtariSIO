@@ -27,12 +27,8 @@ mypicodoscode.c: mypdos-atarisio.bin bootloader.bin dumpmypdoscode
 dumphscode: dumphscode.o
 	$(CC) -o dumphscode dumphscode.o
 
-atarisio-highsio.bin: hisio.src hisio.inc hisiocode.src hisiodet.src
-	$(ATASM) -dFASTVBI -dRELOCTABLE -dSTART=4096 -oatarisio-highsio.bin hisio.src
-
-atarisio-highsio.c: atarisio-highsio.bin dumphscode
+atarisio-highsio.c: highsio-atarisio.bin dumphscode
 	./dumphscode
-
 
 dumpspeedycode: dumpspeedycode.o
 	$(CC) -o dumpspeedycode dumpspeedycode.o
@@ -47,7 +43,7 @@ remote.com: remote.src
 	$(ATASM) $(ASMFLAGS) -oremote.com remote.src
 
 allclean: clean
-	rm -f atarisio-highsio.bin bootloader.bin
+	rm -f bootloader.bin
 
 clean:
 	rm -f dumphscode *.o

@@ -21,7 +21,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-static char objfile[]="atarisio-highsio.bin";
+static char objfile[]="highsio-atarisio.bin";
 
 int main(void)
 {
