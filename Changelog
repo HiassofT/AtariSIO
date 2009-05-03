@@ -136,3 +136,5 @@ AtariSIO changelog:
   - atarisio: preliminary fine-grained baudrate selection for 16C950 UARTs
   - atariserver: configurable highspeed selection
   - atariserver: updated MyPicoDos and highspeed SIO code
+  - atarisio: removed IRQF_DISABLED from request_irq call
+
