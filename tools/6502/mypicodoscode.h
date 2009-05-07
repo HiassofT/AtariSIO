@@ -1,2 +1,2 @@
-enum { eCodeLength = 5632 };
+enum { eCodeLength = 5760 };
 enum { eBootLength = 384 };

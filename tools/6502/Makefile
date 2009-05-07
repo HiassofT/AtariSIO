@@ -6,11 +6,6 @@ CFLAGS=-W -Wall
 all: atarisio-highsio.c mypicodoscode.c remote.com
 # speedycode.c
 
-#all: highspeedcode.c mypicodoscode.c MYPDOS.COM mypdos.atr mypdoshs.atr \
-#     speedycode.c
-
-#all: MYPDOS.COM mypdos.atr mypdoshs.atr myinit2.atr
-
 #ASMFLAGS=
 ASMFLAGS = -s
 
@@ -20,14 +15,14 @@ bootloader.bin: bootloader.src
 dumpmypdoscode: dumpmypdoscode.o
 	$(CC) -o dumpmypdoscode dumpmypdoscode.o
 
-mypicodoscode.c: mypdos-atarisio.bin bootloader.bin dumpmypdoscode
+mypicodoscode.c: atarisio-mypdos.bin bootloader.bin dumpmypdoscode
 	./dumpmypdoscode
 
 
 dumphscode: dumphscode.o
 	$(CC) -o dumphscode dumphscode.o
 
-atarisio-highsio.c: highsio-atarisio.bin dumphscode
+atarisio-highsio.c: atarisio-highsio.bin dumphscode
 	./dumphscode
 
 dumpspeedycode: dumpspeedycode.o

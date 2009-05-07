@@ -20,7 +20,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-static char objfile[]="mypdos-atarisio.bin";
+static char objfile[]="atarisio-mypdos.bin";
 static char bootfile[]="bootloader.bin";
 
 static void dump_buf(FILE* out, unsigned char* buf, int len)

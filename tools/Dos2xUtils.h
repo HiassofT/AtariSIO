@@ -58,6 +58,7 @@ public:
 		eBootMyDos453 = 3,
 		eBootTurboDos21 = 4,
 		eBootTurboDos21HS = 5,
+
 		eBootMyPicoDos403 = 6,
 		eBootMyPicoDos403HS = 7,
 
@@ -68,12 +69,14 @@ public:
 		eBootMyPicoDos404B = 12,
 
 		eBootMyPicoDos405 = 13,
-		eBootMyPicoDos405N = 14,
-		eBootMyPicoDos405R = 15,
-		eBootMyPicoDos405RN = 16,
-		eBootMyPicoDos405B = 17,
+		eBootMyPicoDos405A = 14,
+		eBootMyPicoDos405N = 15,
+		eBootMyPicoDos405R = 16,
+		eBootMyPicoDos405RA = 17,
+		eBootMyPicoDos405RN = 18,
+		eBootMyPicoDos405B = 19,
 
-		ePicoBoot405 = 18,
+		ePicoBoot405 = 20,
 
 		eBootDefault = eBootAtariSIOMyPicoDos
 	};
