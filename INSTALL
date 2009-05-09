@@ -1,6 +1,6 @@
 AtariSIO driver and utilities V0.30
 
-Copyright (C) 2002-2008 Matthias Reichl <hias@horus.com>
+Copyright (C) 2002-2009 Matthias Reichl <hias@horus.com>
 
 This program is proteced under the terms of the GNU General Public
 License, version 2. Please read LICENSE for further details.
@@ -55,8 +55,13 @@ module configuration templates (atarisio-ttySx).
 
    Depending on your Linux distribution you may also need to install
    the development packages for glibc/libncurses/libreadline/zlib.
-   For example, in Debian Woody these packages are named libc6-dev,
-   libncurses5-dev, libreadline4-dev, and zlib1g-dev.
+
+   If you are using a Debian based distribution, install these packages:
+   * build-essential
+   * libncurses5-dev
+   * zlib1g-dev
+   * linux-headers-2.6-XXX (matching your installed linux-image-XXX
+     package, for example linux-headers-2.6-686)
 
    Furthermore, you'll need a fully 16550 compatible serial port.
    If you have a serial port on your mainboard, it most certainly
