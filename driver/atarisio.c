@@ -311,6 +311,9 @@ MODULE_PARM_DESC(debug_irq,"interrupt debug level (default: 0)");
 #define DELAY_T5_MIN 300
 #define DELAY_T5_MIN_SLOW 1000
 
+/* QMEG OS 3 needs a delay of max. 100usec between complete and data */
+#define DELAY_T3_PERIPH 100
+
 /* this one is in mSecs, one jiffy (10 mSec on i386) is minimum,
  * try higher values for slower machines. The default of 50 mSecs
  * should be sufficient for most PCs
@@ -2210,7 +2213,7 @@ static int perform_send_data_frame(struct atarisio_dev* dev, unsigned long arg)
 		return -EFAULT;
 	}
 
-	udelay(DELAY_T3_MIN);
+	udelay(DELAY_T3_PERIPH);
 
 
 	if (frame.data_length) {
