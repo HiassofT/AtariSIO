@@ -3177,6 +3177,7 @@ static int reenable_serial_port(struct atarisio_dev* dev)
 {
 	mm_segment_t fs;
 	struct file* f;
+	struct serial_struct ss;
 
 	if (!dev->need_reenable) {
 		DBG_PRINTK(DEBUG_STANDARD, "unnecessary call to reenable_serial_port\n");
@@ -3198,7 +3199,13 @@ static int reenable_serial_port(struct atarisio_dev* dev)
 	if (f->f_op && f->f_op->ioctl) {
 #endif
 		if (f->f_dentry && f->f_dentry->d_inode) {
-			if (ioctl_wrapper(f, TIOCSSERIAL, (unsigned long) &dev->orig_serial_struct)) {
+			if (ioctl_wrapper(f, TIOCGSERIAL, (unsigned long) &ss)) {
+				DBG_PRINTK(DEBUG_STANDARD, "TIOCGSERIAL failed\n");
+				goto fail_close;
+			}
+			/* restore original values */
+			ss.type = dev->orig_serial_struct.type;
+			if (ioctl_wrapper(f, TIOCSSERIAL, (unsigned long) &ss)) {
 				DBG_PRINTK(DEBUG_STANDARD, "TIOCSSERIAL failed\n");
 				goto fail_close;
 			}
