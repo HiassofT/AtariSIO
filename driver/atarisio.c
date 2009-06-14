@@ -2759,11 +2759,9 @@ static unsigned int atarisio_poll(struct file* filp, poll_table* wait)
 
 /* old IRQ flags deprecated since linux 2.6.22 */
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,22)
-#define FAST_IRQFLAGS (IRQF_DISABLED | IRQF_SHARED)
-#define SLOW_IRQFLAGS (IRQF_SHARED)
+#define MY_IRQFLAGS (IRQF_SHARED)
 #else
-#define FAST_IRQFLAGS (SA_INTERRUPT | SA_SHIRQ)
-#define SLOW_IRQFLAGS (SA_SHIRQ)
+#define MY_IRQFLAGS (SA_SHIRQ)
 #endif
 
 
@@ -2895,19 +2893,18 @@ static int atarisio_open(struct inode* inode, struct file* filp)
 	(void)serial_in(dev, UART_RX);
 	(void)serial_in(dev, UART_MSR);
 
-	if (request_irq(dev->irq, atarisio_interrupt, FAST_IRQFLAGS, dev->devname, dev)) {
-		if (request_irq(dev->irq, atarisio_interrupt, SLOW_IRQFLAGS, dev->devname, dev)) {
-			PRINTK("could not register interrupt %d\n",dev->irq);
-			dev->busy=0;
-			spin_unlock_irqrestore(&dev->uart_lock, flags);
-			ret = -EFAULT;
-			goto exit_open;
-		} else {
-			DBG_PRINTK(DEBUG_STANDARD, "got slow interrupt\n");
-		}
-	} else {
-		DBG_PRINTK(DEBUG_STANDARD, "got fast interrupt\n");
+	spin_unlock(&dev->serial_config_lock);
+	spin_unlock_irqrestore(&dev->uart_lock, flags);
+
+	if (request_irq(dev->irq, atarisio_interrupt, MY_IRQFLAGS, dev->devname, dev)) {
+		PRINTK("could not register interrupt %d\n",dev->irq);
+		dev->busy=0;
+		ret = -EFAULT;
+		goto exit_open;
 	}
+
+	spin_lock_irqsave(&dev->uart_lock, flags);
+	spin_lock(&dev->serial_config_lock);
 
 	serial_out(dev, UART_IER, dev->serial_config.IER);
 
