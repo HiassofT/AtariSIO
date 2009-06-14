@@ -113,6 +113,10 @@ int main(int argc, char**argv)
 				bootType = Dos2xUtils::eBootMyPicoDos405RN;
 			} else if (strcasecmp(optarg,"mypicodos405b") == 0) {
 				bootType = Dos2xUtils::eBootMyPicoDos405B;
+			} else if (strcasecmp(optarg,"mypicodos405s0") == 0) {
+				bootType = Dos2xUtils::eBootMyPicoDos405S0;
+			} else if (strcasecmp(optarg,"mypicodos405s1") == 0) {
+				bootType = Dos2xUtils::eBootMyPicoDos405S1;
 			} else if (strcasecmp(optarg,"picoboot405") == 0) {
 				bootType = Dos2xUtils::ePicoBoot405;
 			} else {
@@ -235,7 +239,7 @@ usage:
 	printf("            MyPicoDos404, MyPicoDos404N, MyPicoDos404R, MyPicoDos404RN,\n");
 	printf("            MyPicoDos404B, MyPicoDos405, MyPicoDos405A, MyPicoDos405N,\n");
 	printf("            MyPicoDos405R, MyPicoDos405RA, MyPicoDos405RN, MyPicoDos405B,\n");
-	printf("            PicoBoot405\n");
+	printf("            MyPicoDos405S0, MyPicoDos405S1, PicoBoot405\n");
 
 	SIOTracer::GetInstance()->RemoveAllTracers();
 	return 1;

@@ -105,6 +105,7 @@ static pokey_divisor_entry divisor_table[] = {
 	{ 9, 55020 },
 	{ 10, 51921 },
 	{ 16, 38400 },
+	{ 40, 19200 },
 	{ 0, 0 }
 };
 

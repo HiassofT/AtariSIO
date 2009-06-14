@@ -1503,6 +1503,10 @@ static unsigned char BootSectorsMyPicoDos405B[] = {
 #include "6502/bootbare405.c"
 };
 
+static unsigned char BootSectorsMyPicoDos405S[] = {
+#include "6502/bootsd405.c"
+};
+
 static unsigned char BootSectorsPicoBoot405[] = {
 #include "6502/picoboot405.c"
 };
@@ -1541,6 +1545,11 @@ static unsigned char PicoDosSys405R[] = {
 static unsigned char PicoDosSys405B[] = {
 #include "6502/picobare405.c"
 };
+
+static unsigned char PicoDosSys405S[] = {
+#include "6502/picosd405.c"
+};
+
 
 bool Dos2xUtils::WriteBootSectors(EBootType type)
 {
@@ -1645,6 +1654,8 @@ bool Dos2xUtils::WriteBootSectors(EBootType type)
 	case eBootMyPicoDos405RA:
 	case eBootMyPicoDos405RN:
 	case eBootMyPicoDos405B:
+	case eBootMyPicoDos405S0:
+	case eBootMyPicoDos405S1:
 		if (dir->FindFile("PICODOS SYS", entry, status, startsec)) {
 			switch (type) {
 			case eBootMyPicoDos403:
@@ -1700,6 +1711,16 @@ bool Dos2xUtils::WriteBootSectors(EBootType type)
 				break;
 			case eBootMyPicoDos405B:
 				memcpy(buf, BootSectorsMyPicoDos405B, 384);
+				break;
+			case eBootMyPicoDos405S0:
+				memcpy(buf, BootSectorsMyPicoDos405S, 384);
+				buf[0x0f]=0x81;
+				buf[0x11]=0;
+				break;
+			case eBootMyPicoDos405S1:
+				memcpy(buf, BootSectorsMyPicoDos405S, 384);
+				buf[0x0f]=0x81;
+				buf[0x11]=1;
 				break;
 
 			default:
@@ -1763,6 +1784,9 @@ unsigned int Dos2xUtils::GetBootFileLength(EBootType type)
 		return sizeof(PicoDosSys405R);
 	case eBootMyPicoDos405B:
 		return sizeof(PicoDosSys405B);
+	case eBootMyPicoDos405S0:
+	case eBootMyPicoDos405S1:
+		return sizeof(PicoDosSys405S);
 	default:
 		return 0;
 	}
@@ -1812,6 +1836,11 @@ bool Dos2xUtils::AddBootFile(EBootType type)
 	case eBootMyPicoDos405B:
 		len = sizeof(PicoDosSys405B);
 		buf = PicoDosSys405B;
+		break;
+	case eBootMyPicoDos405S0:
+	case eBootMyPicoDos405S1:
+		len = sizeof(PicoDosSys405S);
+		buf = PicoDosSys405S;
 		break;
 	default:
 		return true;

@@ -75,8 +75,10 @@ public:
 		eBootMyPicoDos405RA = 17,
 		eBootMyPicoDos405RN = 18,
 		eBootMyPicoDos405B = 19,
+		eBootMyPicoDos405S0 = 20,
+		eBootMyPicoDos405S1 = 21,
 
-		ePicoBoot405 = 20,
+		ePicoBoot405 = 22,
 
 		eBootDefault = eBootAtariSIOMyPicoDos
 	};
