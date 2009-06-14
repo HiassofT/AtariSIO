@@ -856,6 +856,16 @@ static baudrate_entry_16c950 baudrate_table_16c950[] = {
 	{  84562, 15,  31,   3 }, /* (  88672.38:  4.86%) (  89488.64:  5.83%) */
 	{  83781, 16,   8,  11 }, /* (  88672.38:  5.84%) (  89488.64:  6.81%) */
 
+	/* pokey divisor 9: compatible with Speedy 1050 */
+	{  55434, 16,  19,   7 }, /* (  55420.23: -0.02%) (  55930.40:  0.90%) */
+
+	/* pokey divisor 10: compatible with Happy 1050 */
+	{  52150, 13,  29,   6 }, /* (  52160.22:  0.02%) (  52640.37:  0.94%) */
+
+	/* pokey divisor 10: testing */
+	{  52662, 16,  10,  14 }, /* (  52160.22: -0.95%) (  52640.37: -0.04%) */
+	{  52289, 16, 141,   1 }, /* (  52160.22: -0.25%) (  52640.37:  0.67%) */
+
 	{  80577, 12,  61,   2 }, /* (  80611.25:  0.04%) (  81353.31:  0.96%) */
 
 	{  58982,  8, 125,   2 },
@@ -1593,8 +1603,6 @@ static inline int send_command_frame(struct atarisio_dev* dev, SIO_parameters* p
 	while (retry < MAX_COMMAND_FRAME_RETRIES) {
 		DBG_PRINTK(DEBUG_NOISY, "initiating command frame\n");
 
-		dev->rx_buf.tail = dev->rx_buf.head; /* clear rx-buffer */
-
 		set_command_line(dev);
 		udelay(DELAY_T0);
 
@@ -1619,6 +1627,8 @@ static inline int send_command_frame(struct atarisio_dev* dev, SIO_parameters* p
 				return w;
 			}
 		}
+
+		dev->rx_buf.tail = dev->rx_buf.head; /* clear rx-buffer */
 
 		udelay(DELAY_T1);
 		clear_command_line(dev, 1);

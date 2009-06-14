@@ -398,6 +398,10 @@ static int write_image(char *filename)
 		return 1;
 	}
 
+	unsigned char zero[256];
+
+	memset(zero, 0, 256);
+
 	int result,length;
 	unsigned int total_sectors;
 	unsigned int sec;
@@ -414,17 +418,20 @@ static int write_image(char *filename)
 
 	printf("writing image to disk:\n");
 	for (sec=1; sec <= total_sectors; sec++) {
-		printf("\b\b\b\b\b%5d", sec); fflush(stdout);
 		length = image.GetSectorLength(sec);
 		if (length == 0) {
 			printf("error getting sector length\n");
 			return 1;
 		}
-
 		if (!image.ReadSector(sec, buf, length)) {
 			printf("\nerror accessing sector %d of image\n",sec);
 			goto failure;
 		}
+		if (memcmp(buf, zero, length) == 0) {
+			continue;
+		}
+
+		printf("\b\b\b\b\b%5d", sec); fflush(stdout);
 
 		if ((result = SIO->WriteSector(drive_no, sec, buf, length)) ) {
 			printf("\nerror writing sector %d to disk ", sec);
@@ -438,6 +445,56 @@ static int write_image(char *filename)
 
 failure:
 	return 1;
+}
+
+void check_ultraspeed()
+{
+	unsigned char speed_byte;
+	unsigned int baud;
+
+        SIO_parameters params;
+
+        params.device_id = 48+drive_no;
+        params.command = 0x3f;
+        params.direction = 0;
+        params.timeout = 1;
+        params.data_buffer = &speed_byte;
+        params.data_length = 1;
+
+	int ret = SIO->DirectSIO(params);
+
+	baud = 19200;
+	if (ret == 0) {
+		printf("ultra speed capable: speed byte = %d\n", speed_byte);
+		switch (speed_byte) {
+		case 9:
+			baud = 55434;
+			break;
+		case 10:
+			baud = 52150;
+			params.command = 0x48;
+			params.data_length = 0;
+			params.aux1 = 0x20;
+			params.aux2 = 0;
+			printf("possibly Happy 1050: enabling fast writes\n");
+			if (SIO->DirectSIO(params) == 0) {
+				printf("Happy command $48 (AUX=$20) succeeded\n");
+			} else {
+				printf("Happy command $48 (AUX=$20) failed\n");
+			}
+			break;
+		default:
+			printf("unsupported speed byte %d\n", speed_byte);
+			break;
+		}
+		if (SIO->SetBaudrate(baud) == 0) {
+			printf("switched to %d baud\n", baud);
+		} else {
+			printf("switching to %d baud failed\n", baud);
+		}
+	} else {
+		printf("drive is not ultra speed capable, using standard speed\n");
+	}
 }
 
 #ifdef ALL_IN_ONE
@@ -456,12 +513,13 @@ int main(int argc, char** argv)
 	int finished = 0;
 	int prosys = 0;
 	int ret;
+	bool use_ultraspeed = false;
 
 	char* atarisioDevName = getenv("ATARIXFER_DEVICE");
 
 	printf("atarixfer %s\n(c) 2002-2009 by Matthias Reichl <hias@horus.com>\n\n",VERSION_STRING);
 	while(!finished) {
-		c = getopt(argc, argv, "prw12345678df:");
+		c = getopt(argc, argv, "prw12345678df:u");
 		if (c == -1) {
 			break;
 		}
@@ -503,6 +561,9 @@ int main(int argc, char** argv)
 		case '8':
 			drive_no=c - '0';
 			break;
+		case 'u':
+			use_ultraspeed = 1;
+			break;
 		default:
 			printf("forgot to catch option %d\n",c);
 			break;
@@ -517,7 +578,7 @@ int main(int argc, char** argv)
 		goto usage;
 	}
 
-	if (mode == 0 || mode ==1) {
+	if (mode == 0 || mode == 1) {
 		try {
 			SIO = new SIOWrapper(atarisioDevName);
 		}
@@ -546,6 +607,9 @@ int main(int argc, char** argv)
 			return 1;
 		}
 
+		if (use_ultraspeed) {
+			check_ultraspeed();
+		}
 		if (mode == 0) {
 			ret = read_image(argv[optind]);
 		} else {
@@ -563,6 +627,7 @@ usage:
 	printf("  -r imagefile  create ATR/XFD/DCM image of disk\n");
 	printf("  -w imagefile  write given ATR/XFD/DCM image to disk\n");
 	printf("  -d            enable debugging\n");
+	printf("  -u            use ultraspeed if available\n");
 	printf("  -12345678     use drive number 1..8\n");
 	return 1;
 }
