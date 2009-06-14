@@ -814,6 +814,9 @@ static baudrate_entry_16c950 baudrate_table_16c950[] = {
 
 	/* pokey divisor 1: needs 2 stopbits on PAL */
 	{ 112347, 15,  10,   7 }, /* ( 110840.47: -1.34%) ( 111860.80: -0.43%) */
+	{ 112027, 13,   9,   9 }, /* ( 110840.47: -1.06%) ( 111860.80: -0.15%) */
+
+	/* pokey divisor 1: works on NTSC, needs 2 stopbits on PAL */
 	{ 111709, 16,  11,   6 }, /* ( 110840.47: -0.78%) ( 111860.80:  0.14%) */
 	{ 111603,  7, 151,   1 }, /* ( 110840.47: -0.68%) ( 111860.80:  0.23%) */
 	{ 111287, 10, 106,   1 }, /* ( 110840.47: -0.40%) ( 111860.80:  0.52%) */
@@ -823,7 +826,22 @@ static baudrate_entry_16c950 baudrate_table_16c950[] = {
 	/* pokey divisor 1: working */
 	{ 110765,  5, 213,   1 }, /* ( 110840.47:  0.07%) ( 111860.80:  0.99%) */
 
+	/* pokey divisor 2: needs 2 stopbits on PAL */
+	{  99130, 14,  17,   5 }, /* (  98524.86: -0.61%) (  99431.82:  0.30%) */
+
+	/* pokey divisor 2: works on NTSC */
+	{  99632, 16,  74,   1 }, /* (  98524.86: -1.11%) (  99431.82: -0.20%) */
+	{  99548, 15,  79,   1 }, /* (  98524.86: -1.03%) (  99431.82: -0.12%) */
+
+	/* pokey divisor 2: testing */
+	{  98715,  5, 239,   1 }, /* (  98524.86: -0.19%) (  99431.82:  0.73%) */
+
 	/* pokey divisor 2: working */
+	{  98963,  4, 149,   2 }, /* (  98524.86: -0.44%) (  99431.82:  0.47%) */
+	{  98797,  6, 199,   1 }, /* (  98524.86: -0.28%) (  99431.82:  0.64%) */
+	{  98632, 13,  23,   4 }, /* (  98524.86: -0.11%) (  99431.82:  0.81%) */
+	{  98550,  7,   9,  19 }, /* (  98524.86: -0.03%) (  99431.82:  0.89%) */
+
 	{  98304, 15,   0,  10 }, /* (  98524.86:  0.22%) (  99431.82:  1.15%) */
 
 	/* pokey divisor 3: working on NTSC, need 2 stopbits on PAL */
@@ -2223,6 +2241,8 @@ static int perform_send_data_frame(struct atarisio_dev* dev, unsigned long arg)
 		return -EFAULT;
 	}
 
+	/* delay a short time before transmitting data frame */
+	/* most SIO codes don't like it if data follows immediately after complete */
 	udelay(DELAY_T3_PERIPH);
 
 
@@ -2916,6 +2936,7 @@ static int atarisio_open(struct inode* inode, struct file* filp)
 	spin_lock_irqsave(&dev->uart_lock, flags);
 	spin_lock(&dev->serial_config_lock);
 
+	/* enable UART interrupts */
 	serial_out(dev, UART_IER, dev->serial_config.IER);
 
 	spin_unlock(&dev->serial_config_lock);
