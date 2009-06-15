@@ -1,5 +1,5 @@
 /*
-   atarisio V1.04
+   atarisio V1.05
    a kernel module for handling the Atari 8bit SIO protocol
 
    Copyright (C) 2002-2009 Matthias Reichl <hias@horus.com>
@@ -283,7 +283,7 @@ MODULE_PARM_DESC(debug_irq,"interrupt debug level (default: 0)");
  * constants of the SIO protocol
  */
 
-#define MAX_COMMAND_FRAME_RETRIES 14
+#define MAX_COMMAND_FRAME_RETRIES 13
 #define COMMAND_FRAME_ACK_CHAR 0x41
 #define COMMAND_FRAME_NAK_CHAR 0x4e
 
@@ -874,6 +874,10 @@ static baudrate_entry_16c950 baudrate_table_16c950[] = {
 	{  84562, 15,  31,   3 }, /* (  88672.38:  4.86%) (  89488.64:  5.83%) */
 	{  83781, 16,   8,  11 }, /* (  88672.38:  5.84%) (  89488.64:  6.81%) */
 
+	/* pokey divisor 6: testing */
+	{  68266, 16,   9,  12 }, /* (  68209.52: -0.08%) (  68837.41:  0.84%) */
+	{  68385, 15, 115,   1 }, /* (  68209.52: -0.26%) (  68837.41:  0.66%) */
+
 	/* pokey divisor 9: compatible with Speedy 1050 */
 	{  55434, 16,  19,   7 }, /* (  55420.23: -0.02%) (  55930.40:  0.90%) */
 
@@ -883,6 +887,9 @@ static baudrate_entry_16c950 baudrate_table_16c950[] = {
 	/* pokey divisor 10: testing */
 	{  52662, 16,  10,  14 }, /* (  52160.22: -0.95%) (  52640.37: -0.04%) */
 	{  52289, 16, 141,   1 }, /* (  52160.22: -0.25%) (  52640.37:  0.67%) */
+
+	/* pokey divisor 16: compatible with Happy 1050 Warp speed */
+	{  38550, 15,  12,  17 }, /* (  38553.21:  0.01%) (  38908.10:  0.93%) */
 
 	{  80577, 12,  61,   2 }, /* (  80611.25:  0.04%) (  81353.31:  0.96%) */
 
@@ -936,7 +943,7 @@ static unsigned int calc_16c950_baudrate(struct atarisio_dev* dev, unsigned int 
 	return divisor;
 }
 
-static int set_baudrate(struct atarisio_dev* dev, unsigned int baudrate, int do_locks)
+static int force_set_baudrate(struct atarisio_dev* dev, unsigned int baudrate, int do_locks)
 {
 	unsigned long flags=0;
 	unsigned int divisor;
@@ -956,7 +963,7 @@ static int set_baudrate(struct atarisio_dev* dev, unsigned int baudrate, int do_
 			serial_out(dev, UART_MCR, dev->serial_config.MCR);
 			/* configure standard mode: 16 clocks per bit */
 			write_icr(dev, UART_TCR, 0);
-			DBG_PRINTK(DEBUG_STANDARD, "setting baudrate %d TCR=16, CPR=0, divisor %d\n", baudrate, divisor);
+			DBG_PRINTK(DEBUG_NOISY, "setting baudrate %d TCR=16, CPR=0, divisor %d\n", baudrate, divisor);
 		} else {
 			divisor = calc_16c950_baudrate(dev, baudrate);
 		}
@@ -975,6 +982,13 @@ static int set_baudrate(struct atarisio_dev* dev, unsigned int baudrate, int do_
 	return 0;
 }
 
+static int set_baudrate(struct atarisio_dev* dev, unsigned int baudrate, int do_locks)
+{
+	if (dev->serial_config.baudrate != baudrate) {
+		return force_set_baudrate(dev, baudrate, do_locks);
+	}
+	return 0;
+}
 
 static inline unsigned char calculate_checksum(const unsigned char* circ_buf, int start, int len, int total_len)
 {
@@ -1601,7 +1615,7 @@ static inline int wait_receive(struct atarisio_dev* dev, int len, int additional
 	return no_received_chars;
 }
 
-static inline int send_command_frame(struct atarisio_dev* dev, SIO_parameters* params)
+static inline int send_command_frame(struct atarisio_dev* dev, Ext_SIO_parameters* params)
 {
 	int retry = 0;
 	int last_err = 0;
@@ -1609,19 +1623,59 @@ static inline int send_command_frame(struct atarisio_dev* dev, SIO_parameters* p
 	int i;
 	unsigned char c;
 	int w;
+	unsigned char highspeed_mode;
 
 	unsigned char cmd_frame[5];
 
-	cmd_frame[0] = params->device_id;
+	highspeed_mode = params->highspeed_mode;
+
+	cmd_frame[0] = params->device + params->unit - 1;
 	cmd_frame[1] = params->command;
 	cmd_frame[2] = params->aux1;
 	cmd_frame[3] = params->aux2;
+
+	switch (params->highspeed_mode) {
+	case ATARISIO_EXTSIO_SPEED_NORMAL:
+	case ATARISIO_EXTSIO_SPEED_ULTRA:
+		break;
+	case ATARISIO_EXTSIO_SPEED_TURBO:
+		/* set bit 7 of daux2 */
+		cmd_frame[3] |= 0x80;
+		break;
+	case ATARISIO_EXTSIO_SPEED_WARP:
+		/* warp speed only supported for read/write sector */
+		switch (params->command) {
+		case 0x50:
+		case 0x52:
+		case 0x57:
+			/* set bit 5 of command */
+			cmd_frame[1] |= 0x20;
+			break;
+		default:
+			highspeed_mode = ATARISIO_EXTSIO_SPEED_NORMAL;
+		}
+		break;
+	case ATARISIO_EXTSIO_SPEED_XF551:
+		/* XF551 sends response to format commands always in standard speed */
+		if (params->command == 0x21 || params->command == 0x22) {
+			highspeed_mode = ATARISIO_EXTSIO_SPEED_NORMAL;
+		}
+		/* set bit 7 of command */
+		cmd_frame[1] |= 0x80;
+		break;
+	};
+
 	cmd_frame[4] = calculate_checksum(cmd_frame, 0, 4, 5);
 
 	while (retry < MAX_COMMAND_FRAME_RETRIES) {
 		DBG_PRINTK(DEBUG_NOISY, "initiating command frame\n");
 
 		set_command_line(dev);
+		if (highspeed_mode == ATARISIO_EXTSIO_SPEED_ULTRA) {
+			set_baudrate(dev, dev->highspeed_baudrate, 1);
+		} else {
+			set_baudrate(dev, dev->default_baudrate, 1);
+		}
 		udelay(DELAY_T0);
 
 		spin_lock_irqsave(&dev->tx_lock, flags);
@@ -1645,15 +1699,19 @@ static inline int send_command_frame(struct atarisio_dev* dev, SIO_parameters* p
 				return w;
 			}
 		}
+		if (highspeed_mode == ATARISIO_EXTSIO_SPEED_TURBO) {
+			set_baudrate(dev, dev->highspeed_baudrate, 1);
+		}
 
 		dev->rx_buf.tail = dev->rx_buf.head; /* clear rx-buffer */
 
 		udelay(DELAY_T1);
 		clear_command_line(dev, 1);
-		udelay(DELAY_T2_MIN);
+		//udelay(DELAY_T2_MIN);
 
 		PRINT_TIMESTAMP("begin wait for command ACK");
 		w=wait_receive(dev, 1, DELAY_T2_MAX/1000);
+
 		PRINT_TIMESTAMP("end wait for command ACK");
 
 		if (w < 1) {
@@ -1661,18 +1719,23 @@ static inline int send_command_frame(struct atarisio_dev* dev, SIO_parameters* p
 				DBG_PRINTK(DEBUG_STANDARD, "wait_receive returned %d\n",w);
 				return w;
 			} else {
-				DBG_PRINTK(DEBUG_STANDARD, "waiting for command frame ACK timed out\n");
+				DBG_PRINTK(DEBUG_NOISY, "waiting for command frame ACK timed out\n");
 
 				last_err = -EATARISIO_COMMAND_TIMEOUT;
 				goto again;
 			}
 		}
+
+		if (highspeed_mode == ATARISIO_EXTSIO_SPEED_WARP || highspeed_mode == ATARISIO_EXTSIO_SPEED_XF551) {
+			set_baudrate(dev, dev->highspeed_baudrate, 1);
+		}
+
 		c = dev->rx_buf.buf[dev->rx_buf.tail];
 		dev->rx_buf.tail = (dev->rx_buf.tail+1) % IOBUF_LENGTH;
 		if (c==COMMAND_FRAME_ACK_CHAR) {
 			break;
 		} else if (c==COMMAND_FRAME_NAK_CHAR) {
-			DBG_PRINTK(DEBUG_STANDARD, "got command frame NAK\n");
+			DBG_PRINTK(DEBUG_NOISY, "got command frame NAK\n");
 			last_err = -EATARISIO_COMMAND_NAK;
 		} else {
 			DBG_PRINTK(DEBUG_STANDARD, "illegal response to command frame: 0x%02x\n",c);
@@ -1683,6 +1746,8 @@ static inline int send_command_frame(struct atarisio_dev* dev, SIO_parameters* p
 
 again:
 		clear_command_line(dev, 1);
+		udelay(100);
+/*
 		{
 			signed long t = HZ / 5;
 			current->state=TASK_INTERRUPTIBLE;
@@ -1695,6 +1760,7 @@ again:
 			}
 			current->state=TASK_RUNNING;
 		}
+*/
 		retry++;
 	}
 		
@@ -1796,89 +1862,7 @@ static int copy_received_data_to_user(struct atarisio_dev* dev, unsigned int dat
 	return 0;
 }
 
-static int perform_sio_receive_data(struct atarisio_dev* dev, SIO_parameters * sio_params)
-{
-	int received_len, copy_len;
-        int ret=0,w;
-	unsigned char c, checksum;
-	/*
-	 * read data from disk
-	 */
-	if ((w=wait_receive(dev, 1, sio_params->timeout*1000)) < 1) {
-		if (w < 0) {
-			DBG_PRINTK(DEBUG_STANDARD, "wait_receive returned %d\n",w);
-			return w;
-		} else {
-			DBG_PRINTK(DEBUG_STANDARD, "command complete timed out\n");
-			return -EATARISIO_COMMAND_TIMEOUT;
-		}
-	}
-	ret = 0;
-	c = dev->rx_buf.buf[dev->rx_buf.tail];
-	dev->rx_buf.tail = (dev->rx_buf.tail+1) % IOBUF_LENGTH;
-
-	if (c != OPERATION_COMPLETE_CHAR) {
-		if (c == COMMAND_FRAME_ACK_CHAR) {
-			DBG_PRINTK(DEBUG_STANDARD, "got command ACK instead of command complete\n");
-		} else {
-			if (c != OPERATION_ERROR_CHAR) {
-				DBG_PRINTK(DEBUG_STANDARD, "wanted command complete, got: 0x%02x\n",c);
-			} else {
-				DBG_PRINTK(DEBUG_STANDARD, "got sio command error\n");
-			}
-			ret = -EATARISIO_COMMAND_COMPLETE_ERROR;
-		}
-	}
-
-	if (sio_params->data_length) {
-		/* receive data block and checksum*/
-		received_len = wait_receive(dev, sio_params->data_length+1, 0);
-
-		if (received_len < 0) {
-			DBG_PRINTK(DEBUG_STANDARD, "receiving data block returned %d\n",received_len);
-			return received_len;
-		}
-
-		copy_len = sio_params->data_length;
-		if (received_len < copy_len) {
-			copy_len = received_len;
-		}
-		if (copy_len > 0) {
-			if ( (w=copy_received_data_to_user(dev, copy_len, sio_params->data_buffer)) ) {
-				return w;
-			}
-		}
-
-	        if ((unsigned int) received_len < sio_params->data_length+1) {
-			DBG_PRINTK(DEBUG_STANDARD, "receive data frame timed out [wanted %d got %d]\n",
-					sio_params->data_length+1, received_len);
-			return -EATARISIO_COMMAND_TIMEOUT;
-		}
-		checksum = calculate_checksum((unsigned char*)(dev->rx_buf.buf),
-			       	dev->rx_buf.tail, sio_params->data_length, IOBUF_LENGTH);
-
-		if (dev->rx_buf.buf[(dev->rx_buf.tail+sio_params->data_length) % IOBUF_LENGTH ]
-			!= checksum) {
-			DBG_PRINTK(DEBUG_STANDARD, "checksum error : 0x%02x != 0x%02x\n",
-				checksum,
-				dev->rx_buf.buf[(dev->rx_buf.tail+sio_params->data_length) % IOBUF_LENGTH]);
-			if (! ret) {
-				ret = -EATARISIO_CHECKSUM_ERROR;
-			}
-		}
-
-
-		dev->rx_buf.tail = (dev->rx_buf.tail + sio_params->data_length + 1 ) % IOBUF_LENGTH;
-
-	}
-
-	if (dev->rx_buf.head != dev->rx_buf.tail) {
-		DBG_PRINTK(DEBUG_NOISY, "detected excess characters\n");
-	}
-	return ret;
-}
-
-static int perform_sio_send_data(struct atarisio_dev* dev, SIO_parameters * sio_params)
+static int perform_ext_sio_send_data(struct atarisio_dev* dev, Ext_SIO_parameters * sio_params)
 {
         int ret=0,w;
 	unsigned char c;
@@ -1924,7 +1908,66 @@ static int perform_sio_send_data(struct atarisio_dev* dev, SIO_parameters * sio_
 			return -EATARISIO_DATA_NAK;
 		}
 	}
+	return ret;
+}
 
+static int perform_ext_sio_receive_data(struct atarisio_dev* dev, Ext_SIO_parameters * sio_params)
+{
+	int received_len, copy_len;
+        int ret=0,w;
+	unsigned char checksum;
+
+	if (sio_params->data_length) {
+		/* receive data block and checksum*/
+		received_len = wait_receive(dev, sio_params->data_length+1, 0);
+
+		if (received_len < 0) {
+			DBG_PRINTK(DEBUG_STANDARD, "receiving data block returned %d\n",received_len);
+			return received_len;
+		}
+
+		copy_len = sio_params->data_length;
+		if (received_len < copy_len) {
+			copy_len = received_len;
+		}
+		if (copy_len > 0) {
+			if ( (w=copy_received_data_to_user(dev, copy_len, sio_params->data_buffer)) ) {
+				return w;
+			}
+		}
+
+	        if ((unsigned int) received_len < sio_params->data_length+1) {
+			DBG_PRINTK(DEBUG_STANDARD, "receive data frame timed out [wanted %d got %d]\n",
+					sio_params->data_length+1, received_len);
+			return -EATARISIO_COMMAND_TIMEOUT;
+		}
+		checksum = calculate_checksum((unsigned char*)(dev->rx_buf.buf),
+			       	dev->rx_buf.tail, sio_params->data_length, IOBUF_LENGTH);
+
+		if (dev->rx_buf.buf[(dev->rx_buf.tail+sio_params->data_length) % IOBUF_LENGTH ]
+			!= checksum) {
+			DBG_PRINTK(DEBUG_STANDARD, "checksum error : 0x%02x != 0x%02x\n",
+				checksum,
+				dev->rx_buf.buf[(dev->rx_buf.tail+sio_params->data_length) % IOBUF_LENGTH]);
+			if (! ret) {
+				ret = -EATARISIO_CHECKSUM_ERROR;
+			}
+		}
+		dev->rx_buf.tail = (dev->rx_buf.tail + sio_params->data_length + 1 ) % IOBUF_LENGTH;
+	}
+
+	if (dev->rx_buf.head != dev->rx_buf.tail) {
+		DBG_PRINTK(DEBUG_NOISY, "detected excess characters\n");
+	}
+	return ret;
+}
+
+
+static inline int wait_ext_sio_command_complete(struct atarisio_dev* dev, Ext_SIO_parameters * sio_params)
+{
+	int ret = 0;
+	int w;
+	unsigned char c;
 	/* 
 	 * wait for command complete
 	 */
@@ -1946,20 +1989,94 @@ static int perform_sio_send_data(struct atarisio_dev* dev, SIO_parameters * sio_
 		} else {
 			if (c != OPERATION_ERROR_CHAR) {
 				DBG_PRINTK(DEBUG_STANDARD, "wanted command complete, got: 0x%02x\n",c);
+				ret = -EATARTSIO_UNKNOWN_ERROR;
 			} else {
 				DBG_PRINTK(DEBUG_STANDARD, "got sio command error\n");
+				ret = -EATARISIO_COMMAND_COMPLETE_ERROR;
 			}
-			ret = -EATARISIO_COMMAND_COMPLETE_ERROR;
 		}
 	}
 	return ret;
 }
 
-static inline int perform_sio(struct atarisio_dev* dev, SIO_parameters * user_sio_params)
+static inline int internal_perform_ext_sio(struct atarisio_dev* dev, Ext_SIO_parameters * sio_params)
+{
+	int ret = 0;
+	int cmd_ret = 0;
+	int sio_retry = 0;
+
+	if (sio_params->data_length >= MAX_SIO_DATA_LENGTH) {
+		return -EATARISIO_ERROR_BLOCK_TOO_LONG;
+	}
+
+	DBG_PRINTK(DEBUG_NOISY, "SIO: device=%d unit=%d cmd=%d dir=%d timeout=%d aux1=%d aux2=%d datalen=%d highspeed=%d\n",
+		sio_params->device, sio_params->unit, sio_params->command, sio_params->direction,
+		sio_params->timeout, sio_params->aux1, sio_params->aux2, sio_params->data_length,
+		sio_params->highspeed_mode);
+
+	do {
+		ret = 0;
+		cmd_ret = 0;
+
+		if (sio_retry) {
+			DBG_PRINTK(DEBUG_NOISY, "retrying SIO\n");
+		}
+		if ((ret = send_command_frame(dev, sio_params))) {
+			goto sio_error;
+		}
+
+		if (sio_params->data_length && (sio_params->direction & ATARISIO_EXTSIO_DIR_SEND)) {
+			DBG_PRINTK(DEBUG_NOISY, "sending data block\n");
+			if ((ret = perform_ext_sio_send_data(dev, sio_params))) {
+				DBG_PRINTK(DEBUG_NOISY, "sending data block failed: %d\n", ret);
+				goto sio_error;
+			} else {
+				DBG_PRINTK(DEBUG_NOISY, "sending data block OK\n");
+			}
+		}
+
+		DBG_PRINTK(DEBUG_NOISY, "receiving command complete\n");
+		if ((cmd_ret = wait_ext_sio_command_complete(dev, sio_params))) {
+			if (cmd_ret != -EATARISIO_COMMAND_COMPLETE_ERROR) {
+				DBG_PRINTK(DEBUG_NOISY, "wait for command complete failed: %d\n", ret);
+				goto sio_error;
+			} else {
+				ret = 0;
+			}
+		}
+
+		if (sio_params->data_length && (sio_params->direction & ATARISIO_EXTSIO_DIR_RECV)) {
+			DBG_PRINTK(DEBUG_NOISY, "receiving data block\n");
+			if ((ret = perform_ext_sio_receive_data(dev, sio_params))) {
+				DBG_PRINTK(DEBUG_NOISY, "receive data block failed: %d\n", ret);
+				goto sio_error;
+			} else {
+				DBG_PRINTK(DEBUG_NOISY, "receive data block OK\n");
+			}
+		}
+
+sio_error:
+		if (cmd_ret && !ret) {
+			/* report command error in case receiving data succeeded */
+			ret = cmd_ret;
+		}
+		sio_retry++;
+	} while (ret != 0 && sio_retry < 2);
+
+	if (ret == 0) {
+		DBG_PRINTK(DEBUG_NOISY, "SIO successfull\n");
+	} else {
+		DBG_PRINTK(DEBUG_NOISY, "SIO error: %d\n", ret);
+	}
+
+	return ret;
+}
+
+
+static inline int perform_ext_sio(struct atarisio_dev* dev, Ext_SIO_parameters * user_sio_params)
 {
 	int len;
-	int ret=0;
-	SIO_parameters sio_params;
+	Ext_SIO_parameters sio_params;
 
 	len = sizeof(sio_params);
 	if (copy_from_user(&sio_params, user_sio_params, sizeof(sio_params))) {
@@ -1967,26 +2084,44 @@ static inline int perform_sio(struct atarisio_dev* dev, SIO_parameters * user_si
 		return -EFAULT;
 	}
 
-	if (sio_params.data_length >= MAX_SIO_DATA_LENGTH) {
-		return -EATARISIO_ERROR_BLOCK_TOO_LONG;
-	}
-
-	DBG_PRINTK(DEBUG_VERY_NOISY, "performing SIO:\n");
-	DBG_PRINTK(DEBUG_VERY_NOISY, "unit=%d cmd=%d dir=%d timeout=%d aux1=%d aux2=%d datalen=%d\n",
-		sio_params.device_id, sio_params.command, sio_params.direction,
-		sio_params.timeout, sio_params.aux1, sio_params.aux2, sio_params.data_length);
-
-	if ((ret = send_command_frame(dev, &sio_params))) {
-		return ret;
-	}
-
-	if (sio_params.direction == 0) {
-		ret = perform_sio_receive_data(dev, &sio_params);
-	} else {
-		ret = perform_sio_send_data(dev, &sio_params);
-	}
-	return ret;
+	return internal_perform_ext_sio(dev, &sio_params);
 }
+
+static inline int perform_sio(struct atarisio_dev* dev, SIO_parameters * user_sio_params)
+{
+	int len;
+	SIO_parameters sio_params;
+	Ext_SIO_parameters ext_sio_params;
+
+	len = sizeof(sio_params);
+	if (copy_from_user(&sio_params, user_sio_params, sizeof(sio_params))) {
+		DBG_PRINTK(DEBUG_STANDARD, "copy_from_user failed for SIO parameters\n");
+		return -EFAULT;
+	}
+
+	ext_sio_params.device = sio_params.device_id;
+	ext_sio_params.unit = 1;
+	ext_sio_params.command = sio_params.command;
+	ext_sio_params.timeout = sio_params.timeout;
+	ext_sio_params.aux1 = sio_params.aux1;
+	ext_sio_params.aux2 = sio_params.aux2;
+	ext_sio_params.data_length = sio_params.data_length;
+	ext_sio_params.data_buffer = sio_params.data_buffer;
+
+	if (sio_params.data_length) {
+		if (sio_params.direction) {
+			ext_sio_params.direction = ATARISIO_EXTSIO_DIR_SEND;
+		} else {
+			ext_sio_params.direction = ATARISIO_EXTSIO_DIR_RECV;
+		}
+	} else {
+		ext_sio_params.direction = ATARISIO_EXTSIO_DIR_IMMEDIATE;
+	}
+	ext_sio_params.highspeed_mode = ATARISIO_EXTSIO_SPEED_NORMAL;
+
+	return internal_perform_ext_sio(dev, &ext_sio_params);
+}
+
 
 static void set_1050_2_pc_mode(struct atarisio_dev* dev, int do_locks)
 {
@@ -2603,11 +2738,6 @@ static int atarisio_ioctl(struct inode* inode, struct file* filp,
 		break;
 	case ATARISIO_IOC_DO_SIO:
 		ret = perform_sio(dev, (SIO_parameters*)arg);
-		if (ret == 0) {
-			DBG_PRINTK(DEBUG_NOISY, "sio successful\n");
-		} else {
-			DBG_PRINTK(DEBUG_NOISY, "sio failed : %d\n", ret);
-		}
 		break;
 	case ATARISIO_IOC_GET_COMMAND_FRAME:
 		PRINT_TIMESTAMP("start getting command frame");
@@ -2734,6 +2864,9 @@ static int atarisio_ioctl(struct inode* inode, struct file* filp,
 		PRINT_TIMESTAMP("begin send tape block");
 		ret = perform_send_tape_block(dev, arg);
 		PRINT_TIMESTAMP("end send tape block");
+		break;
+	case ATARISIO_IOC_DO_EXT_SIO:
+		ret = perform_ext_sio(dev, (Ext_SIO_parameters*)arg);
 		break;
 	default:
 		ret = -EINVAL;
@@ -2907,7 +3040,7 @@ static int atarisio_open(struct inode* inode, struct file* filp)
 
 	serial_out(dev, UART_LCR, dev->serial_config.LCR);
 
-	set_baudrate(dev, dev->serial_config.baudrate, 0);
+	force_set_baudrate(dev, dev->serial_config.baudrate, 0);
 
 	set_1050_2_pc_mode(dev, 0); /* this call sets MCR */
 

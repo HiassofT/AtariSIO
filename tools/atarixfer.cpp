@@ -46,6 +46,12 @@ static unsigned int drive_no = 1;
 
 static int debugging = 0;
 
+static unsigned int highspeed_mode = ATARISIO_EXTSIO_SPEED_NORMAL;
+
+static bool xf551_format_detection = false;
+
+static bool continue_on_errors = false;
+
 static void my_sig_handler(int sig)
 {
 	switch (sig) {
@@ -75,37 +81,27 @@ static int get_density(unsigned int& bytesPerSector, unsigned int& sectorsPerDis
 	int result;
 
 
-	printf("reading sector 4 ..."); fflush(stdout);
-	{
-		SIO_parameters params;
-		params.device_id = 48+drive_no;
-		params.command = 'R';
-		params.direction = 0;
-		params.timeout = 7;
-		params.data_buffer = 0;
-		params.data_length = 0;
-		params.aux1 = 4;
-		params.aux2 = 0;
+	if (xf551_format_detection) {
+		printf("reading sector 4 ..."); fflush(stdout);
 
-		result = SIO->DirectSIO(params);
-	}
-	//result = SIO->ReadSector(drive_no, 4, buf, 0);
-	
-	if (result) {
-		printf(" failed ");
-		print_error(result);
-	} else {
-		printf(" OK\n");
-	}
+		result = SIO->ImmediateCommand(drive_no, 'R', 4, 0, 7);
+		
+		if (result) {
+			printf(" failed ");
+			print_error(result);
+		} else {
+			printf(" OK\n");
+		}
 
-	sleep(1);
+		sleep(1);
+	}
 
 	/*
 	 * try percom get
 	 */
 
 	printf("get percom block ..."); fflush(stdout);
-	result = SIO->PercomGet(drive_no, buf);
+	result = SIO->PercomGet(drive_no, buf, highspeed_mode);
 	if (result) {
 		printf(" failed ");
 		print_error(result);
@@ -134,7 +130,7 @@ static int get_density(unsigned int& bytesPerSector, unsigned int& sectorsPerDis
 	 */
 
 	printf("get status ..."); fflush(stdout);
-	result = SIO->GetStatus(drive_no, buf);
+	result = SIO->GetStatus(drive_no, buf, highspeed_mode);
 	if (result) {
 		printf(" failed ");
 		print_error(result);
@@ -242,7 +238,7 @@ static int format_disk(EDiskFormat diskFormat)
 			if ( !(result = SIO->PercomPut(drive_no, buf)) ) {
 				printf("disk configured, starting formatting\n");
 
-				if ( (result = SIO->FormatDisk(drive_no, buf, bytesPerSector)) ) {
+				if ( (result = SIO->FormatDisk(drive_no, buf, bytesPerSector, highspeed_mode)) ) {
 					printf("error formatting disk ");
 					print_error(result);
 					return 1;
@@ -262,11 +258,11 @@ static int format_disk(EDiskFormat diskFormat)
 	switch (diskFormat) {
 	case e90kDisk:
 		printf("using SD format command\n");
-		result = SIO->FormatDisk(drive_no, buf, 128);
+		result = SIO->FormatDisk(drive_no, buf, 128, highspeed_mode);
 		break;
 	case e130kDisk:
 		printf("using ED format command\n");
-		result = SIO->FormatEnhanced(drive_no, buf);
+		result = SIO->FormatEnhanced(drive_no, buf, highspeed_mode);
 		break;
 	case e180kDisk:
 		printf("disk is not double-density capable!\n");
@@ -308,22 +304,27 @@ static int read_image(char* filename)
 		printf("enhanced density disk\n");
 		image.CreateImage(e130kDisk);
 	} else if (total_sectors == 720 && sector_length == 256) {
-		printf("reading sector 721 ..."); fflush(stdout);
-		
-		// XF551 workaround for QD
-		if (SIO->ReadSector(drive_no, 721, buf, 256) == 0) {
-			printf(" OK => quad density disk\n");
-			total_sectors = 1440;
-			image.CreateImage(e360kDisk);
+		if (xf551_format_detection) {
+			printf("reading sector 721 ..."); fflush(stdout);
+			
+			// XF551 workaround for QD
+			if (SIO->ReadSector(drive_no, 721, buf, 256, highspeed_mode) == 0) {
+				printf(" OK => quad density disk\n");
+				total_sectors = 1440;
+				image.CreateImage(e360kDisk);
+			} else {
+				printf(" ERROR => double density disk\n");
+				image.CreateImage(e180kDisk);
+			}
 		} else {
-			printf(" ERROR => double density disk\n");
+			printf("double density disk\n");
 			image.CreateImage(e180kDisk);
 		}
 	} else if (total_sectors == 1440 && sector_length == 256) {
 		printf("reading sector 721 ..."); fflush(stdout);
 
 		// XF551 workaround for QD
-		if (SIO->ReadSector(drive_no, 721, buf, 256) == 0) {
+		if (SIO->ReadSector(drive_no, 721, buf, 256, highspeed_mode) == 0) {
 			printf(" OK => quad density disk\n");
 			image.CreateImage(e360kDisk);
 		} else {
@@ -360,13 +361,15 @@ static int read_image(char* filename)
 			length = 256;
 		}
 
-		result = SIO->ReadSector(drive_no, sec, buf, length);
+		result = SIO->ReadSector(drive_no, sec, buf, length, highspeed_mode);
 
 		if (result) {
-			printf("\nReadSector failed ");
+			printf("\nerror reading sector %d from disk ", sec);
 			print_error(result);
-			OK = false;
-			break;
+			if (!continue_on_errors) {
+				OK = false;
+				break;
+			}
 		}
 		if (!image.WriteSector(sec, buf, length)) {
 			printf("\nunable to write sector %d to atr image!\n",sec);
@@ -433,10 +436,12 @@ static int write_image(char *filename)
 
 		printf("\b\b\b\b\b%5d", sec); fflush(stdout);
 
-		if ((result = SIO->WriteSector(drive_no, sec, buf, length)) ) {
+		if ((result = SIO->WriteSector(drive_no, sec, buf, length, highspeed_mode)) ) {
 			printf("\nerror writing sector %d to disk ", sec);
 			print_error(result);
-			goto failure;
+			if (!continue_on_errors) {
+				goto failure;
+			}
 		}
 	}
 	printf("\nwriting finished successfully!\n");
@@ -447,7 +452,7 @@ failure:
 	return 1;
 }
 
-void check_ultraspeed()
+static int check_ultraspeed()
 {
 	unsigned char speed_byte;
 	unsigned int baud;
@@ -463,7 +468,6 @@ void check_ultraspeed()
 
 	int ret = SIO->DirectSIO(params);
 
-	baud = 19200;
 	if (ret == 0) {
 		printf("ultra speed capable: speed byte = %d\n", speed_byte);
 		switch (speed_byte) {
@@ -485,16 +489,94 @@ void check_ultraspeed()
 			break;
 		default:
 			printf("unsupported speed byte %d\n", speed_byte);
-			break;
+			return 1;
 		}
-		if (SIO->SetBaudrate(baud) == 0) {
+		if (SIO->SetHighSpeedBaudrate(baud) == 0) {
 			printf("switched to %d baud\n", baud);
+			highspeed_mode = ATARISIO_EXTSIO_SPEED_ULTRA;
+			return 0;
 		} else {
 			printf("switching to %d baud failed\n", baud);
 		}
 	} else {
 		printf("drive is not ultra speed capable, using standard speed\n");
 	}
+	return 1;
+}
+
+static int check_happy_1050()
+{
+	int ret = SIO->ImmediateCommand(drive_no, 0x48, 0x20, 0, 1);
+	if (ret == 0) {
+		printf("detected happy 1050\n");
+		//if (SIO->SetHighSpeedBaudrate(38550) == 0) {
+		if (SIO->SetHighSpeedBaudrate(38400) == 0) {
+			highspeed_mode = ATARISIO_EXTSIO_SPEED_WARP;
+			return 0;
+		} else {
+			printf("setting highspeed baudrate failed\n");
+		}
+	} else {
+		printf("drive doesn't support happy command $48\n");
+	}
+	return ret;
+}
+
+static int check_high_status(unsigned int baudrate, unsigned char highspeed_mode)
+{
+	unsigned char buf[4];
+	if (SIO->SetHighSpeedBaudrate(baudrate)) {
+		printf("setting baudrate to %d failed\n", baudrate);
+		return 1;
+	}
+	return SIO->GetStatus(drive_no, buf, highspeed_mode);
+}
+
+static int check_turbo_1050()
+{
+	if (check_high_status(68266, ATARISIO_EXTSIO_SPEED_TURBO)) {
+		printf("drive is not a 1050 Turbo\n");
+		return 1;
+	} else {
+		printf("detected 1050 Turbo\n");
+		highspeed_mode = ATARISIO_EXTSIO_SPEED_TURBO;
+		return 0;
+	}
+}
+
+static int check_xf551()
+{
+	if (check_high_status(38400, ATARISIO_EXTSIO_SPEED_XF551)) {
+		printf("drive is not a XF551\n");
+		return 1;
+	} else {
+		printf("detected XF551\n");
+		if (!xf551_format_detection) {
+			xf551_format_detection = true;
+			printf("enabled workaround for XF551 format detection bugs\n");
+		}
+		highspeed_mode = ATARISIO_EXTSIO_SPEED_XF551;
+		return 0;
+	}
+}
+
+static int detect_highspeed_mode(bool include_16c950_modes)
+{
+	if (include_16c950_modes) {
+		if (check_ultraspeed() == 0) {
+			return 0;
+		}
+		if (check_turbo_1050() == 0) {
+			return 0;
+		}
+	}
+	if (check_happy_1050() == 0) {
+		return 0;
+	}
+	if (check_xf551() == 0) {
+		return 0;
+	}
+	return 1;
 }
 
 #ifdef ALL_IN_ONE
@@ -513,13 +595,13 @@ int main(int argc, char** argv)
 	int finished = 0;
 	int prosys = 0;
 	int ret;
-	bool use_ultraspeed = false;
+	int use_highspeed = 0;
 
 	char* atarisioDevName = getenv("ATARIXFER_DEVICE");
 
 	printf("atarixfer %s\n(c) 2002-2009 by Matthias Reichl <hias@horus.com>\n\n",VERSION_STRING);
 	while(!finished) {
-		c = getopt(argc, argv, "prw12345678df:u");
+		c = getopt(argc, argv, "prw12345678df:sSx");
 		if (c == -1) {
 			break;
 		}
@@ -548,6 +630,9 @@ int main(int argc, char** argv)
 		case 'd':
 			debugging=1;
 			break;
+		case 'e':
+			continue_on_errors = true;
+			break;
 		case 'f':
 			atarisioDevName = optarg;
 			break;
@@ -561,8 +646,14 @@ int main(int argc, char** argv)
 		case '8':
 			drive_no=c - '0';
 			break;
-		case 'u':
-			use_ultraspeed = 1;
+		case 's':
+			use_highspeed = 1;
+			break;
+		case 'S':
+			use_highspeed = 2;
+			break;
+		case 'x':
+			xf551_format_detection = true;
 			break;
 		default:
 			printf("forgot to catch option %d\n",c);
@@ -607,8 +698,8 @@ int main(int argc, char** argv)
 			return 1;
 		}
 
-		if (use_ultraspeed) {
-			check_ultraspeed();
+		if (use_highspeed) {
+			detect_highspeed_mode(use_highspeed == 2);
 		}
 		if (mode == 0) {
 			ret = read_image(argv[optind]);
@@ -621,13 +712,16 @@ int main(int argc, char** argv)
 		goto usage;
 	}
 usage:
-	printf("usage: [-f device ] [-p] [-d] [-12345678] -r|-w imagefile\n\n");
+	printf("usage: [-f device ] [-dpsSx12345678] -r|-w imagefile\n\n");
 	printf("  -f device     use alternative AtariSIO device (default: /dev/atarisio0)\n");
-	printf("  -p            use APE prosystem cable (default: 1050-2-PC cable)\n");
 	printf("  -r imagefile  create ATR/XFD/DCM image of disk\n");
 	printf("  -w imagefile  write given ATR/XFD/DCM image to disk\n");
 	printf("  -d            enable debugging\n");
-	printf("  -u            use ultraspeed if available\n");
-	printf("  -12345678     use drive number 1..8\n");
+	printf("  -e            continue on errors\n");
+	printf("  -p            use APE prosystem cable (default: 1050-2-PC cable)\n");
+	printf("  -s            enable Happy Warp/XF551 speeds\n");
+	printf("  -S            enable Ultra/Turbo/Happy Warp/XF551 speeds\n");
+	printf("  -x            enable workaround for XF551 format detection bugs\n");
+	printf("  -1 ... -8     use drive number 1...8\n");
 	return 1;
 }

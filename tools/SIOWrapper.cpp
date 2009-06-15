@@ -124,150 +124,195 @@ int SIOWrapper::SetSIOServerMode(ESIOServerCommandLine cmdLine)
 }
 
 int SIOWrapper::ReadSector(unsigned char driveNo, unsigned int sector, 
-		unsigned char* buf, unsigned int length)
+		unsigned char* buf, unsigned int length,
+		unsigned char highspeedMode)
 {
 	if (driveNo<1 || driveNo > 8 || buf==0 || length==0 || sector > 65535) {
 		return -1;
 	}
 
-	SIO_parameters params;
-	params.device_id = 48+driveNo;
+	Ext_SIO_parameters params;
+	params.device = 0x31;
+	params.unit = driveNo;
 	params.command = 0x52;
-	params.direction = 0;
+	params.direction = ATARISIO_EXTSIO_DIR_RECV;
 	params.timeout = 7;
 	params.data_buffer = buf;
 	params.data_length = length;
 	params.aux1 = sector & 0xff;
 	params.aux2 = sector >> 8;
-	return DirectSIO(params);
+	params.highspeed_mode = highspeedMode;
+	return ExtSIO(params);
 }
 
 int SIOWrapper::WriteSector(unsigned char driveNo, unsigned int sector, 
-		unsigned char* buf, unsigned int length)
+		unsigned char* buf, unsigned int length,
+		unsigned char highspeedMode)
 {
 	if (driveNo<1 || driveNo > 8 || buf==0 || length==0 || sector > 65535) {
 		return -1;
 	}
 
-	SIO_parameters params;
-	params.device_id = 48+driveNo;
+	Ext_SIO_parameters params;
+	params.device = 0x31;
+	params.unit = driveNo;
 	params.command = 0x50;
-	params.direction = 1;
+	params.direction = ATARISIO_EXTSIO_DIR_SEND;
 	params.timeout = 7;
 	params.data_buffer = buf;
 	params.data_length = length;
 	params.aux1 = sector & 0xff;
 	params.aux2 = sector >> 8;
-	return DirectSIO(params);
+	params.highspeed_mode = highspeedMode;
+	return ExtSIO(params);
 }
 
 int SIOWrapper::WriteAndVerifySector(unsigned char driveNo, unsigned int sector, 
-		unsigned char* buf, unsigned int length)
+		unsigned char* buf, unsigned int length,
+		unsigned char highspeedMode)
 {
 	if (driveNo<1 || driveNo > 8 || buf==0 || length==0 || sector > 65535) {
 		return -1;
 	}
 
-	SIO_parameters params;
-	params.device_id = 48+driveNo;
+	Ext_SIO_parameters params;
+	params.device = 0x31;
+	params.unit = driveNo;
 	params.command = 0x57;
-	params.direction = 1;
+	params.direction = ATARISIO_EXTSIO_DIR_SEND;
 	params.timeout = 7;
 	params.data_buffer = buf;
 	params.data_length = length;
 	params.aux1 = sector & 0xff;
 	params.aux2 = sector >> 8;
-	return DirectSIO(params);
+	params.highspeed_mode = highspeedMode;
+	return ExtSIO(params);
 }
 
-int SIOWrapper::FormatDisk(unsigned char driveNo, unsigned char* buf, unsigned int length)
+int SIOWrapper::FormatDisk(unsigned char driveNo, unsigned char* buf, unsigned int length,
+		unsigned char highspeedMode)
 {
 	if (driveNo<1 || driveNo > 8 || buf==0) {
 		return -1;
 	}
 
-	SIO_parameters params;
-	params.device_id = 48+driveNo;
+	Ext_SIO_parameters params;
+	params.device = 0x31;
+	params.unit = driveNo;
 	params.command = 0x21;
-	params.direction = 0;
+	params.direction = ATARISIO_EXTSIO_DIR_RECV;
 	params.timeout = 100;
 	params.data_buffer = buf;
 	params.data_length = length;
 	params.aux1 = 0;
 	params.aux2 = 0;
-	return DirectSIO(params);
+	params.highspeed_mode = highspeedMode;
+	return ExtSIO(params);
 }
 
-int SIOWrapper::FormatEnhanced(unsigned char driveNo, unsigned char* buf)
+int SIOWrapper::FormatEnhanced(unsigned char driveNo, unsigned char* buf,
+		unsigned char highspeedMode)
 {
 	if (driveNo<1 || driveNo > 8 || buf==0) {
 		return -1;
 	}
 
-	SIO_parameters params;
-	params.device_id = 48+driveNo;
+	Ext_SIO_parameters params;
+	params.device = 0x31;
+	params.unit = driveNo;
 	params.command = 0x22;
-	params.direction = 0;
+	params.direction = ATARISIO_EXTSIO_DIR_RECV;
 	params.timeout = 100;
 	params.data_buffer = buf;
 	params.data_length = 128;
 	params.aux1 = 0;
 	params.aux2 = 0;
-	return DirectSIO(params);
+	params.highspeed_mode = highspeedMode;
+	return ExtSIO(params);
 }
 
-int SIOWrapper::GetStatus(unsigned char driveNo, unsigned char* buf)
+int SIOWrapper::GetStatus(unsigned char driveNo, unsigned char* buf,
+		unsigned char highspeedMode)
 {
 	if (driveNo<1 || driveNo > 8 || buf==0) {
 		return -1;
 	}
 
-	SIO_parameters params;
-	params.device_id = 48+driveNo;
+	Ext_SIO_parameters params;
+	params.device = 0x31;
+	params.unit = driveNo;
 	params.command = 0x53;
-	params.direction = 0;
+	params.direction = ATARISIO_EXTSIO_DIR_RECV;
 	params.timeout = 7;
 	params.data_buffer = buf;
 	params.data_length = 4;
 	params.aux1 = 0;
 	params.aux2 = 0;
-	return DirectSIO(params);
+	params.highspeed_mode = highspeedMode;
+	return ExtSIO(params);
 }
 
-int SIOWrapper::PercomGet(unsigned char driveNo, unsigned char* buf)
+int SIOWrapper::PercomGet(unsigned char driveNo, unsigned char* buf,
+		unsigned char highspeedMode)
 {
 	if (driveNo<1 || driveNo > 8 || buf==0) {
 		return -1;
 	}
 
-	SIO_parameters params;
-	params.device_id = 48+driveNo;
+	Ext_SIO_parameters params;
+	params.device = 0x31;
+	params.unit = driveNo;
 	params.command = 0x4e;
-	params.direction = 0;
+	params.direction = ATARISIO_EXTSIO_DIR_RECV;
 	params.timeout = 7;
 	params.data_buffer = buf;
 	params.data_length = 12;
 	params.aux1 = 0;
 	params.aux2 = 0;
-	return DirectSIO(params);
+	params.highspeed_mode = highspeedMode;
+	return ExtSIO(params);
 }
 
-int SIOWrapper::PercomPut(unsigned char driveNo, unsigned char* buf)
+int SIOWrapper::PercomPut(unsigned char driveNo, unsigned char* buf,
+		unsigned char highspeedMode)
 {
 	if (driveNo<1 || driveNo > 8 || buf==0) {
 		return -1;
 	}
 
-	SIO_parameters params;
-	params.device_id = 48+driveNo;
+	Ext_SIO_parameters params;
+	params.device = 0x31;
+	params.unit = driveNo;
 	params.command = 0x4f;
-	params.direction = 1;
+	params.direction = ATARISIO_EXTSIO_DIR_SEND;
 	params.timeout = 7;
 	params.data_buffer = buf;
 	params.data_length = 12;
 	params.aux1 = 0;
 	params.aux2 = 0;
-	return DirectSIO(params);
+	params.highspeed_mode = highspeedMode;
+	return ExtSIO(params);
+}
+int SIOWrapper::ImmediateCommand(unsigned char driveNo, unsigned char command,
+		unsigned char aux1, unsigned char aux2,
+		unsigned char timeout, unsigned char highspeedMode)
+{
+	if (driveNo<1 || driveNo > 8) {
+		return -1;
+	}
+
+	Ext_SIO_parameters params;
+	params.device = 0x31;
+	params.unit = driveNo;
+	params.command = command;
+	params.direction = ATARISIO_EXTSIO_DIR_IMMEDIATE;
+	params.timeout = timeout;
+	params.data_buffer = 0;
+	params.data_length = 0;
+	params.aux1 = aux1;
+	params.aux2 = aux2;
+	params.highspeed_mode = highspeedMode;
+	return ExtSIO(params);
 }
 
 int SIOWrapper::WaitForCommandFrame(int otherReadPollDevice)

@@ -61,32 +61,50 @@ public:
 	 * disk drive methods
 	 */
 	int ReadSector(unsigned char driveNo, unsigned int sector,
-		unsigned char* buf, unsigned int length);
+		unsigned char* buf, unsigned int length,
+		unsigned char highspeedMode = ATARISIO_EXTSIO_SPEED_NORMAL);
 
 	int WriteSector(unsigned char driveNo, unsigned int sector,
-		unsigned char* buf, unsigned int length);
+		unsigned char* buf, unsigned int length,
+		unsigned char highspeedMode = ATARISIO_EXTSIO_SPEED_NORMAL);
 
 	int WriteAndVerifySector(unsigned char driveNo, unsigned int sector,
-		unsigned char* buf, unsigned int length);
+		unsigned char* buf, unsigned int length,
+		unsigned char highspeedMode = ATARISIO_EXTSIO_SPEED_NORMAL);
 
-	int FormatDisk(unsigned char driveNo, unsigned char* buf, unsigned int length);
+	int FormatDisk(unsigned char driveNo, unsigned char* buf, unsigned int length,
+		unsigned char highspeedMode = ATARISIO_EXTSIO_SPEED_NORMAL);
 
-	int FormatEnhanced(unsigned char driveNo, unsigned char* buf);
+	int FormatEnhanced(unsigned char driveNo, unsigned char* buf,
+		unsigned char highspeedMode = ATARISIO_EXTSIO_SPEED_NORMAL);
 	/* buffer length is fixed to 128 bytes */
 
-	int GetStatus(unsigned char driveNo, unsigned char* buf);
+	int GetStatus(unsigned char driveNo, unsigned char* buf,
+		unsigned char highspeedMode = ATARISIO_EXTSIO_SPEED_NORMAL);
 	/* buffer length is fixed to 4 bytes */
 
-	int PercomGet(unsigned char driveNo, unsigned char* buf);
+	int PercomGet(unsigned char driveNo, unsigned char* buf,
+		unsigned char highspeedMode = ATARISIO_EXTSIO_SPEED_NORMAL);
 	/* buffer length is fixed to 12 bytes */
 
-	int PercomPut(unsigned char driveNo, unsigned char* buf);
+	int PercomPut(unsigned char driveNo, unsigned char* buf,
+		unsigned char highspeedMode = ATARISIO_EXTSIO_SPEED_NORMAL);
 	/* buffer length is fixed to 12 bytes */
+
+	int ImmediateCommand(unsigned char driveNo, unsigned char command,
+		unsigned char aux1, unsigned char aux2,
+		unsigned char timeout = 7,
+		unsigned char highspeedMode = ATARISIO_EXTSIO_SPEED_NORMAL);
 
 	/*
-	 * generic SIO method
+	 * generic SIO method (old)
 	 */
 	int DirectSIO(SIO_parameters& params);
+
+	/*
+	 * extended SIO method (new)
+	 */
+	int ExtSIO(Ext_SIO_parameters& params);
 
 	/*
 	 * SIO server methods
@@ -147,6 +165,19 @@ inline int SIOWrapper::DirectSIO(SIO_parameters& params)
 		fLastResult = ENODEV;
 	} else {
 		fLastResult = ioctl(fDeviceFileNo, ATARISIO_IOC_DO_SIO, &params);
+		if (fLastResult == -1) {
+			fLastResult = errno;
+		}
+	}
+	return fLastResult;
+}
+
+inline int SIOWrapper::ExtSIO(Ext_SIO_parameters& params)
+{
+	if (fDeviceFileNo<0) {
+		fLastResult = ENODEV;
+	} else {
+		fLastResult = ioctl(fDeviceFileNo, ATARISIO_IOC_DO_EXT_SIO, &params);
 		if (fLastResult == -1) {
 			fLastResult = errno;
 		}

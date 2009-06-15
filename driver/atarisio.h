@@ -2,7 +2,7 @@
 #define ATARISIO_H
 
 /*
-   atarisio V1.04
+   atarisio V1.05
    a kernel module for handling the Atari 8bit SIO protocol
 
    Copyright (C) 2002-2009 Matthias Reichl <hias@horus.com>
@@ -23,7 +23,7 @@
 */
 
 #define ATARISIO_MAJOR_VERSION 1
-#define ATARISIO_MINOR_VERSION 4
+#define ATARISIO_MINOR_VERSION 5
 #define ATARISIO_VERSION_MAGIC 42
 
 #define ATARISIO_VERSION ( ( (ATARISIO_VERSION_MAGIC) << 16) | ( (ATARISIO_MAJOR_VERSION) << 8) | (ATARISIO_MINOR_VERSION) )
@@ -54,6 +54,37 @@ typedef struct SIO_param_struct {
 	unsigned int   data_length;
 	unsigned char* data_buffer;
 } SIO_parameters;
+
+
+#define ATARISIO_EXTSIO_DIR_IMMEDIATE 0
+#define ATARISIO_EXTSIO_DIR_RECV 0x40
+#define ATARISIO_EXTSIO_DIR_SEND 0x80
+
+#define ATARISIO_EXTSIO_SPEED_NORMAL 0
+#define ATARISIO_EXTSIO_SPEED_ULTRA 1
+#define ATARISIO_EXTSIO_SPEED_WARP 2
+#define ATARISIO_EXTSIO_SPEED_XF551 3
+#define ATARISIO_EXTSIO_SPEED_TURBO 4
+
+/*
+   SIO parameter struct passed to DO_EXT_SIO ioctl.
+   The entries of this struct have the same meaning like
+   in the standard Atari SIO call $E459.
+   Note: be sure that the data_buffer is allocated and can
+   store data_length bytes!
+*/
+typedef struct Ext_SIO_param_struct {
+	unsigned char  device;
+	unsigned char  unit;
+	unsigned char  command;
+	unsigned char  direction; /* 0=none, 0x40 = read from device, 0x80 = write to device */
+	unsigned char  timeout; /* in seconds */
+	unsigned char  aux1; /* auxiliary data, eg. sector number */
+	unsigned char  aux2; 
+	unsigned int   data_length;
+	unsigned char* data_buffer;
+	unsigned char  highspeed_mode;	/* use ATARISIO_EXTSIO_* */
+} Ext_SIO_parameters;
 
 /*
    command frame struct returned by GET_COMMAND_FRAME ioctl.
@@ -283,8 +314,12 @@ typedef struct SIO_timestamp_struct {
 */
 #define ATARISIO_IOC_SET_HIGHSPEED_BAUDRATE	_IOW( ATARISIO_IOC_MAGIC, 26, unsigned int)
 
+/*
+   Talk to a connected Atari device (like $E459)
+*/
+#define ATARISIO_IOC_DO_EXT_SIO		_IOWR(ATARISIO_IOC_MAGIC, 27, Ext_SIO_parameters *)
 
-#define ATARISIO_IOC_MAXNR 26
+#define ATARISIO_IOC_MAXNR 27
 
 /*
    errno codes for DO_SIO, mainly according to
