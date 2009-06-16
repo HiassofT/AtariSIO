@@ -319,7 +319,12 @@ typedef struct SIO_timestamp_struct {
 */
 #define ATARISIO_IOC_DO_EXT_SIO		_IOWR(ATARISIO_IOC_MAGIC, 27, Ext_SIO_parameters *)
 
-#define ATARISIO_IOC_MAXNR 27
+/*
+   get exact UART baudrate
+*/
+#define ATARISIO_IOC_GET_EXACT_BAUDRATE	_IO( ATARISIO_IOC_MAGIC, 28)
+
+#define ATARISIO_IOC_MAXNR 28
 
 /*
    errno codes for DO_SIO, mainly according to

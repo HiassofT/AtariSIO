@@ -136,7 +136,7 @@ static void process_args(RCPtr<DeviceManager>& manager, CursesFrontend* frontend
 						i++;
 						unsigned int baud;
 						unsigned char divisor;
-						if (MiscUtils::ParseHighSpeedParameters(argv[i], baud, divisor)) {
+						if (MiscUtils::ParseHighSpeedParameters(argv[i], baud, divisor, true)) {
 							if (manager->SetHighSpeedParameters(baud, divisor)) {
 								ALOG("Configured high speed mode to pokey divisor %d / baudrate %d", divisor, baud);
 							} else {

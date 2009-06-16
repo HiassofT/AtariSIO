@@ -931,6 +931,12 @@ bool DeviceManager::SetHighSpeedParameters(unsigned int baudrate, unsigned char 
 	fHighSpeedBaudrate = baudrate;
 	fPokeyDivisor = pokeyDivisor;
 	fSIOWrapper->SetHighSpeedBaudrate(baudrate);
+
+	int real_baudrate = fSIOWrapper->GetExactBaudrate();
+
+	if (real_baudrate != baudrate) {
+		AWARN("UART doesn't support %d baud, using %d instead", baudrate, real_baudrate);
+	}
 	return SetHighSpeedMode(fHighSpeedMode);
 }
 

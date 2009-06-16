@@ -145,7 +145,8 @@ public:
 	int SetTapeBaudrate(unsigned int baudrate);
 	int SendTapeBlock(unsigned char* buf, unsigned int length);
 
-	unsigned int GetBaudrate();
+	int GetBaudrate();
+	int GetExactBaudrate();
 
 	int DebugKernelStatus();
 

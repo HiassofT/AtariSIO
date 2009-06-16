@@ -634,7 +634,7 @@ int SIOWrapper::SetHighSpeedPause(unsigned int on)
 	return fLastResult;
 }
 
-unsigned int SIOWrapper::GetBaudrate()
+int SIOWrapper::GetBaudrate()
 {
 	int baudrate;
 
@@ -652,6 +652,26 @@ unsigned int SIOWrapper::GetBaudrate()
 	}
 	return fLastResult;
 }
+
+int SIOWrapper::GetExactBaudrate()
+{
+	int baudrate;
+
+	if (fDeviceFileNo < 0) {
+		fLastResult = ENODEV;
+	} else {
+		fLastResult = 0;
+		baudrate = ioctl(fDeviceFileNo, ATARISIO_IOC_GET_EXACT_BAUDRATE);
+		if (baudrate == -1) {
+			fLastResult = errno;
+			return ATARISIO_STANDARD_BAUDRATE;
+		} else {
+			return baudrate;
+		}
+	}
+	return fLastResult;
+}
+
 
 int SIOWrapper::SetTapeBaudrate(unsigned int baudrate)
 {

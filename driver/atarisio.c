@@ -2909,6 +2909,9 @@ static int atarisio_ioctl(struct inode* inode, struct file* filp,
 	case ATARISIO_IOC_DO_EXT_SIO:
 		ret = perform_ext_sio(dev, (Ext_SIO_parameters*)arg);
 		break;
+	case ATARISIO_IOC_GET_EXACT_BAUDRATE:
+		ret = dev->serial_config.exact_baudrate;
+		break;
 	default:
 		ret = -EINVAL;
 	}

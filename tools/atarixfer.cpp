@@ -452,131 +452,154 @@ failure:
 	return 1;
 }
 
-static int check_ultraspeed()
+static bool set_and_check_highspeed_baudrate(unsigned int baud)
 {
-	unsigned char speed_byte;
+	if (SIO->SetHighSpeedBaudrate(baud) == 0) {
+		int real_baud = SIO->GetExactBaudrate();
+		if (real_baud != (int)baud) {
+			printf("warning: UART doesn't support %d baud, using %d instead\n", baud, real_baud);
+		}
+		return true;
+	} else {
+		printf("switching to %d baud failed\n", baud);
+		return false;
+	}
+}
+
+static bool check_ultraspeed()
+{
+	unsigned char pokey_div;
 	unsigned int baud;
 
-        SIO_parameters params;
+        Ext_SIO_parameters params;
 
-        params.device_id = 48+drive_no;
+        params.device = 0x31;
+	params.unit = drive_no;
         params.command = 0x3f;
-        params.direction = 0;
+        params.direction = ATARISIO_EXTSIO_DIR_RECV;
         params.timeout = 1;
-        params.data_buffer = &speed_byte;
+        params.data_buffer = &pokey_div;
         params.data_length = 1;
+	params.highspeed_mode = ATARISIO_EXTSIO_SPEED_NORMAL;
 
-	int ret = SIO->DirectSIO(params);
+	int ret = SIO->ExtSIO(params);
 
 	if (ret == 0) {
-		printf("ultra speed capable: speed byte = %d\n", speed_byte);
-		switch (speed_byte) {
-		case 9:
-			baud = 55434;
-			break;
-		case 10:
-			baud = 52150;
+		if (!MiscUtils::PokeyDivisorToBaudrate(pokey_div, baud, true)) {
+			printf("unsupported ultra speed pokey divisor %d\n", pokey_div);
+			return false;
+		}
+		printf("ultra speed drive: pokey divisor %d (%d baud)\n", pokey_div, baud);
+		if (pokey_div == 10) {
+			printf("possibly Happy 1050: enabling fast writes\n");
 			params.command = 0x48;
 			params.data_length = 0;
 			params.aux1 = 0x20;
 			params.aux2 = 0;
-			printf("possibly Happy 1050: enabling fast writes\n");
-			if (SIO->DirectSIO(params) == 0) {
+			if (SIO->ImmediateCommand(drive_no, 0x48, 0x20, 0) == 0) {
 				printf("Happy command $48 (AUX=$20) succeeded\n");
 			} else {
 				printf("Happy command $48 (AUX=$20) failed\n");
 			}
-			break;
-		default:
-			printf("unsupported speed byte %d\n", speed_byte);
-			return 1;
 		}
-		if (SIO->SetHighSpeedBaudrate(baud) == 0) {
-			printf("switched to %d baud\n", baud);
+		if (set_and_check_highspeed_baudrate(baud)) {
 			highspeed_mode = ATARISIO_EXTSIO_SPEED_ULTRA;
-			return 0;
-		} else {
-			printf("switching to %d baud failed\n", baud);
+			return true;
 		}
 	} else {
-		printf("drive is not ultra speed capable, using standard speed\n");
+		printf("drive is not ultra speed capable\n");
 	}
-	return 1;
+	return false;
 }
 
-static int check_happy_1050()
+static bool check_happy_1050()
 {
-	int ret = SIO->ImmediateCommand(drive_no, 0x48, 0x20, 0, 1);
-	if (ret == 0) {
-		printf("detected happy 1050\n");
-		//if (SIO->SetHighSpeedBaudrate(38550) == 0) {
-		if (SIO->SetHighSpeedBaudrate(38400) == 0) {
+	if (SIO->ImmediateCommand(drive_no, 0x48, 0x20, 0, 1) == 0) {
+		printf("detected Happy Warp Speed drive\n");
+		unsigned int baud;
+		if (!MiscUtils::PokeyDivisorToBaudrate(16, baud, true)) {
+			printf("internal error: cannot get XF551 baudrate\n");
+			return false;
+		}
+		if (set_and_check_highspeed_baudrate(baud)) {
 			highspeed_mode = ATARISIO_EXTSIO_SPEED_WARP;
-			return 0;
-		} else {
-			printf("setting highspeed baudrate failed\n");
+			return true;
 		}
 	} else {
-		printf("drive doesn't support happy command $48\n");
+		printf("drive is not a Happy 810/1050\n");
 	}
-	return ret;
+	return false;
 }
 
-static int check_high_status(unsigned int baudrate, unsigned char highspeed_mode)
+static bool check_high_status(unsigned int baudrate, unsigned char highspeed_mode)
 {
 	unsigned char buf[4];
 	if (SIO->SetHighSpeedBaudrate(baudrate)) {
 		printf("setting baudrate to %d failed\n", baudrate);
-		return 1;
+		return false;
 	}
-	return SIO->GetStatus(drive_no, buf, highspeed_mode);
+	return (SIO->GetStatus(drive_no, buf, highspeed_mode) == 0);
 }
 
-static int check_turbo_1050()
+static bool check_turbo_1050()
 {
-	if (check_high_status(68266, ATARISIO_EXTSIO_SPEED_TURBO)) {
-		printf("drive is not a 1050 Turbo\n");
-		return 1;
-	} else {
+	unsigned int baud;
+	if (!MiscUtils::PokeyDivisorToBaudrate(6, baud, true)) {
+		printf("internal error: cannot get 1050 Turbo baudrate\n");
+		return false;
+	}
+	if (check_high_status(baud, ATARISIO_EXTSIO_SPEED_TURBO)) {
 		printf("detected 1050 Turbo\n");
-		highspeed_mode = ATARISIO_EXTSIO_SPEED_TURBO;
-		return 0;
+		if (set_and_check_highspeed_baudrate(baud)) {
+			highspeed_mode = ATARISIO_EXTSIO_SPEED_TURBO;
+			return true;
+		}
+	} else {
+		printf("drive is not a 1050 Turbo\n");
 	}
+	return false;
 }
 
-static int check_xf551()
+static bool check_xf551()
 {
-	if (check_high_status(38400, ATARISIO_EXTSIO_SPEED_XF551)) {
-		printf("drive is not a XF551\n");
-		return 1;
-	} else {
+	unsigned int baud;
+	if (!MiscUtils::PokeyDivisorToBaudrate(16, baud, true)) {
+		printf("internal error: cannot get XF551 baudrate\n");
+		return false;
+	}
+	if (check_high_status(baud, ATARISIO_EXTSIO_SPEED_XF551)) {
 		printf("detected XF551\n");
 		if (!xf551_format_detection) {
 			xf551_format_detection = true;
 			printf("enabled workaround for XF551 format detection bugs\n");
 		}
-		highspeed_mode = ATARISIO_EXTSIO_SPEED_XF551;
-		return 0;
+		if (set_and_check_highspeed_baudrate(baud)) {
+			highspeed_mode = ATARISIO_EXTSIO_SPEED_XF551;
+			return true;
+		}
+	} else {
+		printf("drive is not a XF551\n");
 	}
+	return false;
 }
 
-static int detect_highspeed_mode(bool include_16c950_modes)
+static bool detect_highspeed_mode(bool include_16c950_modes)
 {
 	if (include_16c950_modes) {
-		if (check_ultraspeed() == 0) {
-			return 0;
+		if (check_ultraspeed()) {
+			return true;
 		}
-		if (check_turbo_1050() == 0) {
-			return 0;
+		if (check_turbo_1050()) {
+			return true;
 		}
 	}
-	if (check_happy_1050() == 0) {
-		return 0;
+	if (check_happy_1050()) {
+		return true;
 	}
-	if (check_xf551() == 0) {
-		return 0;
+	if (check_xf551()) {
+		return true;
 	}
-	return 1;
+	return false;
 }
 
 #ifdef ALL_IN_ONE

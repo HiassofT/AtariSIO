@@ -85,8 +85,8 @@ char* MiscUtils::ShortenFilename(const char* filename, unsigned int maxlen)
 
 // pokey divisor to baudrate table
 typedef struct {
-	unsigned char divisor;
-	unsigned int baudrate;
+	int divisor;
+	int baudrate;
 } pokey_divisor_entry;
 
 static pokey_divisor_entry divisor_table[] = {
@@ -98,19 +98,36 @@ static pokey_divisor_entry divisor_table[] = {
 	{ 3, 87771 },
 	{ 4, 80139 },
 	{ 5, 73728 },
-	{ 6, 67025 },
+	{ 6, 68266 }, // works with 1050 Turbo
 	{ 7, 62481 },
-	//{ 8, 57600 },
-	{ 8, 59458 },
-	{ 9, 55020 },
-	{ 10, 51921 },
-	{ 16, 38400 },
-	{ 40, 19200 },
-	{ 0, 0 }
+	{ 8, 57600 }, // standard 3xSIO speed
+	//{ 8, 59458 },
+	{ 9, 55434 }, // works with Speedy 1050
+	{ 10, 52150 }, // works with Happy 1050
+	{ 16, 38400 }, // happy warp / XF551 speed
+	{ 40, 19200 }, // standard speed
+	{ -1, -1 }
 };
 
+bool MiscUtils::PokeyDivisorToBaudrate(unsigned char divisor, unsigned int& baudrate, bool enable_calculated_speed)
+{
+	int i = 0;
+	while (divisor_table[i].divisor >= 0) {
+		if (divisor_table[i].divisor == (int) divisor) {
+			baudrate = (unsigned int) divisor_table[i].baudrate;
+			return true;
+		}
+		i++;
+	}
+	if (enable_calculated_speed) {
+		baudrate = (1773445 + divisor + 7) / (2 * (divisor + 7));
+		return true;
+	}
+	return false;
+}
+
 // format is "divisor[,baudrate]"
-bool MiscUtils::ParseHighSpeedParameters(const char* string, unsigned int& baudrate, unsigned char& divisor)
+bool MiscUtils::ParseHighSpeedParameters(const char* string, unsigned int& baudrate, unsigned char& divisor, bool enable_calculated_speed)
 {
 	char* tmp;
 	long l;
@@ -118,21 +135,13 @@ bool MiscUtils::ParseHighSpeedParameters(const char* string, unsigned int& baudr
 	if (tmp == string) {
 		return false;
 	}
-	if (l < 0 || l > 255) {
+	if (l < 0 || l > 63) {
 		return false;
 	}
 	divisor = l;
 
-	if (*tmp == 0) {
-		int i = 0;
-		while (divisor_table[i].divisor || divisor_table[i].baudrate) {
-			if (divisor_table[i].divisor == divisor) {
-				baudrate = divisor_table[i].baudrate;
-				return true;
-			}
-			i++;
-		}
-		return false;
+	if (MiscUtils::PokeyDivisorToBaudrate(divisor, baudrate, enable_calculated_speed && (*tmp == 0))) {
+		return true;
 	}
 	if (*tmp != ',') {
 		return false;
