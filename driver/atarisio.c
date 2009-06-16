@@ -352,7 +352,7 @@ struct atarisio_dev {
 	int use_16c950_mode;
 
 	/* lock for UART hardware registers */
-	spinlock_t uart_lock; /* = SPIN_LOCK_UNLOCKED; */
+	spinlock_t uart_lock;
 
 	volatile int current_mode; /* = MODE_1050_2_PC; */
 
@@ -374,7 +374,7 @@ struct atarisio_dev {
 		int wakeup_len;
 	} rx_buf;
 
-	spinlock_t rx_lock; /* = SPIN_LOCK_UNLOCKED;*/
+	spinlock_t rx_lock;
 
 	/* transmit buffer */
 	volatile struct tx_buf_struct {
@@ -383,7 +383,7 @@ struct atarisio_dev {
 		unsigned int tail;
 	} tx_buf;
 
-	spinlock_t tx_lock; /* = SPIN_LOCK_UNLOCKED;*/
+	spinlock_t tx_lock;
 
 	unsigned int current_cmdframe_serial_number;
 
@@ -405,7 +405,7 @@ struct atarisio_dev {
 		unsigned int missed_count;
 	} cmdframe_buf;
 
-	spinlock_t cmdframe_lock; /* = SPIN_LOCK_UNLOCKED; */
+	spinlock_t cmdframe_lock;
 
 	/*
 	 * wait queues
@@ -437,7 +437,7 @@ struct atarisio_dev {
 		/* this flag is cleared after successful reception of a command frame */
 	} serial_config;
 
-	spinlock_t serial_config_lock; /* = SPIN_LOCK_UNLOCKED; */
+	spinlock_t serial_config_lock;
 
 
 	/* 
@@ -1011,7 +1011,7 @@ error_unlock:
 		spin_unlock_irqrestore(&dev->uart_lock, flags);
 	}
 
-	return 0;
+	return ret;
 }
 
 static int set_baudrate(struct atarisio_dev* dev, unsigned int baudrate, int do_locks)
@@ -1819,6 +1819,8 @@ static int setup_send_frame(struct atarisio_dev* dev, unsigned int data_length, 
 	unsigned int len, remain;
 	unsigned char checksum;
 
+	int ret = 0;
+
 	if ((data_length == 0) || (data_length >= MAX_SIO_DATA_LENGTH)) {
 		return -EINVAL;
 	}
@@ -1833,14 +1835,16 @@ static int setup_send_frame(struct atarisio_dev* dev, unsigned int data_length, 
 	if ( copy_from_user((unsigned char*) (&(dev->tx_buf.buf[dev->tx_buf.head])), 
 			user_buffer,
 			len) ) {
-		return -EFAULT;
+		ret = -EFAULT;
+		goto error_unlock;
 	}
 	remain = data_length - len;
 	if (remain>0) {
 		if ( copy_from_user((unsigned char*) dev->tx_buf.buf,
 				user_buffer+len,
 				remain) ) {
-			return -EFAULT;
+			ret = -EFAULT;
+			goto error_unlock;
 		}
 	}
 
@@ -1853,9 +1857,11 @@ static int setup_send_frame(struct atarisio_dev* dev, unsigned int data_length, 
 	}
 
 	dev->tx_buf.head = (dev->tx_buf.head + data_length) % IOBUF_LENGTH;
+
+error_unlock:
 	spin_unlock_irqrestore(&dev->tx_lock, flags);
 
-	return 0;
+	return ret;
 }
 
 static int setup_send_data_frame(struct atarisio_dev* dev, unsigned int data_length, unsigned char* user_buffer)
@@ -3206,16 +3212,16 @@ struct atarisio_dev* alloc_atarisio_dev(unsigned int id)
 	dev->serial_config.ACR = 0;
 	dev->busy = 0;
 	dev->id = id;
-	dev->uart_lock = SPIN_LOCK_UNLOCKED;
+	spin_lock_init(&dev->uart_lock);
 	dev->current_mode = MODE_1050_2_PC;
 	dev->last_msr = 0;
 	dev->enable_timestamp_recording = 0;
 	dev->rx_buf.head = 0;
 	dev->rx_buf.tail = 0;
-	dev->rx_lock = SPIN_LOCK_UNLOCKED;
-	dev->tx_lock = SPIN_LOCK_UNLOCKED;
-	dev->cmdframe_lock = SPIN_LOCK_UNLOCKED;
-	dev->serial_config_lock = SPIN_LOCK_UNLOCKED;
+	spin_lock_init(&dev->rx_lock);
+	spin_lock_init(&dev->tx_lock);
+	spin_lock_init(&dev->cmdframe_lock);
+	spin_lock_init(&dev->serial_config_lock);
 	dev->sioserver_command_line = UART_MSR_RI;
 	dev->sioserver_command_line_delta = UART_MSR_TERI;
 	dev->command_line_mask =  ~UART_MCR_RTS;
