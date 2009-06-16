@@ -425,6 +425,7 @@ struct atarisio_dev {
 
 	volatile struct serial_config_struct {
 		unsigned int baudrate;
+		unsigned int exact_baudrate;
 		unsigned long baud_base;
 		u8 IER;
 		u8 MCR;
@@ -874,7 +875,7 @@ static baudrate_entry_16c950 baudrate_table_16c950[] = {
 	{  84562, 15,  31,   3 }, /* (  88672.38:  4.86%) (  89488.64:  5.83%) */
 	{  83781, 16,   8,  11 }, /* (  88672.38:  5.84%) (  89488.64:  6.81%) */
 
-	/* pokey divisor 6: testing */
+	/* pokey divisor 6: works with 1050 Turbo */
 	{  68266, 16,   9,  12 }, /* (  68209.52: -0.08%) (  68837.41:  0.84%) */
 	{  68385, 15, 115,   1 }, /* (  68209.52: -0.26%) (  68837.41:  0.66%) */
 
@@ -900,10 +901,11 @@ static baudrate_entry_16c950 baudrate_table_16c950[] = {
 	{      0,  0,   0,   0 }
 };
 
-static unsigned int calc_16c950_baudrate(struct atarisio_dev* dev, unsigned int baudrate)
+static int calc_16c950_baudrate(struct atarisio_dev* dev, unsigned int baudrate)
 {
 	unsigned int divisor;
 	int i;
+	int tcr;
 
 	if (dev->serial_config.baud_base == 921600) {
 		for (i=0; baudrate_table_16c950[i].baudrate; i++) {
@@ -916,6 +918,7 @@ static unsigned int calc_16c950_baudrate(struct atarisio_dev* dev, unsigned int 
 				}
 				serial_out(dev, UART_MCR, dev->serial_config.MCR);
 				write_icr(dev, UART_TCR, baudrate_table_16c950[i].tcr);
+				dev->serial_config.exact_baudrate = baudrate;
 				DBG_PRINTK(DEBUG_STANDARD, "setting baudrate %d TCR=%d, CPR=%d, divisor %d\n",
 					 baudrate,
 					 baudrate_table_16c950[i].tcr,
@@ -929,51 +932,80 @@ static unsigned int calc_16c950_baudrate(struct atarisio_dev* dev, unsigned int 
 	dev->serial_config.MCR &= ~UART_MCR_CLKSEL; /* disable clock prescaler */
 	serial_out(dev, UART_MCR, dev->serial_config.MCR);
 
-	divisor = dev->serial_config.baud_base * 2 / baudrate;
-	if (dev->serial_config.baud_base * 2 / divisor == baudrate) {
-		/* configure 8 clocks per bit */
-		write_icr(dev, UART_TCR, 8);
-		DBG_PRINTK(DEBUG_STANDARD, "setting baudrate %d TCR=8, CPR=0, divisor %d\n", baudrate, divisor);
-	} else {
-		/* configure 4 clocks per bit */
-		divisor = dev->serial_config.baud_base * 4 / baudrate;
-		write_icr(dev, UART_TCR, 4);
-		DBG_PRINTK(DEBUG_STANDARD, "setting baudrate %d TCR=4, CPR=0, divisor %d\n", baudrate, divisor);
+	tcr = 4;
+	/* calculate divisor for TCR = 4 */
+	divisor = (dev->serial_config.baud_base * 4 + baudrate / 2) / baudrate;
+
+	/* switch to TCR 8 or 16 if the divisor is even */
+	while ( ((divisor & 1) == 0) && (tcr < 16) ) {
+		divisor = divisor / 2;
+		tcr = tcr * 2;
 	}
+
+	if (divisor == 0) {
+		PRINTK("calc_16c950_baudrate: invalid baudrate %d\n", baudrate);
+		return -EINVAL;
+	}
+	dev->serial_config.exact_baudrate = (dev->serial_config.baud_base*(16/tcr)) / divisor;
+
+	write_icr(dev, UART_TCR, tcr & 0x0f);
+
+	DBG_PRINTK(DEBUG_STANDARD, "setting baudrate %d (requested: %d) TCR=%d, CPR=0, divisor %d\n",
+		dev->serial_config.exact_baudrate, baudrate, tcr, divisor);
+
 	return divisor;
 }
 
 static int force_set_baudrate(struct atarisio_dev* dev, unsigned int baudrate, int do_locks)
 {
 	unsigned long flags=0;
-	unsigned int divisor;
+	int divisor;
+	int ret = 0;
 
+	if (baudrate == 0) {
+		PRINTK("force_set_baudrate: invalid baudrate 0\n");
+		return -EINVAL;
+	}
 	if (do_locks) {
 		spin_lock_irqsave(&dev->uart_lock, flags);
 		spin_lock(&dev->serial_config_lock);
 	}
 
+	divisor = (dev->serial_config.baud_base + baudrate / 2) / baudrate;
+
+	if (divisor == 0 ) {
+		PRINTK("force_set_baudrate: invalid baudrate %d\n", baudrate);
+		ret = -EINVAL;
+		goto error_unlock;
+	}
+
 	dev->serial_config.baudrate = baudrate;
 	dev->serial_config.just_switched_baud = 1;
+	dev->serial_config.exact_baudrate = dev->serial_config.baud_base / divisor;
 
-	divisor = dev->serial_config.baud_base / baudrate;
 	if (dev->is_16c950 && dev->use_16c950_mode) {
-		if (dev->serial_config.baud_base / divisor == baudrate) {
+		if (dev->serial_config.exact_baudrate == baudrate) {
 			dev->serial_config.MCR &= ~UART_MCR_CLKSEL; /* disable clock prescaler */
 			serial_out(dev, UART_MCR, dev->serial_config.MCR);
 			/* configure standard mode: 16 clocks per bit */
 			write_icr(dev, UART_TCR, 0);
-			DBG_PRINTK(DEBUG_NOISY, "setting baudrate %d TCR=16, CPR=0, divisor %d\n", baudrate, divisor);
+			DBG_PRINTK(DEBUG_STANDARD, "setting baudrate %d TCR=16, CPR=0, divisor %d\n", baudrate, divisor);
 		} else {
 			divisor = calc_16c950_baudrate(dev, baudrate);
 		}
+	} else {
+		DBG_PRINTK(DEBUG_STANDARD, "setting baudrate %d (requested: %d), divisor %d\n",
+			dev->serial_config.exact_baudrate, baudrate, divisor);
 	}
 
-	serial_out(dev, UART_LCR, dev->serial_config.LCR | UART_LCR_DLAB);
-	serial_out(dev, UART_DLL, divisor & 0xff);
-	serial_out(dev, UART_DLM, divisor >> 8);
-	serial_out(dev, UART_LCR, dev->serial_config.LCR);
+	if (divisor > 0) {
+		serial_out(dev, UART_LCR, dev->serial_config.LCR | UART_LCR_DLAB);
+		serial_out(dev, UART_DLL, divisor & 0xff);
+		serial_out(dev, UART_DLM, divisor >> 8);
+		serial_out(dev, UART_LCR, dev->serial_config.LCR);
+	}
 
+error_unlock:
 	if (do_locks) {
 		spin_unlock(&dev->serial_config_lock);
 		spin_unlock_irqrestore(&dev->uart_lock, flags);
@@ -984,6 +1016,10 @@ static int force_set_baudrate(struct atarisio_dev* dev, unsigned int baudrate, i
 
 static int set_baudrate(struct atarisio_dev* dev, unsigned int baudrate, int do_locks)
 {
+	if (baudrate == 0) {
+		PRINTK("force_set_baudrate: invalid baudrate 0\n");
+		return -EINVAL;
+	}
 	if (dev->serial_config.baudrate != baudrate) {
 		return force_set_baudrate(dev, baudrate, do_locks);
 	}
@@ -1463,7 +1499,7 @@ static inline int wait_send(struct atarisio_dev* dev, unsigned int len)
 	unsigned long max_jiffies;
 	long timeout;
 
-	timeout = 11*len*1000 / dev->serial_config.baudrate;
+	timeout = 11*len*1000 / dev->serial_config.exact_baudrate;
 	timeout += DELAY_SEND_HEADROOM;
 
 	timeout_jiffies = timeout*HZ/1000;
@@ -1532,7 +1568,7 @@ static inline int wait_send(struct atarisio_dev* dev, unsigned int len)
 	}
 }
 
-static inline int wait_receive(struct atarisio_dev* dev, int len, int additional_timeout)
+static int wait_receive(struct atarisio_dev* dev, int len, int additional_timeout)
 {
 	wait_queue_t wait;
 
@@ -1542,7 +1578,7 @@ static inline int wait_receive(struct atarisio_dev* dev, int len, int additional
 	signed long expire;
 	signed long jiffies_start = jiffies;
 
-	timeout = 10*len*1000 / dev->serial_config.baudrate;
+	timeout = 11*len*1000 / dev->serial_config.exact_baudrate;
 	timeout += additional_timeout + DELAY_RECEIVE_HEADROOM;
 
 	timeout_jiffies = timeout*HZ/1000;
@@ -1615,7 +1651,7 @@ static inline int wait_receive(struct atarisio_dev* dev, int len, int additional
 	return no_received_chars;
 }
 
-static inline int send_command_frame(struct atarisio_dev* dev, Ext_SIO_parameters* params)
+static int send_command_frame(struct atarisio_dev* dev, Ext_SIO_parameters* params)
 {
 	int retry = 0;
 	int last_err = 0;
@@ -1668,7 +1704,7 @@ static inline int send_command_frame(struct atarisio_dev* dev, Ext_SIO_parameter
 	cmd_frame[4] = calculate_checksum(cmd_frame, 0, 4, 5);
 
 	while (retry < MAX_COMMAND_FRAME_RETRIES) {
-		DBG_PRINTK(DEBUG_NOISY, "initiating command frame\n");
+		DBG_PRINTK(DEBUG_VERY_NOISY, "initiating command frame\n");
 
 		set_command_line(dev);
 		if (highspeed_mode == ATARISIO_EXTSIO_SPEED_ULTRA) {
@@ -1680,7 +1716,7 @@ static inline int send_command_frame(struct atarisio_dev* dev, Ext_SIO_parameter
 
 		spin_lock_irqsave(&dev->tx_lock, flags);
 		if (dev->tx_buf.head != dev->tx_buf.tail) {
-			DBG_PRINTK(DEBUG_NOISY, "clearing tx bufffer\n");
+			DBG_PRINTK(DEBUG_VERY_NOISY, "clearing tx bufffer\n");
 			dev->tx_buf.head = dev->tx_buf.tail;
 		}
 		for (i=0;i<5;i++) {
@@ -1739,6 +1775,7 @@ static inline int send_command_frame(struct atarisio_dev* dev, Ext_SIO_parameter
 			last_err = -EATARISIO_COMMAND_NAK;
 		} else {
 			DBG_PRINTK(DEBUG_STANDARD, "illegal response to command frame: 0x%02x\n",c);
+			last_err = -EATARISIO_UNKNOWN_ERROR;
 		}
 		if (retry+1 < MAX_COMMAND_FRAME_RETRIES) {
 			DBG_PRINTK(DEBUG_NOISY, "retrying command frame\n");
@@ -1765,12 +1802,10 @@ again:
 	}
 		
 	if (retry == MAX_COMMAND_FRAME_RETRIES) {
-		DBG_PRINTK(DEBUG_STANDARD, "request timed out - no ACK to command frame\n");
-
 		if (last_err) {
 			return last_err;
 		} else {
-			return -EATARTSIO_UNKNOWN_ERROR;
+			return -EATARISIO_UNKNOWN_ERROR;
 		}
 	} else {
 		DBG_PRINTK(DEBUG_NOISY, "got ACK for command frame - ready to proceed\n");
@@ -1989,7 +2024,7 @@ static inline int wait_ext_sio_command_complete(struct atarisio_dev* dev, Ext_SI
 		} else {
 			if (c != OPERATION_ERROR_CHAR) {
 				DBG_PRINTK(DEBUG_STANDARD, "wanted command complete, got: 0x%02x\n",c);
-				ret = -EATARTSIO_UNKNOWN_ERROR;
+				ret = -EATARISIO_UNKNOWN_ERROR;
 			} else {
 				DBG_PRINTK(DEBUG_STANDARD, "got sio command error\n");
 				ret = -EATARISIO_COMMAND_COMPLETE_ERROR;
@@ -2009,9 +2044,14 @@ static inline int internal_perform_ext_sio(struct atarisio_dev* dev, Ext_SIO_par
 		return -EATARISIO_ERROR_BLOCK_TOO_LONG;
 	}
 
-	DBG_PRINTK(DEBUG_NOISY, "SIO: device=%d unit=%d cmd=%d dir=%d timeout=%d aux1=%d aux2=%d datalen=%d highspeed=%d\n",
-		sio_params->device, sio_params->unit, sio_params->command, sio_params->direction,
-		sio_params->timeout, sio_params->aux1, sio_params->aux2, sio_params->data_length,
+	DBG_PRINTK(DEBUG_STANDARD, "SIO: device=0x%02x unit=0x%02x cmd=0x%02x aux1=0x%02x aux2=0x%02x dir=0x%02x timeout=%d datalen=%d highspeed=%d\n",
+		sio_params->device,
+		sio_params->unit,
+		sio_params->command,
+		sio_params->aux1, sio_params->aux2,
+		sio_params->direction,
+		sio_params->timeout,
+		sio_params->data_length,
 		sio_params->highspeed_mode);
 
 	do {
@@ -2028,7 +2068,7 @@ static inline int internal_perform_ext_sio(struct atarisio_dev* dev, Ext_SIO_par
 		if (sio_params->data_length && (sio_params->direction & ATARISIO_EXTSIO_DIR_SEND)) {
 			DBG_PRINTK(DEBUG_NOISY, "sending data block\n");
 			if ((ret = perform_ext_sio_send_data(dev, sio_params))) {
-				DBG_PRINTK(DEBUG_NOISY, "sending data block failed: %d\n", ret);
+				DBG_PRINTK(DEBUG_STANDARD, "sending data block failed: %d\n", ret);
 				goto sio_error;
 			} else {
 				DBG_PRINTK(DEBUG_NOISY, "sending data block OK\n");
@@ -2038,7 +2078,7 @@ static inline int internal_perform_ext_sio(struct atarisio_dev* dev, Ext_SIO_par
 		DBG_PRINTK(DEBUG_NOISY, "receiving command complete\n");
 		if ((cmd_ret = wait_ext_sio_command_complete(dev, sio_params))) {
 			if (cmd_ret != -EATARISIO_COMMAND_COMPLETE_ERROR) {
-				DBG_PRINTK(DEBUG_NOISY, "wait for command complete failed: %d\n", ret);
+				DBG_PRINTK(DEBUG_STANDARD, "wait for command complete failed: %d\n", ret);
 				goto sio_error;
 			} else {
 				ret = 0;
@@ -2048,7 +2088,7 @@ static inline int internal_perform_ext_sio(struct atarisio_dev* dev, Ext_SIO_par
 		if (sio_params->data_length && (sio_params->direction & ATARISIO_EXTSIO_DIR_RECV)) {
 			DBG_PRINTK(DEBUG_NOISY, "receiving data block\n");
 			if ((ret = perform_ext_sio_receive_data(dev, sio_params))) {
-				DBG_PRINTK(DEBUG_NOISY, "receive data block failed: %d\n", ret);
+				DBG_PRINTK(DEBUG_STANDARD, "receive data block failed: %d\n", ret);
 				goto sio_error;
 			} else {
 				DBG_PRINTK(DEBUG_NOISY, "receive data block OK\n");
@@ -2066,7 +2106,7 @@ sio_error:
 	if (ret == 0) {
 		DBG_PRINTK(DEBUG_NOISY, "SIO successfull\n");
 	} else {
-		DBG_PRINTK(DEBUG_NOISY, "SIO error: %d\n", ret);
+		DBG_PRINTK(DEBUG_STANDARD, "SIO error: %d\n", ret);
 	}
 
 	return ret;
@@ -2646,12 +2686,9 @@ static void print_status(struct atarisio_dev* dev)
 		dev->cmdframe_buf.error_chars,
 		dev->cmdframe_buf.break_chars);
 
-	PRINTK("serial_config: baudrate=%d\n",
-		dev->serial_config.baudrate);
-
-	PRINTK("command_line=0x%02x delta=0x%02x\n",
-		dev->sioserver_command_line,
-		dev->sioserver_command_line_delta);
+	PRINTK("serial_config: baudrate=%d exact_baudrate=%d\n",
+		dev->serial_config.baudrate,
+		dev->serial_config.exact_baudrate);
 
 	PRINTK("default_baudrate=%d highspeed_baudrate=%d do_autobaud=%d\n",
 		dev->default_baudrate,
@@ -2660,6 +2697,10 @@ static void print_status(struct atarisio_dev* dev)
 
 	PRINTK("tape_baudrate=%d\n",
 		dev->tape_baudrate);
+
+	PRINTK("command_line=0x%02x delta=0x%02x\n",
+		dev->sioserver_command_line,
+		dev->sioserver_command_line_delta);
 
 	spin_lock_irqsave(&dev->uart_lock, flags);
 
@@ -3003,9 +3044,11 @@ static int atarisio_open(struct inode* inode, struct file* filp)
 			/* set clock prescaler to 4 instead of 16 */
 			/* write_icr(dev, UART_TCR, 4); */
 
+/*
 			PRINTK("MCR = %02x CPR = %02x\n",
 				serial_in(dev, UART_MCR),
 				read_icr(dev, UART_CPR));
+*/
 
 			/* TESTING CPR */
 			/* set clock prescaler to 1 */
@@ -3025,9 +3068,8 @@ static int atarisio_open(struct inode* inode, struct file* filp)
 		}
 	}
 
-
-	/* dev->serial_config.baud_base = 115200; */
 	dev->serial_config.baudrate = dev->default_baudrate;
+	dev->serial_config.exact_baudrate = dev->default_baudrate;
 	dev->serial_config.just_switched_baud = 1;
 	dev->serial_config.IER = UART_IER_RDI;
 	dev->serial_config.MCR = UART_MCR_OUT2;

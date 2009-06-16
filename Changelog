@@ -137,4 +137,6 @@ AtariSIO changelog:
   - atariserver: configurable highspeed selection
   - atarisio: removed IRQF_DISABLED from request_irq call
   - atariserver: updated MyPicoDos and highspeed SIO code to 2009-05-03
-
+  - atarisio: added EXT_SIO ioctl with highspeed SIO support
+  - atarisio: reworked baudrate selection code
+  - atarixfer: added support for highspeed SIO
