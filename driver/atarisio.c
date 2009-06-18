@@ -155,15 +155,6 @@
 #define ATARISIO_PRINT_TIMESTAMPS
 */
 
-/*
- * if ATARISIO_EARLY_NOTIFICATION is defined, poll will indicate a
- * pending command frame at the very start of the command frame,
- * not when it's completely received
- */
-/*
-#define ATARISIO_EARLY_NOTIFICATION
-*/
-
 #define PRINTK_NODEV(x...) printk(NAME ": " x)
 
 #ifdef ATARISIO_PRINT_TIMESTAMPS
@@ -205,12 +196,6 @@
 #else
 #define PRINT_TIMESTAMP(msg) do { } while(0)
 #endif
-
-
-/*
-#define ATARISIO_DEBUG_TIMEOUTS
-#define ATARISIO_DEBUG_TIMEOUT_WAIT (HZ/2)
-*/
 
 #ifdef MODULE_LICENSE
 MODULE_LICENSE("GPL");
@@ -351,8 +336,8 @@ struct atarisio_dev {
 	/* flag if extended 16C950 functions should be used */
 	int use_16c950_mode;
 
-	/* lock for UART hardware registers */
-	spinlock_t uart_lock;
+	/* global data structure and UART lock */
+	spinlock_t lock;
 
 	volatile int current_mode; /* = MODE_1050_2_PC; */
 
@@ -374,16 +359,12 @@ struct atarisio_dev {
 		int wakeup_len;
 	} rx_buf;
 
-	spinlock_t rx_lock;
-
 	/* transmit buffer */
 	volatile struct tx_buf_struct {
 		unsigned char buf[IOBUF_LENGTH];
 		unsigned int head;
 		unsigned int tail;
 	} tx_buf;
-
-	spinlock_t tx_lock;
 
 	unsigned int current_cmdframe_serial_number;
 
@@ -405,8 +386,6 @@ struct atarisio_dev {
 		unsigned int missed_count;
 	} cmdframe_buf;
 
-	spinlock_t cmdframe_lock;
-
 	/*
 	 * wait queues
 	 */
@@ -414,10 +393,6 @@ struct atarisio_dev {
 	wait_queue_head_t rx_queue;
 	wait_queue_head_t tx_queue;
 	wait_queue_head_t cmdframe_queue;
-
-#ifdef ATARISIO_EARLY_NOTIFICATION
-	wait_queue_head_t early_cmdframe_queue;
-#endif
 
 	/*
 	 * configuration of the serial port
@@ -436,9 +411,6 @@ struct atarisio_dev {
 		unsigned int just_switched_baud; /* true if we just switched baud rates */
 		/* this flag is cleared after successful reception of a command frame */
 	} serial_config;
-
-	spinlock_t serial_config_lock;
-
 
 	/* 
 	 * configuration for SIOSERVER mode
@@ -636,45 +608,9 @@ static inline void timestamp_leaving_ioctl(struct atarisio_dev* dev)
 	}
 }
 
-static inline void reset_rx_buf(struct atarisio_dev* dev)
-{
-	unsigned long flags;
-	spin_lock_irqsave(&dev->rx_lock, flags);
-
-	if (dev->rx_buf.head!=dev->rx_buf.tail) {
-		DBG_PRINTK(DEBUG_STANDARD, "reset_rx_buf: flushing %d characters\n",
-			(dev->rx_buf.head+IOBUF_LENGTH - dev->rx_buf.tail) % IOBUF_LENGTH);
-	}
-
-	dev->rx_buf.head=dev->rx_buf.tail=0;
-	dev->rx_buf.wakeup_len=-1;
-
-	spin_unlock_irqrestore(&dev->rx_lock, flags);
-}
-
-static inline void reset_tx_buf(struct atarisio_dev* dev)
-{
-	unsigned long flags;
-	spin_lock_irqsave(&dev->tx_lock, flags);
-
-	if (dev->tx_buf.head!=dev->tx_buf.tail) {
-		DBG_PRINTK(DEBUG_STANDARD, "reset_tx_buf: flushing %d characters\n",
-			(dev->tx_buf.head+IOBUF_LENGTH - dev->tx_buf.tail) % IOBUF_LENGTH);
-	}
-
-	dev->tx_buf.head=dev->tx_buf.tail=0;
-
-	spin_unlock_irqrestore(&dev->tx_lock, flags);
-}
-
 /* reset command frame buffer data so that a new reception can start */
-static inline void reset_cmdframe_buf_data(struct atarisio_dev* dev, int do_lock)
+static inline void reset_cmdframe_buf_data(struct atarisio_dev* dev)
 {
-	unsigned long flags = 0;
-	if (do_lock) {
-		spin_lock_irqsave(&dev->cmdframe_lock, flags);
-	}
-
 	dev->cmdframe_buf.is_valid = 0;
 	dev->cmdframe_buf.receiving = 0;
 	dev->cmdframe_buf.pos = 0;
@@ -683,63 +619,6 @@ static inline void reset_cmdframe_buf_data(struct atarisio_dev* dev, int do_lock
 	dev->cmdframe_buf.break_chars = 0;
 	dev->cmdframe_buf.start_reception_time=0;
 	dev->cmdframe_buf.end_reception_time=0;
-
-	if (do_lock) {
-		spin_unlock_irqrestore(&dev->cmdframe_lock, flags);
-	}
-}
-
-/* init commandframe buffer and statistics like counters etc. */
-static inline void init_cmdframe_buf(struct atarisio_dev* dev, int do_lock)
-{
-	unsigned long flags = 0;
-	if (do_lock) {
-		spin_lock_irqsave(&dev->cmdframe_lock, flags);
-	}
-
-	/* clear all values */
-	reset_cmdframe_buf_data(dev, 0);
-
-	/* reset statistics */
-	dev->cmdframe_buf.serial_number=0;
-	dev->cmdframe_buf.missed_count=0;
-
-	if (do_lock) {
-		spin_unlock_irqrestore(&dev->cmdframe_lock, flags);
-	}
-}
-
-/*
- * indicate the start of a command frame
- */
-static inline void set_command_line(struct atarisio_dev* dev)
-{
-	unsigned long flags;
-	spin_lock_irqsave(&dev->uart_lock, flags);
-
-	dev->serial_config.MCR = (dev->serial_config.MCR & dev->command_line_mask) | dev->command_line_low;
-	serial_out(dev, UART_MCR, dev->serial_config.MCR);
-
-	spin_unlock_irqrestore(&dev->uart_lock, flags);
-}
-
-/*
- * indicate the end of a command frame
- */
-static inline void clear_command_line(struct atarisio_dev* dev, int lock_uart)
-{
-	unsigned long flags = 0;
-
-	if (lock_uart) {
-		spin_lock_irqsave(&dev->uart_lock, flags);
-	}
-
-	dev->serial_config.MCR = (dev->serial_config.MCR & dev->command_line_mask) | dev->command_line_high;
-	serial_out(dev, UART_MCR, dev->serial_config.MCR);
-
-	if (lock_uart) {
-		spin_unlock_irqrestore(&dev->uart_lock, flags);
-	}
 }
 
 static void set_lcr(struct atarisio_dev* dev, unsigned char lcr, int do_locks)
@@ -747,16 +626,14 @@ static void set_lcr(struct atarisio_dev* dev, unsigned char lcr, int do_locks)
 	unsigned long flags=0;
 
 	if (do_locks) {
-		spin_lock_irqsave(&dev->uart_lock, flags);
-		spin_lock(&dev->serial_config_lock);
+		spin_lock_irqsave(&dev->lock, flags);
 	}
 
 	dev->serial_config.LCR = lcr;
 	serial_out(dev, UART_LCR, dev->serial_config.LCR);
 
 	if (do_locks) {
-		spin_unlock(&dev->serial_config_lock);
-		spin_unlock_irqrestore(&dev->uart_lock, flags);
+		spin_unlock_irqrestore(&dev->lock, flags);
 	}
 }
 
@@ -956,9 +833,8 @@ static int calc_16c950_baudrate(struct atarisio_dev* dev, unsigned int baudrate)
 	return divisor;
 }
 
-static int force_set_baudrate(struct atarisio_dev* dev, unsigned int baudrate, int do_locks)
+static int force_set_baudrate(struct atarisio_dev* dev, unsigned int baudrate)
 {
-	unsigned long flags=0;
 	int divisor;
 	int ret = 0;
 
@@ -966,17 +842,12 @@ static int force_set_baudrate(struct atarisio_dev* dev, unsigned int baudrate, i
 		PRINTK("force_set_baudrate: invalid baudrate 0\n");
 		return -EINVAL;
 	}
-	if (do_locks) {
-		spin_lock_irqsave(&dev->uart_lock, flags);
-		spin_lock(&dev->serial_config_lock);
-	}
 
 	divisor = (dev->serial_config.baud_base + baudrate / 2) / baudrate;
 
 	if (divisor == 0 ) {
 		PRINTK("force_set_baudrate: invalid baudrate %d\n", baudrate);
-		ret = -EINVAL;
-		goto error_unlock;
+		return -EINVAL;
 	}
 
 	dev->serial_config.baudrate = baudrate;
@@ -1005,25 +876,27 @@ static int force_set_baudrate(struct atarisio_dev* dev, unsigned int baudrate, i
 		serial_out(dev, UART_LCR, dev->serial_config.LCR);
 	}
 
-error_unlock:
-	if (do_locks) {
-		spin_unlock(&dev->serial_config_lock);
-		spin_unlock_irqrestore(&dev->uart_lock, flags);
-	}
-
 	return ret;
 }
 
 static int set_baudrate(struct atarisio_dev* dev, unsigned int baudrate, int do_locks)
 {
+	int ret=0;
+	unsigned long flags=0;
 	if (baudrate == 0) {
-		PRINTK("force_set_baudrate: invalid baudrate 0\n");
+		PRINTK("set_baudrate: invalid baudrate 0\n");
 		return -EINVAL;
 	}
-	if (dev->serial_config.baudrate != baudrate) {
-		return force_set_baudrate(dev, baudrate, do_locks);
+	if (do_locks) {
+		spin_lock_irqsave(&dev->lock, flags);
 	}
-	return 0;
+	if (dev->serial_config.baudrate != baudrate) {
+		ret=force_set_baudrate(dev, baudrate);
+	}
+	if (do_locks) {
+		spin_unlock_irqrestore(&dev->lock, flags);
+	}
+	return ret;
 }
 
 static inline unsigned char calculate_checksum(const unsigned char* circ_buf, int start, int len, int total_len)
@@ -1057,15 +930,10 @@ static inline void receive_chars(struct atarisio_dev* dev)
 	int do_wakeup=0;
 	int first = 1;
 
-	spin_lock(&dev->rx_lock);
-	spin_lock(&dev->cmdframe_lock);
-	
 	while ( (lsr=serial_in(dev, UART_LSR)) & UART_LSR_DR ) {
 		if (first && (dev->serial_config.LCR != dev->standard_lcr) ) {
 			IRQ_PRINTK(DEBUG_STANDARD, "wrong LCR in receive chars!\n");
-			spin_lock(&dev->serial_config_lock);
 			set_lcr(dev, dev->standard_lcr, 0);
-			spin_unlock(&dev->serial_config_lock);
 		}
 		first = 0;
 		if (lsr & UART_LSR_OE) {
@@ -1117,8 +985,6 @@ static inline void receive_chars(struct atarisio_dev* dev)
 			}
 		}
 	}
-	spin_unlock(&dev->cmdframe_lock);
-	spin_unlock(&dev->rx_lock);
 	if ( do_wakeup ) {
 		wake_up(&dev->rx_queue);
 	}
@@ -1137,7 +1003,6 @@ static inline void send_chars(struct atarisio_dev* dev)
 	if (lsr & UART_LSR_THRE) {
 		timestamp_transmission_send_irq(dev);	/* note: only the first occurrence will be recorded */
 
-		spin_lock(&dev->tx_lock);
 		while ( (count > 0) && (dev->tx_buf.head != dev->tx_buf.tail) ) {
 			IRQ_PRINTK(DEBUG_VERY_NOISY, "transmit char 0x%02x\n",dev->tx_buf.buf[dev->tx_buf.tail]);
 
@@ -1147,18 +1012,14 @@ static inline void send_chars(struct atarisio_dev* dev)
 		};
 		if ( dev->tx_buf.head == dev->tx_buf.tail ) {
 			/* end of TX-buffer reached, disable further TX-interrupts */
-			spin_lock(&dev->serial_config_lock);
 
 			dev->serial_config.IER &= ~UART_IER_THRI;
 			serial_out(dev, UART_IER, dev->serial_config.IER);
-
-			spin_unlock(&dev->serial_config_lock);
 
 			timestamp_transmission_end(dev);
 
 			do_wakeup=1;
 		}
-		spin_unlock(&dev->tx_lock);
 		if (do_wakeup) {
 			wake_up(&dev->tx_queue);
 		}
@@ -1168,8 +1029,6 @@ static inline void send_chars(struct atarisio_dev* dev)
 static inline void try_switchbaud(struct atarisio_dev* dev)
 {
 	unsigned int baud;
-
-	spin_lock(&dev->serial_config_lock);
 
         baud= dev->serial_config.baudrate;
 
@@ -1188,8 +1047,6 @@ static inline void try_switchbaud(struct atarisio_dev* dev)
 	}
 
 	set_baudrate(dev, baud, 0);
-
-	spin_unlock(&dev->serial_config_lock);
 }
 
 static inline void check_modem_lines_before_receive(struct atarisio_dev* dev, unsigned char new_msr)
@@ -1200,7 +1057,6 @@ static inline void check_modem_lines_before_receive(struct atarisio_dev* dev, un
 			if (new_msr & dev->sioserver_command_line) {
 				PRINT_TIMESTAMP("start of command frame");
 				/* start of a new command frame */
-				spin_lock(&dev->cmdframe_lock);
 				if (dev->cmdframe_buf.is_valid) {
 					IRQ_PRINTK(DEBUG_STANDARD, "invalidating command frame (detected new frame) %d\n", 
 						dev->cmdframe_buf.missed_count);
@@ -1209,16 +1065,10 @@ static inline void check_modem_lines_before_receive(struct atarisio_dev* dev, un
 				if (dev->cmdframe_buf.receiving) {
 					IRQ_PRINTK(DEBUG_STANDARD, "restarted reception of command frame (detected new frame)\n");
 				}
-				reset_cmdframe_buf_data(dev, 0);
+				reset_cmdframe_buf_data(dev);
 				dev->cmdframe_buf.receiving = 1;
 				dev->cmdframe_buf.start_reception_time = timeval_to_usec(&dev->irq_timestamp);
 				dev->cmdframe_buf.serial_number++;
-
-				spin_unlock(&dev->cmdframe_lock);
-
-#ifdef ATARISIO_EARLY_NOTIFICATION
-				wake_up(&dev->early_cmdframe_queue);
-#endif
 			}
 		}
 	}
@@ -1294,10 +1144,8 @@ static inline int validate_command_frame(struct atarisio_dev* dev)
 	int last_switchbaud;
 	enum command_frame_quality quality;
 
-	spin_lock(&dev->serial_config_lock);
 	last_switchbaud = dev->serial_config.just_switched_baud;
 	dev->serial_config.just_switched_baud = 0;
-	spin_unlock(&dev->serial_config_lock);
 
 	if (dev->cmdframe_buf.receiving) {
 		quality = check_command_frame_quality(dev);
@@ -1342,10 +1190,6 @@ static inline void check_modem_lines_after_receive(struct atarisio_dev* dev, uns
 		 * have been received.
 		 */
 		if ( (new_msr & dev->sioserver_command_line_delta) && (!(new_msr & dev->sioserver_command_line)) ) {
-			spin_lock(&dev->rx_lock);
-			spin_lock(&dev->cmdframe_lock);
-
-
 			if (dev->rx_buf.tail != dev->rx_buf.head) {
 				IRQ_PRINTK(DEBUG_STANDARD, "flushing rx buffer (%d/%d)\n", dev->rx_buf.head, dev->rx_buf.tail);
 			}
@@ -1353,7 +1197,7 @@ static inline void check_modem_lines_after_receive(struct atarisio_dev* dev, uns
 				IRQ_PRINTK(DEBUG_STANDARD, "flushing tx buffer (%d/%d)\n", dev->tx_buf.head, dev->tx_buf.tail);
 			}
 
-			dev->rx_buf.tail = dev->rx_buf.head; /* flush input buffer */
+			dev->rx_buf.head = dev->rx_buf.tail; /* flush input buffer */
 			dev->tx_buf.tail = dev->tx_buf.head; /* flush output buffer */
 
 			IRQ_PRINTK(DEBUG_NOISY, DEBUG_PRINT_CMDFRAME_BUF(dev));
@@ -1366,9 +1210,6 @@ static inline void check_modem_lines_after_receive(struct atarisio_dev* dev, uns
 			}
 
 			dev->cmdframe_buf.receiving = 0;
-
-			spin_unlock(&dev->cmdframe_lock);
-			spin_unlock(&dev->rx_lock);
 
 			if (do_wakeup) {
 				PRINT_TIMESTAMP("waking up cmdframe_queue");
@@ -1394,7 +1235,7 @@ static irqreturn_t atarisio_interrupt(int irq, void* dev_id)
 
 	do_gettimeofday(&dev->irq_timestamp);
 
-	spin_lock(&dev->uart_lock);
+	spin_lock(&dev->lock);
 
 	while (! ((iir=serial_in(dev, UART_IIR)) & UART_IIR_NO_INT)) {
 		handled = 1;
@@ -1413,60 +1254,11 @@ static irqreturn_t atarisio_interrupt(int irq, void* dev_id)
 		dev->last_msr = msr;
 	}
 
-	spin_unlock(&dev->uart_lock);
+	spin_unlock(&dev->lock);
 
 	return IRQ_RETVAL(handled);
 }
 
-// check if a new command frame was received, before sending
-// a command ACK/NAK
-static inline int check_new_command_frame(struct atarisio_dev* dev)
-{
-	if (dev->current_mode != MODE_SIOSERVER) {
-		return 0;
-	}
-	if (dev->cmdframe_buf.serial_number != dev->current_cmdframe_serial_number) {
-		DBG_PRINTK(DEBUG_STANDARD, "new command frame has arrived...\n");
-		return -EATARISIO_COMMAND_TIMEOUT;
-	} else {
-		return 0;
-	}
-}
-
-static inline int check_command_frame_time(struct atarisio_dev* dev, int do_lock)
-{
-	unsigned long flags = 0;
-	unsigned long long current_time;
-	int ret = 0;
-	unsigned int do_delay = 0;
-
-	if (dev->current_mode != MODE_SIOSERVER) {
-		return 0;
-	}
-	if (do_lock) {
-		spin_lock_irqsave(&dev->cmdframe_lock, flags);
-	}
-	current_time = get_timestamp();
-
-	if (current_time > dev->cmdframe_buf.end_reception_time+10000 ) {
-		DBG_PRINTK(DEBUG_STANDARD, "command frame is too old (%lu usecs)\n",
-				(unsigned long) (current_time - dev->cmdframe_buf.end_reception_time));
-		ret = -EATARISIO_COMMAND_TIMEOUT;
-	} else {
-		DBG_PRINTK(DEBUG_NOISY, "command frame age is OK (%lu usecs)\n",
-				(unsigned long) (current_time - dev->cmdframe_buf.end_reception_time));
-		if (do_lock && (current_time - dev->cmdframe_buf.end_reception_time < DELAY_T2_MIN)) {
-			do_delay = DELAY_T2_MIN-(current_time - dev->cmdframe_buf.end_reception_time);
-		}
-	}
-	if (do_lock) {
-		spin_unlock_irqrestore(&dev->cmdframe_lock, flags);
-	}
-	if (do_delay>0) {
-		udelay(do_delay);
-	}
-	return ret;
-}
 
 static inline void initiate_send(struct atarisio_dev* dev)
 {
@@ -1475,20 +1267,18 @@ static inline void initiate_send(struct atarisio_dev* dev)
 
 	timestamp_transmission_start(dev);
 
+	spin_lock_irqsave(&dev->lock, flags);
+
 	if ( (dev->tx_buf.head != dev->tx_buf.tail)
 	     && !(dev->serial_config.IER & UART_IER_THRI) ) {
 
 		DBG_PRINTK(DEBUG_VERY_NOISY, "enabling TX-interrupt\n");
 
-		spin_lock_irqsave(&dev->uart_lock, flags);
-		spin_lock(&dev->serial_config_lock);
-
 		dev->serial_config.IER |= UART_IER_THRI;
 		serial_out(dev, UART_IER, dev->serial_config.IER);
-
-		spin_unlock(&dev->serial_config_lock);
-		spin_unlock_irqrestore(&dev->uart_lock, flags);
 	}
+
+	spin_unlock_irqrestore(&dev->lock, flags);
 }
 
 static inline int wait_send(struct atarisio_dev* dev, unsigned int len)
@@ -1568,8 +1358,26 @@ static inline int wait_send(struct atarisio_dev* dev, unsigned int len)
 	}
 }
 
+// check if a new command frame was received, before sending
+// a command ACK/NAK
+static inline int check_new_command_frame(struct atarisio_dev* dev)
+{
+	if (dev->current_mode != MODE_SIOSERVER) {
+		return 0;
+	}
+	if (dev->cmdframe_buf.serial_number != dev->current_cmdframe_serial_number) {
+		DBG_PRINTK(DEBUG_STANDARD, "new command frame has arrived...\n");
+		return -EATARISIO_COMMAND_TIMEOUT;
+	} else {
+		return 0;
+	}
+}
+
+
 static int wait_receive(struct atarisio_dev* dev, int len, int additional_timeout)
 {
+	unsigned long flags;
+
 	wait_queue_t wait;
 
 	int no_received_chars=0;
@@ -1594,7 +1402,12 @@ static int wait_receive(struct atarisio_dev* dev, int len, int additional_timeou
 	add_wait_queue(&dev->rx_queue, &wait);
 	while (1) {
 		current->state = TASK_INTERRUPTIBLE;
-		if ( (no_received_chars=(dev->rx_buf.head+IOBUF_LENGTH - dev->rx_buf.tail) % IOBUF_LENGTH) >=len) {
+
+		spin_lock_irqsave(&dev->lock, flags);
+		no_received_chars=(dev->rx_buf.head+IOBUF_LENGTH - dev->rx_buf.tail) % IOBUF_LENGTH;
+		spin_unlock_irqrestore(&dev->lock, flags);
+
+		if (no_received_chars >=len) {
 			break;
 		}
 		expire = schedule_timeout(expire);
@@ -1610,36 +1423,8 @@ static int wait_receive(struct atarisio_dev* dev, int len, int additional_timeou
 	current->state=TASK_RUNNING;
 	remove_wait_queue(&dev->rx_queue, &wait);
 
-#ifdef ATARISIO_DEBUG_TIMEOUTS
-	no_received_chars=(dev->rx_buf.head+IOBUF_LENGTH - dev->rx_buf.tail) % IOBUF_LENGTH;
-	if (no_received_chars != len) {
-		check_new_command_frame(dev);
-		DBG_PRINTK(DEBUG_STANDARD, "timeout in wait_receive [wanted %d got %d time %ld], waiting again\n",
-				len, no_received_chars, jiffies-jiffies_start);
-		dev->rx_buf.wakeup_len = len;
-		expire = ATARISIO_DEBUG_TIMEOUT_WAIT;
-		add_wait_queue(&dev->rx_queue, &wait);
-		while(1) {
-			current->state = TASK_INTERRUPTIBLE;
-			if ((no_received_chars=(dev->rx_buf.head+IOBUF_LENGTH - dev->rx_buf.tail) % IOBUF_LENGTH) >=len) {
-				break;
-			}
-			expire = schedule_timeout(expire);
-			if (expire==0) {
-				break;
-			}
-			if (signal_pending(current)) {
-				current->state=TASK_RUNNING;
-				remove_wait_queue(&dev->rx_queue, &wait);
-				return -EINTR;
-			}
-		}
-		current->state=TASK_RUNNING;
-		remove_wait_queue(&dev->rx_queue, &wait);
-	}
-#endif
 	dev->rx_buf.wakeup_len=-1;
-	no_received_chars=(dev->rx_buf.head+IOBUF_LENGTH - dev->rx_buf.tail) % IOBUF_LENGTH;
+
 	if (no_received_chars < len) {
 		DBG_PRINTK(DEBUG_STANDARD, "timeout in wait_receive [wanted %d got %d time %ld]\n",
 				len, no_received_chars, jiffies - jiffies_start);
@@ -1651,14 +1436,265 @@ static int wait_receive(struct atarisio_dev* dev, int len, int additional_timeou
 	return no_received_chars;
 }
 
+static int setup_send_frame(struct atarisio_dev* dev, unsigned int data_length, unsigned char* user_buffer, int add_checksum)
+{
+	unsigned long flags;
+	unsigned int len, remain;
+	unsigned char checksum;
+
+	int ret = 0;
+
+	if ((data_length == 0) || (data_length >= MAX_SIO_DATA_LENGTH)) {
+		return -EINVAL;
+	}
+
+	spin_lock_irqsave(&dev->lock, flags);
+
+	dev->tx_buf.head = dev->tx_buf.tail;
+
+	len = IOBUF_LENGTH - dev->tx_buf.head;
+	if (len > data_length) {
+		len = data_length;
+	}
+	if ( copy_from_user((unsigned char*) (&(dev->tx_buf.buf[dev->tx_buf.head])), 
+			user_buffer,
+			len) ) {
+		ret = -EFAULT;
+		goto error_unlock;
+	}
+	remain = data_length - len;
+	if (remain>0) {
+		if ( copy_from_user((unsigned char*) dev->tx_buf.buf,
+				user_buffer+len,
+				remain) ) {
+			ret = -EFAULT;
+			goto error_unlock;
+		}
+	}
+
+	if (add_checksum) {
+		checksum = calculate_checksum((unsigned char*)(dev->tx_buf.buf),
+				dev->tx_buf.head, data_length, IOBUF_LENGTH);
+
+		dev->tx_buf.buf[(dev->tx_buf.head+data_length) % IOBUF_LENGTH] = checksum;
+		data_length++;
+	}
+
+	dev->tx_buf.head = (dev->tx_buf.head + data_length) % IOBUF_LENGTH;
+
+error_unlock:
+	spin_unlock_irqrestore(&dev->lock, flags);
+
+	return ret;
+}
+
+static int copy_received_data_to_user(struct atarisio_dev* dev, unsigned int data_length, unsigned char* user_buffer)
+{
+	unsigned long flags;
+	unsigned int len, remain;
+	int ret = 0;
+
+	if ((data_length == 0) || (data_length >= MAX_SIO_DATA_LENGTH)) {
+		return -EINVAL;
+	}
+	/* if we received any bytes, copy the to the user buffer, even
+	 * if we ran into a timeout and got less than we wanted
+	 */
+	spin_lock_irqsave(&dev->lock, flags);
+
+	len = IOBUF_LENGTH - dev->rx_buf.tail;
+	if (len > data_length) {
+		len = data_length;
+	}
+	if ( copy_to_user(user_buffer,
+			 (unsigned char*) (&(dev->rx_buf.buf[dev->rx_buf.tail])),
+			 len) ) {
+		ret = -EFAULT;
+		goto error_unlock;
+	}
+	remain = data_length - len;
+	if (remain>0) {
+		if ( copy_to_user(user_buffer+len,
+				 (unsigned char*) dev->rx_buf.buf,
+				 remain) ) {
+			ret = -EFAULT;
+		}
+	}
+error_unlock:
+	spin_unlock_irqrestore(&dev->lock, flags);
+
+	return ret;
+}
+
+static int send_single_character(struct atarisio_dev* dev, unsigned char c)
+{
+	unsigned long flags;
+	int w;
+	
+	spin_lock_irqsave(&dev->lock, flags);
+	dev->tx_buf.buf[dev->tx_buf.head]=c;
+	dev->tx_buf.head = (dev->tx_buf.head + 1) % IOBUF_LENGTH;
+	spin_unlock_irqrestore(&dev->lock, flags);
+
+	initiate_send(dev);
+
+	w=wait_send(dev, 1);
+	return w;
+}
+
+static int receive_single_character(struct atarisio_dev* dev, unsigned int additional_timeout)
+{
+	unsigned long flags;
+	int w;
+	unsigned char c;
+
+	if ((w=wait_receive(dev, 1, additional_timeout)) >= 1) {
+		spin_lock_irqsave(&dev->lock, flags);
+		c = dev->rx_buf.buf[dev->rx_buf.tail];
+		dev->rx_buf.tail = (dev->rx_buf.tail + 1) % IOBUF_LENGTH;
+		spin_unlock_irqrestore(&dev->lock, flags);
+		return c;
+	} else {
+		if (w == 0) {
+			return -EATARISIO_COMMAND_TIMEOUT;
+		} else {
+			DBG_PRINTK(DEBUG_STANDARD, "error waiting for single character: %d\n",w);
+			return w;
+		}
+	}
+}
+
+static int receive_block(struct atarisio_dev* dev,
+	unsigned int block_len,
+	unsigned char* user_buffer,
+	unsigned int additional_timeout,
+	int handle_checksum)
+{
+	unsigned long flags;
+
+	int ret=0;
+	int received_len, want_len, copy_len;
+	unsigned char checksum;
+
+	if (block_len == 0) {
+		return -EINVAL;
+	}
+
+	want_len = block_len;
+	copy_len = block_len;
+
+	if (handle_checksum) {
+		want_len++;
+	}
+	/* receive data block and checksum*/
+	received_len = wait_receive(dev, want_len, additional_timeout);
+
+	if (received_len < 0) {
+		DBG_PRINTK(DEBUG_STANDARD, "wait_receive returned %d\n",received_len);
+		return received_len;
+	}
+	if (received_len < want_len) {
+		DBG_PRINTK(DEBUG_STANDARD, "receive block timed out [wanted %d got %d]\n",
+				want_len, received_len);
+		ret = -EATARISIO_COMMAND_TIMEOUT;
+	}
+	if (received_len < copy_len) {
+		copy_len = received_len;
+	}
+	if (copy_len > 0) {
+		if ( (ret=copy_received_data_to_user(dev, copy_len, user_buffer)) ) {
+			return ret;
+		}
+	}
+
+	if (handle_checksum && (received_len == want_len)) {
+		spin_lock_irqsave(&dev->lock, flags);
+
+		checksum = calculate_checksum((unsigned char*)(dev->rx_buf.buf),
+				dev->rx_buf.tail, block_len, IOBUF_LENGTH);
+
+		if (dev->rx_buf.buf[(dev->rx_buf.tail+block_len) % IOBUF_LENGTH ]
+			!= checksum) {
+			DBG_PRINTK(DEBUG_STANDARD, "checksum error : 0x%02x != 0x%02x\n",
+				checksum,
+				dev->rx_buf.buf[(dev->rx_buf.tail+block_len) % IOBUF_LENGTH]);
+			if (! ret) {
+				ret = -EATARISIO_CHECKSUM_ERROR;
+			}
+		}
+		dev->rx_buf.tail = (dev->rx_buf.tail + block_len + 1 ) % IOBUF_LENGTH;
+		spin_unlock_irqrestore(&dev->lock, flags);
+	}
+
+	if (dev->rx_buf.head != dev->rx_buf.tail) {
+		DBG_PRINTK(DEBUG_NOISY, "detected excess characters\n");
+	}
+	return ret;
+}
+
+static int send_block(struct atarisio_dev* dev,
+        unsigned int block_len,
+        unsigned char* user_buffer,
+        int add_checksum)
+
+{
+	int ret = 0;
+
+	if (block_len) {
+		if ((dev->add_highspeedpause & ATARISIO_HIGHSPEEDPAUSE_BYTE_DELAY) && (dev->serial_config.baudrate != ATARISIO_STANDARD_BAUDRATE)) {
+			set_lcr(dev, dev->slow_lcr, 1);
+		}
+		if ( (ret=setup_send_frame(dev, block_len, user_buffer, add_checksum)) == 0) {
+			PRINT_TIMESTAMP("send_block: initiate_send");
+			initiate_send(dev);
+
+			PRINT_TIMESTAMP("send_block: begin wait_send");
+			if (add_checksum) {
+				block_len++;
+			}
+			if ((ret=wait_send(dev, block_len))) {
+				DBG_PRINTK(DEBUG_STANDARD, "wait_send returned %d\n", ret);
+			} else {
+				PRINT_TIMESTAMP("send_block: end wait_send");
+			}
+		}
+		if ((dev->add_highspeedpause & ATARISIO_HIGHSPEEDPAUSE_BYTE_DELAY) && (dev->serial_config.baudrate != ATARISIO_STANDARD_BAUDRATE)) {
+			set_lcr(dev, dev->standard_lcr, 1);
+		}
+	}
+	return ret;
+}
+
+/*
+ * active=1 means a command frame is transmitted
+ */
+static inline void set_command_line(struct atarisio_dev* dev, int active, int do_locks)
+{
+	unsigned long flags;
+	if (do_locks) {
+		spin_lock_irqsave(&dev->lock, flags);
+	}
+
+	if (active) {
+		dev->serial_config.MCR = (dev->serial_config.MCR & dev->command_line_mask) | dev->command_line_low;
+	} else {
+		dev->serial_config.MCR = (dev->serial_config.MCR & dev->command_line_mask) | dev->command_line_high;
+	}
+	serial_out(dev, UART_MCR, dev->serial_config.MCR);
+
+	if (do_locks) {
+		spin_unlock_irqrestore(&dev->lock, flags);
+	}
+}
+
 static int send_command_frame(struct atarisio_dev* dev, Ext_SIO_parameters* params)
 {
 	int retry = 0;
 	int last_err = 0;
 	unsigned long flags;
 	int i;
-	unsigned char c;
 	int w;
+	int c;
 	unsigned char highspeed_mode;
 
 	unsigned char cmd_frame[5];
@@ -1706,7 +1742,7 @@ static int send_command_frame(struct atarisio_dev* dev, Ext_SIO_parameters* para
 	while (retry < MAX_COMMAND_FRAME_RETRIES) {
 		DBG_PRINTK(DEBUG_VERY_NOISY, "initiating command frame\n");
 
-		set_command_line(dev);
+		set_command_line(dev, 1, 0);
 		if (highspeed_mode == ATARISIO_EXTSIO_SPEED_ULTRA) {
 			set_baudrate(dev, dev->highspeed_baudrate, 1);
 		} else {
@@ -1714,18 +1750,18 @@ static int send_command_frame(struct atarisio_dev* dev, Ext_SIO_parameters* para
 		}
 		udelay(DELAY_T0);
 
-		spin_lock_irqsave(&dev->tx_lock, flags);
+		spin_lock_irqsave(&dev->lock, flags);
 		if (dev->tx_buf.head != dev->tx_buf.tail) {
 			DBG_PRINTK(DEBUG_VERY_NOISY, "clearing tx bufffer\n");
 			dev->tx_buf.head = dev->tx_buf.tail;
 		}
 		for (i=0;i<5;i++) {
-			dev->tx_buf.buf[dev->tx_buf.head+i] = cmd_frame[i];
+			dev->tx_buf.buf[(dev->tx_buf.head+i) % IOBUF_LENGTH] = cmd_frame[i];
 		}
 		dev->tx_buf.head = (dev->tx_buf.head+5) % IOBUF_LENGTH;
+		spin_unlock_irqrestore(&dev->lock, flags);
 
 		initiate_send(dev);
-		spin_unlock_irqrestore(&dev->tx_lock, flags);
 		if ((w=wait_send(dev, 5))) {
 			if (w == -EATARISIO_COMMAND_TIMEOUT) {
 				last_err = w;
@@ -1742,32 +1778,24 @@ static int send_command_frame(struct atarisio_dev* dev, Ext_SIO_parameters* para
 		dev->rx_buf.tail = dev->rx_buf.head; /* clear rx-buffer */
 
 		udelay(DELAY_T1);
-		clear_command_line(dev, 1);
+		set_command_line(dev, 0, 1);
 		//udelay(DELAY_T2_MIN);
 
 		PRINT_TIMESTAMP("begin wait for command ACK");
-		w=wait_receive(dev, 1, DELAY_T2_MAX/1000);
 
-		PRINT_TIMESTAMP("end wait for command ACK");
-
-		if (w < 1) {
-			if (w < 0) {
-				DBG_PRINTK(DEBUG_STANDARD, "wait_receive returned %d\n",w);
-				return w;
-			} else {
-				DBG_PRINTK(DEBUG_NOISY, "waiting for command frame ACK timed out\n");
-
-				last_err = -EATARISIO_COMMAND_TIMEOUT;
-				goto again;
-			}
-		}
+		c = receive_single_character(dev, DELAY_T2_MAX/1000);
 
 		if (highspeed_mode == ATARISIO_EXTSIO_SPEED_WARP || highspeed_mode == ATARISIO_EXTSIO_SPEED_XF551) {
 			set_baudrate(dev, dev->highspeed_baudrate, 1);
 		}
 
-		c = dev->rx_buf.buf[dev->rx_buf.tail];
-		dev->rx_buf.tail = (dev->rx_buf.tail+1) % IOBUF_LENGTH;
+		PRINT_TIMESTAMP("end wait for command ACK");
+
+		if (c < 0) {
+			DBG_PRINTK(DEBUG_NOISY, "error waiting for command frame ACK: %d\n", c);
+			last_err = -EATARISIO_COMMAND_TIMEOUT;
+			goto again;
+		}
 		if (c==COMMAND_FRAME_ACK_CHAR) {
 			break;
 		} else if (c==COMMAND_FRAME_NAK_CHAR) {
@@ -1782,7 +1810,7 @@ static int send_command_frame(struct atarisio_dev* dev, Ext_SIO_parameters* para
 		}
 
 again:
-		clear_command_line(dev, 1);
+		set_command_line(dev, 0, 1);
 		udelay(100);
 /*
 		{
@@ -1813,134 +1841,29 @@ again:
 	}
 }
 
-static int setup_send_frame(struct atarisio_dev* dev, unsigned int data_length, unsigned char* user_buffer, int add_checksum)
-{
-	unsigned long flags;
-	unsigned int len, remain;
-	unsigned char checksum;
-
-	int ret = 0;
-
-	if ((data_length == 0) || (data_length >= MAX_SIO_DATA_LENGTH)) {
-		return -EINVAL;
-	}
-
-	spin_lock_irqsave(&dev->tx_lock, flags);
-	dev->tx_buf.head = dev->tx_buf.tail;
-
-	len = IOBUF_LENGTH - dev->tx_buf.head;
-	if (len > data_length) {
-		len = data_length;
-	}
-	if ( copy_from_user((unsigned char*) (&(dev->tx_buf.buf[dev->tx_buf.head])), 
-			user_buffer,
-			len) ) {
-		ret = -EFAULT;
-		goto error_unlock;
-	}
-	remain = data_length - len;
-	if (remain>0) {
-		if ( copy_from_user((unsigned char*) dev->tx_buf.buf,
-				user_buffer+len,
-				remain) ) {
-			ret = -EFAULT;
-			goto error_unlock;
-		}
-	}
-
-	if (add_checksum) {
-		checksum = calculate_checksum((unsigned char*)(dev->tx_buf.buf),
-				dev->tx_buf.head, data_length, IOBUF_LENGTH);
-
-		dev->tx_buf.buf[(dev->tx_buf.head+data_length) % IOBUF_LENGTH] = checksum;
-		data_length++;
-	}
-
-	dev->tx_buf.head = (dev->tx_buf.head + data_length) % IOBUF_LENGTH;
-
-error_unlock:
-	spin_unlock_irqrestore(&dev->tx_lock, flags);
-
-	return ret;
-}
-
-static int setup_send_data_frame(struct atarisio_dev* dev, unsigned int data_length, unsigned char* user_buffer)
-{
-	return setup_send_frame(dev, data_length, user_buffer, 1);
-}
-
-static int setup_send_raw_frame(struct atarisio_dev* dev, unsigned int data_length, unsigned char* user_buffer)
-{
-	return setup_send_frame(dev, data_length, user_buffer, 0);
-}
-
-static int copy_received_data_to_user(struct atarisio_dev* dev, unsigned int data_length, unsigned char* user_buffer)
-{
-	unsigned int len, remain;
-	if ((data_length == 0) || (data_length >= MAX_SIO_DATA_LENGTH)) {
-		return -EINVAL;
-	}
-	/* if we received any bytes, copy the to the user buffer, even
-	 * if we ran into a timeout and got less than we wanted
-	 */
-	len = IOBUF_LENGTH - dev->rx_buf.tail;
-	if (len > data_length) {
-		len = data_length;
-	}
-	if ( copy_to_user(user_buffer,
-			 (unsigned char*) (&(dev->rx_buf.buf[dev->rx_buf.tail])),
-			 len) ) {
-		return -EFAULT;
-	}
-	remain = data_length - len;
-	if (remain>0) {
-		if ( copy_to_user(user_buffer+len,
-				 (unsigned char*) dev->rx_buf.buf,
-				 remain) ) {
-			return -EFAULT;
-		}
-	}
-	return 0;
-}
 
 static int perform_ext_sio_send_data(struct atarisio_dev* dev, Ext_SIO_parameters * sio_params)
 {
-        int ret=0,w;
-	unsigned char c;
+        int ret=0;
+	int c;
 
 	/*
 	 * read data from disk
 	 */
 	udelay(DELAY_T3_MIN);
 
-
 	if (sio_params->data_length) {
-		if ( (ret=setup_send_data_frame(dev, sio_params->data_length, sio_params->data_buffer)) ) {
+		if ( (ret=send_block(dev, sio_params->data_length, sio_params->data_buffer, 1)) ) {
 			return ret;
-		}
-
-		initiate_send(dev);
-
-		if ((w=wait_send(dev, sio_params->data_length+1))) {
-			DBG_PRINTK(DEBUG_STANDARD, "send data frame returned %d\n",w);
-			return w;
 		}
 
 		/*
 		 * wait for data frame ack
 		 */
 
-		if ((w=wait_receive(dev, 1, DELAY_T4_MAX/1000)) < 1) {
-			if (w < 0) {
-				DBG_PRINTK(DEBUG_STANDARD, "receive data frame ACK returned %d\n",w);
-				return w;
-			} else {
-				DBG_PRINTK(DEBUG_STANDARD, "receive data frame ACK timed out\n");
-				return -EATARISIO_COMMAND_TIMEOUT;
-			}
+		if ((c=receive_single_character(dev, DELAY_T4_MAX/1000)) < 0) {
+			return c;
 		}
-		c = dev->rx_buf.buf[dev->rx_buf.tail];
-		dev->rx_buf.tail = (dev->rx_buf.tail + 1) % IOBUF_LENGTH;
 
 		if (c != DATA_FRAME_ACK_CHAR) {
 			if (c != DATA_FRAME_NAK_CHAR) {
@@ -1952,77 +1875,14 @@ static int perform_ext_sio_send_data(struct atarisio_dev* dev, Ext_SIO_parameter
 	return ret;
 }
 
-static int perform_ext_sio_receive_data(struct atarisio_dev* dev, Ext_SIO_parameters * sio_params)
-{
-	int received_len, copy_len;
-        int ret=0,w;
-	unsigned char checksum;
-
-	if (sio_params->data_length) {
-		/* receive data block and checksum*/
-		received_len = wait_receive(dev, sio_params->data_length+1, 0);
-
-		if (received_len < 0) {
-			DBG_PRINTK(DEBUG_STANDARD, "receiving data block returned %d\n",received_len);
-			return received_len;
-		}
-
-		copy_len = sio_params->data_length;
-		if (received_len < copy_len) {
-			copy_len = received_len;
-		}
-		if (copy_len > 0) {
-			if ( (w=copy_received_data_to_user(dev, copy_len, sio_params->data_buffer)) ) {
-				return w;
-			}
-		}
-
-	        if ((unsigned int) received_len < sio_params->data_length+1) {
-			DBG_PRINTK(DEBUG_STANDARD, "receive data frame timed out [wanted %d got %d]\n",
-					sio_params->data_length+1, received_len);
-			return -EATARISIO_COMMAND_TIMEOUT;
-		}
-		checksum = calculate_checksum((unsigned char*)(dev->rx_buf.buf),
-			       	dev->rx_buf.tail, sio_params->data_length, IOBUF_LENGTH);
-
-		if (dev->rx_buf.buf[(dev->rx_buf.tail+sio_params->data_length) % IOBUF_LENGTH ]
-			!= checksum) {
-			DBG_PRINTK(DEBUG_STANDARD, "checksum error : 0x%02x != 0x%02x\n",
-				checksum,
-				dev->rx_buf.buf[(dev->rx_buf.tail+sio_params->data_length) % IOBUF_LENGTH]);
-			if (! ret) {
-				ret = -EATARISIO_CHECKSUM_ERROR;
-			}
-		}
-		dev->rx_buf.tail = (dev->rx_buf.tail + sio_params->data_length + 1 ) % IOBUF_LENGTH;
-	}
-
-	if (dev->rx_buf.head != dev->rx_buf.tail) {
-		DBG_PRINTK(DEBUG_NOISY, "detected excess characters\n");
-	}
-	return ret;
-}
-
-
 static inline int wait_ext_sio_command_complete(struct atarisio_dev* dev, Ext_SIO_parameters * sio_params)
 {
 	int ret = 0;
-	int w;
-	unsigned char c;
-	/* 
-	 * wait for command complete
-	 */
-	if ((w=wait_receive(dev, 1, sio_params->timeout*1000)) < 1) {
-		if (w < 0) {
-			DBG_PRINTK(DEBUG_STANDARD, "receive command complete returned %d\n",w);
-			return w;
-		} else {
-			DBG_PRINTK(DEBUG_STANDARD, "receive command complete timed out\n");
-			return -EATARISIO_COMMAND_TIMEOUT;
-		}
+	int c;
+
+	if ((c=receive_single_character(dev, sio_params->timeout*1000)) < 0) {
+		return c;
 	}
-	c = dev->rx_buf.buf[dev->rx_buf.tail];
-	dev->rx_buf.tail = (dev->rx_buf.tail + 1) % IOBUF_LENGTH;
 
 	if (c != OPERATION_COMPLETE_CHAR) {
 		if (c == COMMAND_FRAME_ACK_CHAR) {
@@ -2093,7 +1953,7 @@ static inline int internal_perform_ext_sio(struct atarisio_dev* dev, Ext_SIO_par
 
 		if (sio_params->data_length && (sio_params->direction & ATARISIO_EXTSIO_DIR_RECV)) {
 			DBG_PRINTK(DEBUG_NOISY, "receiving data block\n");
-			if ((ret = perform_ext_sio_receive_data(dev, sio_params))) {
+			if ((ret = receive_block(dev, sio_params->data_length, sio_params->data_buffer, 0, 1))) {
 				DBG_PRINTK(DEBUG_STANDARD, "receive data block failed: %d\n", ret);
 				goto sio_error;
 			} else {
@@ -2168,15 +2028,106 @@ static inline int perform_sio(struct atarisio_dev* dev, SIO_parameters * user_si
 	return internal_perform_ext_sio(dev, &ext_sio_params);
 }
 
+static int perform_send_frame(struct atarisio_dev* dev, unsigned long arg, int add_checksum)
+{
+	SIO_data_frame frame;
 
-static void set_1050_2_pc_mode(struct atarisio_dev* dev, int do_locks)
+	if (copy_from_user(&frame, (SIO_data_frame*) arg, sizeof(SIO_data_frame)) ) {
+		return -EFAULT;
+	}
+
+	return send_block(dev, frame.data_length, frame.data_buffer, add_checksum);
+}
+
+
+static int perform_receive_frame(struct atarisio_dev* dev, unsigned long arg, int handle_checksum)
+{
+	SIO_data_frame frame;
+
+	if (copy_from_user(&frame, (SIO_data_frame*) arg, sizeof(SIO_data_frame)) ) {
+		return -EFAULT;
+	}
+
+	return receive_block(dev, frame.data_length, frame.data_buffer, DELAY_T3_MAX/1000, handle_checksum);
+}
+
+static int perform_send_tape_block(struct atarisio_dev* dev, unsigned long arg)
+{
+	unsigned int current_baudrate;
+	unsigned int current_autobaud;
+	int ret = 0;
+
+	current_baudrate = dev->serial_config.baudrate;
+	current_autobaud = dev->do_autobaud;
+
+	/* disable autobauding and set the baudrate */
+	dev->do_autobaud = 0;
+	if ((ret = set_baudrate(dev, dev->tape_baudrate, 1))) {
+		DBG_PRINTK(DEBUG_STANDARD, "setting tape baudrate %d failed\n", dev->tape_baudrate);
+	} else {
+		ret = perform_send_frame(dev, arg, 0);
+	}
+	
+	set_baudrate(dev, current_baudrate, 1);
+	dev->do_autobaud = current_autobaud;
+
+	return ret;
+}
+
+static int check_command_frame_time(struct atarisio_dev* dev, int do_lock)
+{
+	unsigned long flags = 0;
+	unsigned long long current_time;
+	int ret = 0;
+	unsigned int do_delay = 0;
+
+	if (dev->current_mode != MODE_SIOSERVER) {
+		return 0;
+	}
+	if (do_lock) {
+		spin_lock_irqsave(&dev->lock, flags);
+	}
+	current_time = get_timestamp();
+
+	if (current_time > dev->cmdframe_buf.end_reception_time+10000 ) {
+		DBG_PRINTK(DEBUG_STANDARD, "command frame is too old (%lu usecs)\n",
+				(unsigned long) (current_time - dev->cmdframe_buf.end_reception_time));
+		ret = -EATARISIO_COMMAND_TIMEOUT;
+	} else {
+		DBG_PRINTK(DEBUG_NOISY, "command frame age is OK (%lu usecs)\n",
+				(unsigned long) (current_time - dev->cmdframe_buf.end_reception_time));
+		if (do_lock && (current_time - dev->cmdframe_buf.end_reception_time < DELAY_T2_MIN)) {
+			do_delay = DELAY_T2_MIN-(current_time - dev->cmdframe_buf.end_reception_time);
+		}
+	}
+	if (do_lock) {
+		spin_unlock_irqrestore(&dev->lock, flags);
+	}
+	if (do_delay>0) {
+		udelay(do_delay);
+	}
+	return ret;
+}
+
+/* init commandframe buffer and statistics like counters etc. */
+static inline void init_cmdframe_buf(struct atarisio_dev* dev)
+{
+	/* clear all values */
+	reset_cmdframe_buf_data(dev);
+
+	/* reset statistics */
+	dev->cmdframe_buf.serial_number=0;
+	dev->cmdframe_buf.missed_count=0;
+}
+
+
+static void set_1050_2_pc_mode(struct atarisio_dev* dev, int prosystem, int do_locks)
 {
 	unsigned long flags=0;
 	int have_to_wait;
 
 	if (do_locks) {
-		spin_lock_irqsave(&dev->uart_lock, flags);
-		spin_lock(&dev->serial_config_lock);
+		spin_lock_irqsave(&dev->lock, flags);
 	}
 
 	have_to_wait = !(dev->serial_config.MCR & UART_MCR_DTR);
@@ -2184,8 +2135,12 @@ static void set_1050_2_pc_mode(struct atarisio_dev* dev, int do_locks)
 	dev->current_mode = MODE_1050_2_PC;
 	dev->command_line_mask = ~(UART_MCR_RTS | UART_MCR_DTR);
 	dev->command_line_low = UART_MCR_DTR | UART_MCR_RTS;
-	dev->command_line_high = UART_MCR_DTR;
-	clear_command_line(dev, 0);
+	if (prosystem) {
+		dev->command_line_high = UART_MCR_RTS;
+	} else {
+		dev->command_line_high = UART_MCR_DTR;
+	}
+	set_command_line(dev, 0, 0);
 
 	set_lcr(dev, dev->standard_lcr, 0);
 	dev->do_autobaud = 0;
@@ -2193,49 +2148,14 @@ static void set_1050_2_pc_mode(struct atarisio_dev* dev, int do_locks)
 	dev->serial_config.IER &= ~UART_IER_MSI;
 	serial_out(dev, UART_IER, dev->serial_config.IER);
 
+	init_cmdframe_buf(dev);
+
 	if (do_locks) {
-		spin_unlock(&dev->serial_config_lock);
-		spin_unlock_irqrestore(&dev->uart_lock, flags);
+		spin_unlock_irqrestore(&dev->lock, flags);
 		if (have_to_wait) {
 			schedule_timeout(HZ/2); /* wait 0.5 sec. for voltage supply to stabilize */
 		}
 	}
-
-	init_cmdframe_buf(dev, 1);
-}
-
-static void set_prosystem_mode(struct atarisio_dev* dev, int do_locks)
-{
-	unsigned long flags = 0;
-	int have_to_wait;
-
-	if (do_locks) {
-		spin_lock_irqsave(&dev->uart_lock, flags);
-		spin_lock(&dev->serial_config_lock);
-	}
-
-	have_to_wait = !(dev->serial_config.MCR & UART_MCR_RTS);
-
-	dev->current_mode = MODE_1050_2_PC;
-	dev->command_line_mask = ~(UART_MCR_RTS | UART_MCR_DTR);
-	dev->command_line_low = UART_MCR_RTS | UART_MCR_DTR;
-	dev->command_line_high = UART_MCR_RTS;
-	clear_command_line(dev, 0);
-	set_lcr(dev, dev->standard_lcr, 0);
-	dev->do_autobaud = 0;
-	set_baudrate(dev, dev->default_baudrate, 0);
-	dev->serial_config.IER &= ~UART_IER_MSI;
-	serial_out(dev, UART_IER, dev->serial_config.IER);
-
-	if (do_locks) {
-		spin_unlock(&dev->serial_config_lock);
-		spin_unlock_irqrestore(&dev->uart_lock, flags);
-		if (have_to_wait) {
-			schedule_timeout(HZ/2); /* wait 0.5 sec. for voltage supply to stabilize */
-		}
-	}
-
-	init_cmdframe_buf(dev, 1);
 }
 
 /* clear DTR and RTS to make autoswitching Atarimax interface work */
@@ -2245,18 +2165,34 @@ static void clear_control_lines(struct atarisio_dev* dev)
 	serial_out(dev, UART_MCR, dev->serial_config.MCR);
 }
 
-static void set_sioserver_mode(struct atarisio_dev* dev, int do_locks)
-{
-	unsigned long flags = 0;
+#define SIOSERVER_COMMAND_RI 0
+#define SIOSERVER_COMMAND_DSR 1
+#define SIOSERVER_COMMAND_CTS 2
 
-	if (do_locks) {
-		spin_lock_irqsave(&dev->uart_lock, flags);
-		spin_lock(&dev->serial_config_lock);
-	}
+static void set_sioserver_mode(struct atarisio_dev* dev, int command_line)
+{
+	unsigned long flags;
+
+	spin_lock_irqsave(&dev->lock, flags);
 
 	dev->current_mode = MODE_SIOSERVER;
-	dev->sioserver_command_line = UART_MSR_RI;
-	dev->sioserver_command_line_delta = UART_MSR_TERI;
+	switch (command_line) {
+	case SIOSERVER_COMMAND_DSR:
+		dev->sioserver_command_line = UART_MSR_DSR;
+		dev->sioserver_command_line_delta = UART_MSR_DDSR;
+		break;
+	case SIOSERVER_COMMAND_CTS:
+		dev->sioserver_command_line = UART_MSR_CTS;
+		dev->sioserver_command_line_delta = UART_MSR_DCTS;
+		break;
+	default:
+		if (command_line != SIOSERVER_COMMAND_RI) {
+			DBG_PRINTK(DEBUG_STANDARD, "set_sioserver_mode: illegal command_line value %d\n", command_line);
+		}
+		dev->sioserver_command_line = UART_MSR_RI;
+		dev->sioserver_command_line_delta = UART_MSR_TERI;
+		break;
+	}
 
 	set_lcr(dev, dev->standard_lcr, 0);
 	set_baudrate(dev, dev->default_baudrate, 0);
@@ -2264,66 +2200,30 @@ static void set_sioserver_mode(struct atarisio_dev* dev, int do_locks)
 	dev->serial_config.IER |= UART_IER_MSI;
 	serial_out(dev, UART_IER, dev->serial_config.IER);
 
-	if (do_locks) {
-		spin_unlock(&dev->serial_config_lock);
-		spin_unlock_irqrestore(&dev->uart_lock, flags);
-	}
+	init_cmdframe_buf(dev);
 
-	init_cmdframe_buf(dev, 1);
+	spin_unlock_irqrestore(&dev->lock, flags);
 }
 
-static void set_sioserver_mode_dsr(struct atarisio_dev* dev, int do_locks)
+static inline void reset_rx_buf(struct atarisio_dev* dev)
 {
-	unsigned long flags = 0;
-
-	if (do_locks) {
-		spin_lock_irqsave(&dev->uart_lock, flags);
-		spin_lock(&dev->serial_config_lock);
+	if (dev->rx_buf.head!=dev->rx_buf.tail) {
+		DBG_PRINTK(DEBUG_STANDARD, "reset_rx_buf: flushing %d characters\n",
+			(dev->rx_buf.head+IOBUF_LENGTH - dev->rx_buf.tail) % IOBUF_LENGTH);
 	}
 
-	dev->current_mode = MODE_SIOSERVER;
-	dev->sioserver_command_line = UART_MSR_DSR;
-	dev->sioserver_command_line_delta = UART_MSR_DDSR;
-
-	set_lcr(dev, dev->standard_lcr, 0);
-	set_baudrate(dev, dev->default_baudrate, 0);
-	clear_control_lines(dev);
-	dev->serial_config.IER |= UART_IER_MSI;
-	serial_out(dev, UART_IER, dev->serial_config.IER);
-
-	if (do_locks) {
-		spin_unlock(&dev->serial_config_lock);
-		spin_unlock_irqrestore(&dev->uart_lock, flags);
-	}
-
-	init_cmdframe_buf(dev, 1);
+	dev->rx_buf.head=dev->rx_buf.tail=0;
+	dev->rx_buf.wakeup_len=-1;
 }
 
-static void set_sioserver_mode_cts(struct atarisio_dev* dev, int do_locks)
+static inline void reset_tx_buf(struct atarisio_dev* dev)
 {
-	unsigned long flags = 0;
-
-	if (do_locks) {
-		spin_lock_irqsave(&dev->uart_lock, flags);
-		spin_lock(&dev->serial_config_lock);
+	if (dev->tx_buf.head!=dev->tx_buf.tail) {
+		DBG_PRINTK(DEBUG_STANDARD, "reset_tx_buf: flushing %d characters\n",
+			(dev->tx_buf.head+IOBUF_LENGTH - dev->tx_buf.tail) % IOBUF_LENGTH);
 	}
 
-	dev->current_mode = MODE_SIOSERVER;
-	dev->sioserver_command_line = UART_MSR_CTS;
-	dev->sioserver_command_line_delta = UART_MSR_DCTS;
-
-	set_lcr(dev, dev->standard_lcr, 0);
-	set_baudrate(dev, dev->default_baudrate, 0);
-	clear_control_lines(dev);
-	dev->serial_config.IER |= UART_IER_MSI;
-	serial_out(dev, UART_IER, dev->serial_config.IER);
-
-	if (do_locks) {
-		spin_unlock(&dev->serial_config_lock);
-		spin_unlock_irqrestore(&dev->uart_lock, flags);
-	}
-
-	init_cmdframe_buf(dev, 1);
+	dev->tx_buf.head=dev->tx_buf.tail=0;
 }
 
 
@@ -2365,22 +2265,16 @@ again:
 	current->state=TASK_RUNNING;
 	remove_wait_queue(&dev->cmdframe_queue, &wait);
 
+	spin_lock_irqsave(&dev->lock, flags);
 	if (!dev->cmdframe_buf.is_valid ) {
+		spin_unlock_irqrestore(&dev->lock, flags);
 		DBG_PRINTK(DEBUG_STANDARD, "waiting for command frame timed out\n");
 		return -EATARISIO_COMMAND_TIMEOUT;
 	}
-	spin_lock_irqsave(&dev->cmdframe_lock, flags);
-/*
-	if (!cmdframe_buf.is_valid) {
-		DBG_PRINTK(DEBUG_STANDARD, "command frame invalidated shortly after notification\n");
-		spin_unlock_irqrestore(&cmdframe_lock, flags);
-		goto again;
-	}
-*/
 
 	if (check_command_frame_time(dev, 0)) {
 		dev->cmdframe_buf.is_valid = 0;
-		spin_unlock_irqrestore(&dev->cmdframe_lock, flags);
+		spin_unlock_irqrestore(&dev->lock, flags);
 		goto again;
 	}
 
@@ -2395,7 +2289,8 @@ again:
 	dev->cmdframe_buf.is_valid = 0; /* already got that :-) */
 	reset_tx_buf(dev);
 	reset_rx_buf(dev);
-	spin_unlock_irqrestore(&dev->cmdframe_lock, flags);
+
+	spin_unlock_irqrestore(&dev->lock, flags);
 
 	if (copy_to_user((SIO_command_frame*) arg, &frame, sizeof(SIO_command_frame)) ) {
 		return -EFAULT;
@@ -2403,263 +2298,12 @@ again:
 	return 0;
 }
 
-static int send_single_character(struct atarisio_dev* dev, unsigned char c)
-{
-	int w;
-	dev->tx_buf.buf[dev->tx_buf.head]=c;
-	dev->tx_buf.head = (dev->tx_buf.head + 1) % IOBUF_LENGTH;
-	initiate_send(dev);
-	w=wait_send(dev, 1);
-	return w;
-}
-
-static int perform_send_data_frame(struct atarisio_dev* dev, unsigned long arg)
-{
-	SIO_data_frame frame;
-	int ret,w;
-
-	if (copy_from_user(&frame, (SIO_data_frame*) arg, sizeof(SIO_data_frame)) ) {
-		return -EFAULT;
-	}
-
-	/* delay a short time before transmitting data frame */
-	/* most SIO codes don't like it if data follows immediately after complete */
-	udelay(DELAY_T3_PERIPH);
-
-
-	if (frame.data_length) {
-		if ((dev->add_highspeedpause & ATARISIO_HIGHSPEEDPAUSE_BYTE_DELAY) && (dev->serial_config.baudrate != ATARISIO_STANDARD_BAUDRATE)) {
-			set_lcr(dev, dev->slow_lcr, 1);
-		}
-		if ((ret=setup_send_data_frame(dev, frame.data_length, frame.data_buffer)) ) {
-			if ((dev->add_highspeedpause & ATARISIO_HIGHSPEEDPAUSE_BYTE_DELAY) && (dev->serial_config.baudrate != ATARISIO_STANDARD_BAUDRATE)) {
-				set_lcr(dev, dev->standard_lcr, 1);
-			}
-			return ret;
-		}
-
-		PRINT_TIMESTAMP("perform_send_data_frame: initiate_send");
-		initiate_send(dev);
-
-		PRINT_TIMESTAMP("perform_send_data_frame: begin wait_send");
-		if ((w=wait_send(dev, frame.data_length+1))) {
-			if ((dev->add_highspeedpause & ATARISIO_HIGHSPEEDPAUSE_BYTE_DELAY) && (dev->serial_config.baudrate != ATARISIO_STANDARD_BAUDRATE)) {
-				set_lcr(dev, dev->standard_lcr, 1);
-			}
-			DBG_PRINTK(DEBUG_STANDARD, "send data frame returned %d\n",w);
-			return w;
-		}
-		if ((dev->add_highspeedpause & ATARISIO_HIGHSPEEDPAUSE_BYTE_DELAY) && (dev->serial_config.baudrate != ATARISIO_STANDARD_BAUDRATE)) {
-			set_lcr(dev, dev->standard_lcr, 1);
-		}
-		PRINT_TIMESTAMP("perform_send_data_frame: end wait_send");
-	}
-	return 0;
-}
-
-static int perform_receive_data_frame(struct atarisio_dev* dev, unsigned long arg)
-{
-	SIO_data_frame frame;
-	int ret=0;
-	int received_len, copy_len;
-	unsigned char checksum;
-
-	if (copy_from_user(&frame, (SIO_data_frame*) arg, sizeof(SIO_data_frame)) ) {
-		return -EFAULT;
-	}
-
-
-	if (frame.data_length) {
-		/* receive data block and checksum*/
-		received_len = wait_receive(dev, frame.data_length+1, DELAY_T3_MAX/1000);
-
-		if (received_len < 0) {
-			DBG_PRINTK(DEBUG_STANDARD, "receive data block returned %d\n",received_len);
-			return received_len;
-		}
-		copy_len = frame.data_length;
-		if (received_len < copy_len) {
-			copy_len = received_len;
-		}
-		if (copy_len > 0) {
-			if ( (ret=copy_received_data_to_user(dev, copy_len, frame.data_buffer)) ) {
-				return ret;
-			}
-		}
-
-	        if ((unsigned int) received_len < frame.data_length+1) {
-			DBG_PRINTK(DEBUG_STANDARD, "receive data frame timed out [wanted %d got %d]\n",
-					frame.data_length+1, received_len);
-			return -EATARISIO_COMMAND_TIMEOUT;
-		}
-		checksum = calculate_checksum((unsigned char*)(dev->rx_buf.buf),
-			       	dev->rx_buf.tail, frame.data_length, IOBUF_LENGTH);
-
-		if (dev->rx_buf.buf[(dev->rx_buf.tail+frame.data_length) % IOBUF_LENGTH ]
-			!= checksum) {
-			DBG_PRINTK(DEBUG_STANDARD, "checksum error : 0x%02x != 0x%02x\n",
-				checksum,
-				dev->rx_buf.buf[(dev->rx_buf.tail+frame.data_length) % IOBUF_LENGTH]);
-			if (! ret) {
-				ret = -EATARISIO_CHECKSUM_ERROR;
-			}
-		}
-
-
-		dev->rx_buf.tail = (dev->rx_buf.tail + frame.data_length + 1 ) % IOBUF_LENGTH;
-
-		udelay(DELAY_T4_MIN);
-		if (ret == 0) {
-			ret=send_single_character(dev, DATA_FRAME_ACK_CHAR);
-		} else {
-			send_single_character(dev, DATA_FRAME_NAK_CHAR);
-		}
-	} else {
-		return -EINVAL;
-	}
-
-	if (dev->rx_buf.head != dev->rx_buf.tail) {
-		DBG_PRINTK(DEBUG_NOISY, "detected excess characters\n");
-	}
-	return ret;
-}
-
-static int perform_send_raw_frame(struct atarisio_dev* dev, unsigned long arg)
-{
-	SIO_data_frame frame;
-	int ret,w;
-
-	if (copy_from_user(&frame, (SIO_data_frame*) arg, sizeof(SIO_data_frame)) ) {
-		return -EFAULT;
-	}
-
-	if (frame.data_length) {
-		if ((dev->add_highspeedpause & ATARISIO_HIGHSPEEDPAUSE_BYTE_DELAY) && (dev->serial_config.baudrate != ATARISIO_STANDARD_BAUDRATE)) {
-			set_lcr(dev, dev->slow_lcr, 1);
-		}
-		if ((ret=setup_send_raw_frame(dev, frame.data_length, frame.data_buffer)) ) {
-			if ((dev->add_highspeedpause & ATARISIO_HIGHSPEEDPAUSE_BYTE_DELAY) && (dev->serial_config.baudrate != ATARISIO_STANDARD_BAUDRATE)) {
-				set_lcr(dev, dev->standard_lcr, 1);
-			}
-			return ret;
-		}
-
-		PRINT_TIMESTAMP("perform_send_raw_frame: initiate_send");
-		initiate_send(dev);
-
-		PRINT_TIMESTAMP("perform_send_raw_frame: begin wait_send");
-		if ((w=wait_send(dev, frame.data_length))) {
-			if ((dev->add_highspeedpause & ATARISIO_HIGHSPEEDPAUSE_BYTE_DELAY) && (dev->serial_config.baudrate != ATARISIO_STANDARD_BAUDRATE)) {
-				set_lcr(dev, dev->standard_lcr, 1);
-			}
-			DBG_PRINTK(DEBUG_STANDARD, "send raw frame returned %d\n",w);
-			return w;
-		}
-		if ((dev->add_highspeedpause & ATARISIO_HIGHSPEEDPAUSE_BYTE_DELAY) && (dev->serial_config.baudrate != ATARISIO_STANDARD_BAUDRATE)) {
-			set_lcr(dev, dev->standard_lcr, 1);
-		}
-		PRINT_TIMESTAMP("perform_send_raw_frame: end wait_send");
-	}
-	return 0;
-}
-
-static int perform_receive_raw_frame(struct atarisio_dev* dev, unsigned long arg)
-{
-	SIO_data_frame frame;
-	int ret=0;
-	int received_len, copy_len;
-
-	if (copy_from_user(&frame, (SIO_data_frame*) arg, sizeof(SIO_data_frame)) ) {
-		return -EFAULT;
-	}
-
-	if (frame.data_length) {
-		/* receive data block and checksum*/
-		received_len = wait_receive(dev, frame.data_length, DELAY_T3_MAX/1000);
-
-		if (received_len < 0) {
-			DBG_PRINTK(DEBUG_STANDARD, "receive data block returned %d\n",received_len);
-			return received_len;
-		}
-		copy_len = frame.data_length;
-		if (received_len < copy_len) {
-			copy_len = received_len;
-		}
-		if (copy_len > 0) {
-			if ( (ret=copy_received_data_to_user(dev, copy_len, frame.data_buffer)) ) {
-				return ret;
-			}
-		}
-
-	        if ((unsigned int) received_len < frame.data_length) {
-			DBG_PRINTK(DEBUG_STANDARD, "receive raw frame timed out [wanted %d got %d]\n",
-					frame.data_length+1, received_len);
-			return -EATARISIO_COMMAND_TIMEOUT;
-		}
-		dev->rx_buf.tail = (dev->rx_buf.tail + frame.data_length) % IOBUF_LENGTH;
-	} else {
-		return -EINVAL;
-	}
-
-	if (dev->rx_buf.head != dev->rx_buf.tail) {
-		DBG_PRINTK(DEBUG_NOISY, "detected excess characters\n");
-	}
-	return ret;
-}
-
-static int perform_send_tape_block(struct atarisio_dev* dev, unsigned long arg)
-{
-	SIO_data_frame frame;
-	unsigned int current_baudrate;
-	unsigned int current_autobaud;
-	int ret = 0;
-	int w;
-
-	if (copy_from_user(&frame, (SIO_data_frame*) arg, sizeof(SIO_data_frame)) ) {
-		return -EFAULT;
-	}
-	current_baudrate = dev->serial_config.baudrate;
-	current_autobaud = dev->do_autobaud;
-
-	/* disable autobauding and set the baudrate */
-	dev->do_autobaud = 0;
-	ret = set_baudrate(dev, dev->tape_baudrate, 1);
-
-	if (ret) {
-		DBG_PRINTK(DEBUG_STANDARD, "setting tape baudrate %d failed\n", dev->tape_baudrate);
-		goto exit_failure;
-	}
-	
-	if (frame.data_length) {
-		if ((ret=setup_send_raw_frame(dev, frame.data_length, frame.data_buffer)) ) {
-			goto exit_failure;
-		}
-
-		PRINT_TIMESTAMP("perform_send_tape_block: initiate_send");
-		initiate_send(dev);
-
-		PRINT_TIMESTAMP("perform_send_tape_block: begin wait_send");
-		if ((w=wait_send(dev, frame.data_length))) {
-			DBG_PRINTK(DEBUG_STANDARD, "send tape block returned %d\n",w);
-			ret = w;
-			goto exit_failure;
-		}
-		PRINT_TIMESTAMP("perform_send_tape_block: end wait_send");
-	} else {
-		DBG_PRINTK(DEBUG_STANDARD, "warning: called perform_send_tape_block with empty tape frame\n");
-	}
-
-exit_failure:
-	/* reset baudrate */
-	set_baudrate(dev, current_baudrate, 1);
-	dev->do_autobaud = current_autobaud;
-	return ret;
-
-}
 
 static void print_status(struct atarisio_dev* dev)
 {
 	unsigned long flags;
+
+	spin_lock_irqsave(&dev->lock, flags);
 
 	switch (dev->current_mode) {
 	case MODE_1050_2_PC:
@@ -2708,8 +2352,6 @@ static void print_status(struct atarisio_dev* dev)
 		dev->sioserver_command_line,
 		dev->sioserver_command_line_delta);
 
-	spin_lock_irqsave(&dev->uart_lock, flags);
-
 	PRINTK("UART RBR = 0x%02x\n", serial_in(dev, UART_RX));
 	PRINTK("UART IER = 0x%02x\n", serial_in(dev, UART_IER));
 	PRINTK("UART IIR = 0x%02x\n", serial_in(dev, UART_IIR));
@@ -2718,7 +2360,7 @@ static void print_status(struct atarisio_dev* dev)
 	PRINTK("UART LSR = 0x%02x\n", serial_in(dev, UART_LSR));
 	PRINTK("UART MSR = 0x%02x\n", serial_in(dev, UART_MSR));
 
-	spin_unlock_irqrestore(&dev->uart_lock, flags);
+	spin_unlock_irqrestore(&dev->lock, flags);
 }
 
 static int atarisio_ioctl(struct inode* inode, struct file* filp,
@@ -2751,19 +2393,19 @@ static int atarisio_ioctl(struct inode* inode, struct file* filp,
 	case ATARISIO_IOC_SET_MODE:
 		switch (arg) {
 		case ATARISIO_MODE_1050_2_PC:
-			set_1050_2_pc_mode(dev, 1);
+			set_1050_2_pc_mode(dev, 0, 1);
 			break;
 		case ATARISIO_MODE_PROSYSTEM:
-			set_prosystem_mode(dev, 1);
+			set_1050_2_pc_mode(dev, 1, 1);
 			break;
 		case ATARISIO_MODE_SIOSERVER:
-			set_sioserver_mode(dev, 1);
+			set_sioserver_mode(dev, SIOSERVER_COMMAND_RI);
 			break;
 		case ATARISIO_MODE_SIOSERVER_DSR:
-			set_sioserver_mode_dsr(dev, 1);
+			set_sioserver_mode(dev, SIOSERVER_COMMAND_DSR);
 			break;
 		case ATARISIO_MODE_SIOSERVER_CTS:
-			set_sioserver_mode_cts(dev, 1);
+			set_sioserver_mode(dev, SIOSERVER_COMMAND_CTS);
 			break;
 		default:
 			ret = -EINVAL;
@@ -2857,7 +2499,11 @@ static int atarisio_ioctl(struct inode* inode, struct file* filp,
 			break;
 		}
 		PRINT_TIMESTAMP("begin send data frame");
-		ret = perform_send_data_frame(dev, arg);
+		/* delay a short time before transmitting data frame */
+		/* most SIO codes don't like it if data follows immediately after complete */
+		udelay(DELAY_T3_PERIPH);
+
+		ret = perform_send_frame(dev, arg, 1);
 		PRINT_TIMESTAMP("end send data frame");
 		if (cmd == ATARISIO_IOC_SEND_DATA_FRAME_XF551) {
 			set_baudrate(dev, ATARISIO_STANDARD_BAUDRATE, 1);
@@ -2867,21 +2513,29 @@ static int atarisio_ioctl(struct inode* inode, struct file* filp,
 		if ((ret = check_new_command_frame(dev))) {
 			break;
 		}
-		ret = perform_receive_data_frame(dev, arg);
+		ret = perform_receive_frame(dev, arg, 1);
+		if (ret == 0 || ret == -EATARISIO_CHECKSUM_ERROR) {
+			udelay(DELAY_T4_MIN);
+			if (ret == 0) {
+				ret=send_single_character(dev, DATA_FRAME_ACK_CHAR);
+			} else {
+				send_single_character(dev, DATA_FRAME_NAK_CHAR);
+			}
+		}
 		break;
 	case ATARISIO_IOC_SEND_RAW_FRAME:
 		if ((ret = check_new_command_frame(dev))) {
 			break;
 		}
 		PRINT_TIMESTAMP("begin send raw frame");
-		ret = perform_send_raw_frame(dev, arg);
+		ret = perform_send_frame(dev, arg, 0);
 		PRINT_TIMESTAMP("end send raw frame");
 		break;
 	case ATARISIO_IOC_RECEIVE_RAW_FRAME:
 		if ((ret = check_new_command_frame(dev))) {
 			break;
 		}
-		ret = perform_receive_raw_frame(dev, arg);
+		ret = perform_receive_frame(dev, arg, 0);
 		break;
 	case ATARISIO_IOC_GET_BAUDRATE:
 		ret = dev->serial_config.baudrate;
@@ -2939,29 +2593,7 @@ static unsigned int atarisio_poll(struct file* filp, poll_table* wait)
 		return -ENOTTY;
 	}
 
-#ifdef ATARISIO_EARLY_NOTIFICATION
-	unsigned long flags;
-	unsigned long long current_time;
-#endif
-
 	poll_wait(filp, &dev->cmdframe_queue, wait);
-
-#ifdef ATARISIO_EARLY_NOTIFICATION
-	poll_wait(filp, &dev->early_cmdframe_queue, wait);
-
-	spin_lock_irqsave(&dev->cmdframe_lock, flags);
-
-	current_time = get_timestamp();
-	if (dev->cmdframe_buf.receiving) {
-		if (current_time > dev->cmdframe_buf.start_reception_time + 10000) {
-			dev->cmdframe_buf.receiving = 0;
-			DBG_PRINTK(DEBUG_STANDARD, "aborted reception of command frame - maximum time exceeded");
-		} else {
-			mask |= POLLPRI;
-		}
-	}
-	spin_unlock_irqrestore(&dev->cmdframe_lock, flags);
-#endif
 
 	if (dev->cmdframe_buf.is_valid) {
 		mask |= POLLPRI;
@@ -3012,20 +2644,19 @@ static int atarisio_open(struct inode* inode, struct file* filp)
 	dev->busy=1;
 	filp->private_data = dev;
 
+	spin_lock_irqsave(&dev->lock, flags);
+
 	dev->current_mode = MODE_1050_2_PC;
 
 	reset_rx_buf(dev);
 	reset_tx_buf(dev);
-	init_cmdframe_buf(dev, 1);
+	init_cmdframe_buf(dev);
 
 	dev->do_autobaud = 0;
 	dev->default_baudrate = ATARISIO_STANDARD_BAUDRATE;
 	dev->highspeed_baudrate = ATARISIO_HIGHSPEED_BAUDRATE;
 	dev->tape_baudrate = ATARISIO_TAPE_BAUDRATE;
 	dev->add_highspeedpause = ATARISIO_HIGHSPEEDPAUSE_OFF;
-
-	spin_lock_irqsave(&dev->uart_lock, flags);
-	spin_lock(&dev->serial_config_lock);
 
 	if (dev->is_16c950) {
 		dev->serial_config.ACR = 0;
@@ -3091,9 +2722,9 @@ static int atarisio_open(struct inode* inode, struct file* filp)
 
 	serial_out(dev, UART_LCR, dev->serial_config.LCR);
 
-	force_set_baudrate(dev, dev->serial_config.baudrate, 0);
+	force_set_baudrate(dev, dev->serial_config.baudrate);
 
-	set_1050_2_pc_mode(dev, 0); /* this call sets MCR */
+	set_1050_2_pc_mode(dev, 0, 0); /* this call sets MCR */
 
 	serial_out(dev, UART_FCR, 0);
 	serial_out(dev, UART_FCR, UART_FCR_ENABLE_FIFO | UART_FCR_CLEAR_RCVR | UART_FCR_CLEAR_XMIT);
@@ -3107,8 +2738,7 @@ static int atarisio_open(struct inode* inode, struct file* filp)
 	(void)serial_in(dev, UART_RX);
 	(void)serial_in(dev, UART_MSR);
 
-	spin_unlock(&dev->serial_config_lock);
-	spin_unlock_irqrestore(&dev->uart_lock, flags);
+	spin_unlock_irqrestore(&dev->lock, flags);
 
 	if (request_irq(dev->irq, atarisio_interrupt, MY_IRQFLAGS, dev->devname, dev)) {
 		PRINTK("could not register interrupt %d\n",dev->irq);
@@ -3117,14 +2747,12 @@ static int atarisio_open(struct inode* inode, struct file* filp)
 		goto exit_open;
 	}
 
-	spin_lock_irqsave(&dev->uart_lock, flags);
-	spin_lock(&dev->serial_config_lock);
+	spin_lock_irqsave(&dev->lock, flags);
 
 	/* enable UART interrupts */
 	serial_out(dev, UART_IER, dev->serial_config.IER);
 
-	spin_unlock(&dev->serial_config_lock);
-	spin_unlock_irqrestore(&dev->uart_lock, flags);
+	spin_unlock_irqrestore(&dev->lock, flags);
 
 exit_open:
 
@@ -3146,12 +2774,12 @@ static int atarisio_release(struct inode* inode, struct file* filp)
 		return -ENOTTY;
 	}
 
-	spin_lock_irqsave(&dev->uart_lock, flags);
+	spin_lock_irqsave(&dev->lock, flags);
 
 	serial_out(dev, UART_MCR,0);
 	serial_out(dev, UART_IER,0);
 
-	spin_unlock_irqrestore(&dev->uart_lock, flags);
+	spin_unlock_irqrestore(&dev->lock, flags);
 
 	free_irq(dev->irq, dev);
 
@@ -3212,16 +2840,12 @@ struct atarisio_dev* alloc_atarisio_dev(unsigned int id)
 	dev->serial_config.ACR = 0;
 	dev->busy = 0;
 	dev->id = id;
-	spin_lock_init(&dev->uart_lock);
+	spin_lock_init(&dev->lock);
 	dev->current_mode = MODE_1050_2_PC;
 	dev->last_msr = 0;
 	dev->enable_timestamp_recording = 0;
 	dev->rx_buf.head = 0;
 	dev->rx_buf.tail = 0;
-	spin_lock_init(&dev->rx_lock);
-	spin_lock_init(&dev->tx_lock);
-	spin_lock_init(&dev->cmdframe_lock);
-	spin_lock_init(&dev->serial_config_lock);
 	dev->sioserver_command_line = UART_MSR_RI;
 	dev->sioserver_command_line_delta = UART_MSR_TERI;
 	dev->command_line_mask =  ~UART_MCR_RTS;
@@ -3245,10 +2869,6 @@ struct atarisio_dev* alloc_atarisio_dev(unsigned int id)
 	dev->miscdev->name = dev->devname;
 	dev->miscdev->fops = &atarisio_fops;
 	dev->miscdev->minor = minor + dev->id;
-
-#ifdef ATARISIO_EARLY_NOTIFICATION
-	init_waitqueue_head(&dev->early_cmdframe_queue);
-#endif
 
 	return dev;
 
