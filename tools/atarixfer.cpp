@@ -489,7 +489,7 @@ static bool check_ultraspeed()
 			printf("unsupported ultra speed pokey divisor %d\n", pokey_div);
 			return false;
 		}
-		printf("ultra speed drive: pokey divisor %d (%d baud)\n", pokey_div, baud);
+		printf("detected ultra speed drive: pokey divisor %d (%d baud)\n", pokey_div, baud);
 		if (pokey_div == 10) {
 			printf("possibly Happy 1050: enabling fast writes\n");
 			params.command = 0x48;
@@ -506,8 +506,6 @@ static bool check_ultraspeed()
 			highspeed_mode = ATARISIO_EXTSIO_SPEED_ULTRA;
 			return true;
 		}
-	} else {
-		printf("drive is not ultra speed capable\n");
 	}
 	return false;
 }
@@ -525,8 +523,6 @@ static bool check_happy_1050()
 			highspeed_mode = ATARISIO_EXTSIO_SPEED_WARP;
 			return true;
 		}
-	} else {
-		printf("drive is not a Happy 810/1050\n");
 	}
 	return false;
 }
@@ -554,8 +550,6 @@ static bool check_turbo_1050()
 			highspeed_mode = ATARISIO_EXTSIO_SPEED_TURBO;
 			return true;
 		}
-	} else {
-		printf("drive is not a 1050 Turbo\n");
 	}
 	return false;
 }
@@ -577,14 +571,13 @@ static bool check_xf551()
 			highspeed_mode = ATARISIO_EXTSIO_SPEED_XF551;
 			return true;
 		}
-	} else {
-		printf("drive is not a XF551\n");
 	}
 	return false;
 }
 
 static bool detect_highspeed_mode(bool include_16c950_modes)
 {
+	printf("checking highspeed capability\n");
 	if (include_16c950_modes) {
 		if (check_ultraspeed()) {
 			return true;
@@ -599,6 +592,7 @@ static bool detect_highspeed_mode(bool include_16c950_modes)
 	if (check_xf551()) {
 		return true;
 	}
+	printf("no highspeed drive detected, using standard speed\n");
 	return false;
 }
 
