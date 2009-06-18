@@ -395,7 +395,7 @@ int main(int argc, char** argv)
 		printf("-o file       save trace output to <file>\n");
 		printf("-p            write protect the next image\n");
 		printf("-s mode       set high speed mode:i 0 = off, 1 = on, 2 = on with pauses\n");
-		printf("-S baud,div   high speed SIO parameters: baudrate and pokey divisor");
+		printf("-S baud,div   high speed SIO parameters: baudrate and pokey divisor\n");
 		printf("-X            enable XF551 commands\n");
 		printf("-t            increase SIO trace level (default:0, max:3)\n");
 		printf("-1..-8        set current drive number (default: 1)\n"); 
