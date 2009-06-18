@@ -1654,7 +1654,7 @@ static int send_block(struct atarisio_dev* dev,
 		}
 		if ((dev->add_highspeedpause & ATARISIO_HIGHSPEEDPAUSE_BYTE_DELAY) && (dev->serial_config.baudrate != ATARISIO_STANDARD_BAUDRATE)) {
 			spin_lock_irqsave(&dev->lock, flags);
-			set_lcr(dev, dev->slow_lcr);
+			set_lcr(dev, dev->standard_lcr);
 			spin_unlock_irqrestore(&dev->lock, flags);
 		}
 	}
