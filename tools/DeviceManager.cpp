@@ -934,7 +934,7 @@ bool DeviceManager::SetHighSpeedParameters(unsigned int baudrate, unsigned char 
 
 	int real_baudrate = fSIOWrapper->GetExactBaudrate();
 
-	if (real_baudrate != baudrate) {
+	if (real_baudrate != (int)baudrate) {
 		AWARN("UART doesn't support %d baud, using %d instead", baudrate, real_baudrate);
 	}
 	return SetHighSpeedMode(fHighSpeedMode);
