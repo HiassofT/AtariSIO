@@ -284,14 +284,16 @@ MODULE_PARM_DESC(debug_irq,"interrupt debug level (default: 0)");
 
 #define DELAY_T0 900
 #define DELAY_T1 850
-#define DELAY_T2_MIN 10
+
+/* BiboDos needs at least 50us delay before ACK */
+#define DELAY_T2_MIN 50
 #define DELAY_T2_MAX 20000
 #define DELAY_T3_MIN 1000
 #define DELAY_T3_MAX 1600
 #define DELAY_T4_MIN 450
 #define DELAY_T4_MAX 16000
 
-/* the QMEG OS needs at least 300usec delay between ACK and  complete */
+/* the QMEG OS needs at least 300usec delay between ACK and complete */
 /* #define DELAY_T5_MIN 250 */
 #define DELAY_T5_MIN 300
 #define DELAY_T5_MIN_SLOW 1000
@@ -1349,8 +1351,7 @@ static inline int wait_send(struct atarisio_dev* dev, unsigned int len)
 	}
 }
 
-// check if a new command frame was received, before sending
-// a command ACK/NAK
+/* check if a new command frame was received, before sending a command ACK/NAK */
 static inline int check_new_command_frame(struct atarisio_dev* dev)
 {
 	if (dev->current_mode != MODE_SIOSERVER) {
@@ -1780,8 +1781,6 @@ static int send_command_frame(struct atarisio_dev* dev, Ext_SIO_parameters* para
 		spin_lock_irqsave(&dev->lock, flags);
 		clear_command_line(dev);
 		spin_unlock_irqrestore(&dev->lock, flags);
-
-		//udelay(DELAY_T2_MIN);
 
 		PRINT_TIMESTAMP("begin wait for command ACK");
 
@@ -2957,7 +2956,7 @@ static int disable_serial_port(struct atarisio_dev* dev)
 				dev->serial_config.baud_base = ss.baud_base;
 			}
 
-			// disable serial driver by setting the uart type to none
+			/* disable serial driver by setting the uart type to none */
 			ss.type = PORT_UNKNOWN;
 
 			if (ioctl_wrapper(f, TIOCSSERIAL, (unsigned long) &ss)) {
