@@ -1121,7 +1121,7 @@ int CursesFrontend::GetCh(bool ignoreResize)
 		} else if (ret == 0) {
 			ch = wgetch(fInputLineWindow);
 			if (ch == KEY_RESIZE) {
-				DPRINTF("got KEY_RESIZE from ncurses!");
+				//DPRINTF("got KEY_RESIZE from ncurses!");
 			} else {
 				break;
 			}
@@ -2787,7 +2787,7 @@ void CursesFrontend::ProcessTapeEmulation(const char* loadfilename)
 		} else {
 			ch = wgetch(fInputLineWindow);
 			if (ch == KEY_RESIZE) {
-				DPRINTF("got KEY_RESIZE from ncurses!");
+				//DPRINTF("got KEY_RESIZE from ncurses!");
 				continue;
 			}
 		}
