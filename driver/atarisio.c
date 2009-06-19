@@ -1368,98 +1368,6 @@ static inline int check_new_command_frame(struct atarisio_dev* dev)
 	}
 }
 
-
-
-static int setup_send_frame(struct atarisio_dev* dev, unsigned int data_length, unsigned char* user_buffer, int add_checksum)
-{
-	unsigned long flags;
-	unsigned int len, remain;
-	unsigned char checksum;
-
-	int ret = 0;
-
-	if ((data_length == 0) || (data_length >= MAX_SIO_DATA_LENGTH)) {
-		return -EINVAL;
-	}
-
-	spin_lock_irqsave(&dev->lock, flags);
-
-	dev->tx_buf.head = dev->tx_buf.tail;
-
-	len = IOBUF_LENGTH - dev->tx_buf.head;
-	if (len > data_length) {
-		len = data_length;
-	}
-	if ( copy_from_user((unsigned char*) (&(dev->tx_buf.buf[dev->tx_buf.head])), 
-			user_buffer,
-			len) ) {
-		ret = -EFAULT;
-		goto error_unlock;
-	}
-	remain = data_length - len;
-	if (remain>0) {
-		if ( copy_from_user((unsigned char*) dev->tx_buf.buf,
-				user_buffer+len,
-				remain) ) {
-			ret = -EFAULT;
-			goto error_unlock;
-		}
-	}
-
-	if (add_checksum) {
-		checksum = calculate_checksum((unsigned char*)(dev->tx_buf.buf),
-				dev->tx_buf.head, data_length, IOBUF_LENGTH);
-
-		dev->tx_buf.buf[(dev->tx_buf.head+data_length) % IOBUF_LENGTH] = checksum;
-		data_length++;
-	}
-
-	dev->tx_buf.head = (dev->tx_buf.head + data_length) % IOBUF_LENGTH;
-
-error_unlock:
-	spin_unlock_irqrestore(&dev->lock, flags);
-
-	return ret;
-}
-
-static int copy_received_data_to_user(struct atarisio_dev* dev, unsigned int data_length, unsigned char* user_buffer)
-{
-	unsigned long flags;
-	unsigned int len, remain;
-	int ret = 0;
-
-	if ((data_length == 0) || (data_length >= MAX_SIO_DATA_LENGTH)) {
-		return -EINVAL;
-	}
-	/* if we received any bytes, copy the to the user buffer, even
-	 * if we ran into a timeout and got less than we wanted
-	 */
-	spin_lock_irqsave(&dev->lock, flags);
-
-	len = IOBUF_LENGTH - dev->rx_buf.tail;
-	if (len > data_length) {
-		len = data_length;
-	}
-	if ( copy_to_user(user_buffer,
-			 (unsigned char*) (&(dev->rx_buf.buf[dev->rx_buf.tail])),
-			 len) ) {
-		ret = -EFAULT;
-		goto error_unlock;
-	}
-	remain = data_length - len;
-	if (remain>0) {
-		if ( copy_to_user(user_buffer+len,
-				 (unsigned char*) dev->rx_buf.buf,
-				 remain) ) {
-			ret = -EFAULT;
-		}
-	}
-error_unlock:
-	spin_unlock_irqrestore(&dev->lock, flags);
-
-	return ret;
-}
-
 static int wait_receive(struct atarisio_dev* dev, int len, int additional_timeout)
 {
 	unsigned long flags;
@@ -1557,6 +1465,36 @@ static int receive_single_character(struct atarisio_dev* dev, unsigned int addit
 	return ret;
 }
 
+static int copy_received_data_to_user(struct atarisio_dev* dev, unsigned int data_length, unsigned char* user_buffer)
+{
+	unsigned int len, remain;
+
+	if ((data_length == 0) || (data_length >= MAX_SIO_DATA_LENGTH)) {
+		return -EINVAL;
+	}
+	/* if we received any bytes, copy the to the user buffer, even
+	 * if we ran into a timeout and got less than we wanted
+	 */
+	len = IOBUF_LENGTH - dev->rx_buf.tail;
+	if (len > data_length) {
+		len = data_length;
+	}
+	if ( copy_to_user(user_buffer,
+			 (unsigned char*) (&(dev->rx_buf.buf[dev->rx_buf.tail])),
+			 len) ) {
+		return -EFAULT;
+	}
+	remain = data_length - len;
+	if (remain>0) {
+		if ( copy_to_user(user_buffer+len,
+				 (unsigned char*) dev->rx_buf.buf,
+				 remain) ) {
+			return -EFAULT;
+		}
+	}
+	return 0;
+}
+
 static int receive_block(struct atarisio_dev* dev,
 	unsigned int block_len,
 	unsigned char* user_buffer,
@@ -1635,6 +1573,47 @@ static int send_single_character(struct atarisio_dev* dev, unsigned char c)
 	return w;
 }
 
+static int setup_send_frame(struct atarisio_dev* dev, unsigned int data_length, unsigned char* user_buffer, int add_checksum)
+{
+	unsigned int len, remain;
+	unsigned char checksum;
+
+	if ((data_length == 0) || (data_length >= MAX_SIO_DATA_LENGTH)) {
+		return -EINVAL;
+	}
+
+	dev->tx_buf.head = dev->tx_buf.tail;
+
+	len = IOBUF_LENGTH - dev->tx_buf.head;
+	if (len > data_length) {
+		len = data_length;
+	}
+	if ( copy_from_user((unsigned char*) (&(dev->tx_buf.buf[dev->tx_buf.head])), 
+			user_buffer,
+			len) ) {
+		return -EFAULT;
+	}
+	remain = data_length - len;
+	if (remain>0) {
+		if ( copy_from_user((unsigned char*) dev->tx_buf.buf,
+				user_buffer+len,
+				remain) ) {
+			return -EFAULT;
+		}
+	}
+
+	if (add_checksum) {
+		checksum = calculate_checksum((unsigned char*)(dev->tx_buf.buf),
+				dev->tx_buf.head, data_length, IOBUF_LENGTH);
+
+		dev->tx_buf.buf[(dev->tx_buf.head+data_length) % IOBUF_LENGTH] = checksum;
+		data_length++;
+	}
+
+	dev->tx_buf.head = (dev->tx_buf.head + data_length) % IOBUF_LENGTH;
+	return 0;
+}
+
 
 static int send_block(struct atarisio_dev* dev,
         unsigned int block_len,
@@ -1646,12 +1625,13 @@ static int send_block(struct atarisio_dev* dev,
 	int ret = 0;
 
 	if (block_len) {
+		spin_lock_irqsave(&dev->lock, flags);
 		if ((dev->add_highspeedpause & ATARISIO_HIGHSPEEDPAUSE_BYTE_DELAY) && (dev->serial_config.baudrate != ATARISIO_STANDARD_BAUDRATE)) {
-			spin_lock_irqsave(&dev->lock, flags);
 			set_lcr(dev, dev->slow_lcr);
-			spin_unlock_irqrestore(&dev->lock, flags);
 		}
-		if ( (ret=setup_send_frame(dev, block_len, user_buffer, add_checksum)) == 0) {
+		ret = setup_send_frame(dev, block_len, user_buffer, add_checksum);
+		spin_unlock_irqrestore(&dev->lock, flags);
+		if (ret == 0) {
 			PRINT_TIMESTAMP("send_block: initiate_send");
 			initiate_send(dev);
 
