@@ -909,7 +909,8 @@ static inline void reset_fifos(struct atarisio_dev* dev)
 	IRQ_PRINTK(DEBUG_NOISY, "resetting 16550 fifos\n");
 
 	serial_out(dev, UART_FCR, 0);
-	serial_out(dev, UART_FCR, dev->serial_config.FCR | UART_FCR_CLEAR_RCVR | UART_FCR_CLEAR_XMIT);
+	serial_out(dev, UART_FCR, UART_FCR_ENABLE_FIFO | UART_FCR_CLEAR_RCVR | UART_FCR_CLEAR_XMIT);
+	serial_out(dev, UART_FCR, dev->serial_config.FCR);
 
 	/* read LSR and MSR to clear any remaining status bits */
 	(void) serial_in(dev, UART_LSR);
@@ -1131,7 +1132,7 @@ static enum command_frame_quality check_command_frame_quality(struct atarisio_de
 	return command_frame_normal_error;
 }
 
-/* check if the command frame is OK (return 1 in this case) and take possible counter-measures */
+/* check if the command frame is OK (return 0 in this case) and take possible counter-measures */
 static inline int validate_command_frame(struct atarisio_dev* dev)
 {
 	int last_switchbaud;
@@ -1143,25 +1144,24 @@ static inline int validate_command_frame(struct atarisio_dev* dev)
 	if (dev->cmdframe_buf.receiving) {
 		quality = check_command_frame_quality(dev);
 		if (quality == command_frame_ok) {
-			return 1;
+			return 0;
 		}
 	} else {
 		IRQ_PRINTK(DEBUG_NOISY, "indicated end of command frame, but I'm not currently receiving\n");
-		/* the UART might have locked up, try resetting the FIFOs */
-		reset_fifos(dev);
-		return 0;
+		/* the UART might have locked up or the baudrate is way off */
+		quality = command_frame_major_error;
 	}
 
 	reset_fifos(dev);
 
 	if (quality == command_frame_minor_error) {
-		return 0;
+		return 1;
 	}
 
 	if (quality == command_frame_normal_error) {
 		/* don't switch baudrates too fast, wait until the next command frame */
 		if (last_switchbaud) {
-			return 0;
+			return 1;
 		}
 	}
 
@@ -1194,7 +1194,7 @@ static inline void check_modem_lines_after_receive(struct atarisio_dev* dev, uns
 			dev->tx_buf.tail = dev->tx_buf.head; /* flush output buffer */
 
 			IRQ_PRINTK(DEBUG_NOISY, DEBUG_PRINT_CMDFRAME_BUF(dev));
-			if (validate_command_frame(dev)) {
+			if (validate_command_frame(dev) == 0) {
 				do_wakeup = 1;
 				dev->cmdframe_buf.is_valid = 1;
 				dev->cmdframe_buf.end_reception_time = timeval_to_usec(&dev->irq_timestamp);
@@ -2703,9 +2703,7 @@ static int atarisio_open(struct inode* inode, struct file* filp)
 
 	set_1050_2_pc_mode(dev, 0, 0); /* this call sets MCR */
 
-	serial_out(dev, UART_FCR, 0);
-	serial_out(dev, UART_FCR, UART_FCR_ENABLE_FIFO | UART_FCR_CLEAR_RCVR | UART_FCR_CLEAR_XMIT);
-	serial_out(dev, UART_FCR, UART_FCR_ENABLE_FIFO | UART_FCR_TRIGGER_1);
+	reset_fifos(dev);
 
 	/*
 	 * clear any interrupts
