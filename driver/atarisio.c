@@ -286,7 +286,7 @@ MODULE_PARM_DESC(debug_irq,"interrupt debug level (default: 0)");
 #define DELAY_T1 850
 
 /* BiboDos needs at least 50us delay before ACK */
-#define DELAY_T2_MIN 50
+#define DELAY_T2_MIN 100
 #define DELAY_T2_MAX 20000
 #define DELAY_T3_MIN 1000
 #define DELAY_T3_MAX 1600
@@ -298,8 +298,8 @@ MODULE_PARM_DESC(debug_irq,"interrupt debug level (default: 0)");
 #define DELAY_T5_MIN 300
 #define DELAY_T5_MIN_SLOW 1000
 
-/* QMEG OS 3 needs a delay of max. 100usec between complete and data */
-#define DELAY_T3_PERIPH 100
+/* QMEG OS 3 needs a delay of max. 150usec between complete and data */
+#define DELAY_T3_PERIPH 150
 
 /* this one is in mSecs, one jiffy (10 mSec on i386) is minimum,
  * try higher values for slower machines. The default of 50 mSecs
@@ -1252,6 +1252,9 @@ static irqreturn_t atarisio_interrupt(int irq, void* dev_id)
 	return IRQ_RETVAL(handled);
 }
 
+/*
+ * code from here on is never called in an interrrupt context
+ */
 
 static inline void initiate_send(struct atarisio_dev* dev)
 {
@@ -1366,67 +1369,6 @@ static inline int check_new_command_frame(struct atarisio_dev* dev)
 }
 
 
-static int wait_receive(struct atarisio_dev* dev, int len, int additional_timeout)
-{
-	unsigned long flags;
-
-	wait_queue_t wait;
-
-	int no_received_chars=0;
-	long timeout;
-	signed long timeout_jiffies;
-	signed long expire;
-	signed long jiffies_start = jiffies;
-
-	timeout = 11*len*1000 / dev->serial_config.exact_baudrate;
-	timeout += additional_timeout + DELAY_RECEIVE_HEADROOM;
-
-	timeout_jiffies = timeout*HZ/1000;
-	if (timeout_jiffies <= 0) {
-		timeout_jiffies = 1;
-	}
-
-	expire = timeout_jiffies;
-
-	init_waitqueue_entry(&wait, current);
-
-	dev->rx_buf.wakeup_len = len;
-	add_wait_queue(&dev->rx_queue, &wait);
-	while (1) {
-		current->state = TASK_INTERRUPTIBLE;
-
-		spin_lock_irqsave(&dev->lock, flags);
-		no_received_chars=(dev->rx_buf.head+IOBUF_LENGTH - dev->rx_buf.tail) % IOBUF_LENGTH;
-		spin_unlock_irqrestore(&dev->lock, flags);
-
-		if (no_received_chars >=len) {
-			break;
-		}
-		expire = schedule_timeout(expire);
-		if (expire==0) {
-			break;
-		}
-		if (signal_pending(current)) {
-			current->state=TASK_RUNNING;
-			remove_wait_queue(&dev->rx_queue, &wait);
-			return -EINTR;
-		}
-	}
-	current->state=TASK_RUNNING;
-	remove_wait_queue(&dev->rx_queue, &wait);
-
-	dev->rx_buf.wakeup_len=-1;
-
-	if (no_received_chars < len) {
-		DBG_PRINTK(DEBUG_STANDARD, "timeout in wait_receive [wanted %d got %d time %ld]\n",
-				len, no_received_chars, jiffies - jiffies_start);
-	}
-	if (no_received_chars > len) {
-		DBG_PRINTK(DEBUG_NOISY, "received more bytes than expected [expected %d got %d]\n",
-				len, no_received_chars);
-	}
-	return no_received_chars;
-}
 
 static int setup_send_frame(struct atarisio_dev* dev, unsigned int data_length, unsigned char* user_buffer, int add_checksum)
 {
@@ -1518,6 +1460,165 @@ error_unlock:
 	return ret;
 }
 
+static int wait_receive(struct atarisio_dev* dev, int len, int additional_timeout)
+{
+	unsigned long flags;
+
+	wait_queue_t wait;
+
+	int no_received_chars=0;
+	long timeout;
+	signed long timeout_jiffies;
+	signed long expire;
+	signed long jiffies_start = jiffies;
+
+	if (len <= 0) {
+		DBG_PRINTK(DEBUG_STANDARD, "error in wait_receive: invalid len parameter %d\n", len);
+		return -EINVAL;
+	}
+
+	timeout = 11*len*1000 / dev->serial_config.exact_baudrate;
+	timeout += additional_timeout + DELAY_RECEIVE_HEADROOM;
+
+	timeout_jiffies = timeout*HZ/1000;
+	if (timeout_jiffies <= 0) {
+		timeout_jiffies = 1;
+	}
+
+	expire = timeout_jiffies;
+
+	init_waitqueue_entry(&wait, current);
+
+	dev->rx_buf.wakeup_len = len;
+	add_wait_queue(&dev->rx_queue, &wait);
+	while (1) {
+		current->state = TASK_INTERRUPTIBLE;
+
+		spin_lock_irqsave(&dev->lock, flags);
+		no_received_chars=(dev->rx_buf.head+IOBUF_LENGTH - dev->rx_buf.tail) % IOBUF_LENGTH;
+		spin_unlock_irqrestore(&dev->lock, flags);
+
+		if (no_received_chars >=len) {
+			break;
+		}
+		expire = schedule_timeout(expire);
+		if (expire==0) {
+			break;
+		}
+		if (signal_pending(current)) {
+			current->state=TASK_RUNNING;
+			remove_wait_queue(&dev->rx_queue, &wait);
+			return -EINTR;
+		}
+	}
+	current->state=TASK_RUNNING;
+	remove_wait_queue(&dev->rx_queue, &wait);
+
+	dev->rx_buf.wakeup_len=-1;
+
+	if (no_received_chars < len) {
+		DBG_PRINTK(DEBUG_STANDARD, "timeout in wait_receive [wanted %d got %d time %ld]\n",
+				len, no_received_chars, jiffies - jiffies_start);
+		if (no_received_chars) {
+			DBG_PRINTK(DEBUG_NOISY, "wait_receive: flushing rx_buf\n");
+			spin_lock_irqsave(&dev->lock, flags);
+			dev->rx_buf.tail = dev->rx_buf.head;
+			spin_unlock_irqrestore(&dev->lock, flags);
+		}
+		return -EATARISIO_COMMAND_TIMEOUT;
+	}
+	if (no_received_chars > len) {
+		DBG_PRINTK(DEBUG_NOISY, "received more bytes than expected [expected %d got %d]\n",
+				len, no_received_chars);
+	}
+	return 0;
+}
+
+static int receive_single_character(struct atarisio_dev* dev, unsigned int additional_timeout)
+{
+	unsigned long flags;
+	int ret;
+	int no_received_chars;
+
+	if ((ret=wait_receive(dev, 1, additional_timeout))) {
+		return ret;
+	}
+
+	spin_lock_irqsave(&dev->lock, flags);
+	no_received_chars=(dev->rx_buf.head+IOBUF_LENGTH - dev->rx_buf.tail) % IOBUF_LENGTH;
+	if (no_received_chars < 1) {
+		DBG_PRINTK(DEBUG_NOISY,"receive_single_character: rx_buf flushed after wait_receive\n");
+		ret = -EATARISIO_COMMAND_TIMEOUT;
+	} else {
+		ret = dev->rx_buf.buf[dev->rx_buf.tail];
+		dev->rx_buf.tail = (dev->rx_buf.tail + 1) % IOBUF_LENGTH;
+	}
+	spin_unlock_irqrestore(&dev->lock, flags);
+	return ret;
+}
+
+static int receive_block(struct atarisio_dev* dev,
+	unsigned int block_len,
+	unsigned char* user_buffer,
+	unsigned int additional_timeout,
+	int handle_checksum)
+{
+	unsigned long flags;
+
+	int ret=0;
+	int want_len;
+	int no_received_chars;
+	unsigned char checksum;
+
+	if (block_len == 0) {
+		return -EINVAL;
+	}
+
+	want_len = block_len;
+
+	if (handle_checksum) {
+		want_len++;
+	}
+
+	/* receive data block and checksum */
+	if ((ret=wait_receive(dev, want_len, additional_timeout))) {
+		return ret;
+	}
+
+	spin_lock_irqsave(&dev->lock, flags);
+
+	no_received_chars=(dev->rx_buf.head+IOBUF_LENGTH - dev->rx_buf.tail) % IOBUF_LENGTH;
+	if (no_received_chars < want_len) {
+		DBG_PRINTK(DEBUG_NOISY,"receive_single_character: rx_buf flushed after wait_receive\n");
+		ret = -EATARISIO_COMMAND_TIMEOUT;
+	} else {
+		ret = copy_received_data_to_user(dev, block_len, user_buffer);
+
+		if (handle_checksum) {
+			checksum = calculate_checksum((unsigned char*)(dev->rx_buf.buf),
+					dev->rx_buf.tail, block_len, IOBUF_LENGTH);
+
+			if (dev->rx_buf.buf[(dev->rx_buf.tail+block_len) % IOBUF_LENGTH ]
+				!= checksum) {
+				DBG_PRINTK(DEBUG_STANDARD, "checksum error : 0x%02x != 0x%02x\n",
+					checksum,
+					dev->rx_buf.buf[(dev->rx_buf.tail+block_len) % IOBUF_LENGTH]);
+				if (! ret) {
+					ret = -EATARISIO_CHECKSUM_ERROR;
+				}
+			}
+		}
+		dev->rx_buf.tail = (dev->rx_buf.tail + want_len) % IOBUF_LENGTH;
+	}
+
+	if (dev->rx_buf.head != dev->rx_buf.tail) {
+		DBG_PRINTK(DEBUG_NOISY, "detected excess characters\n");
+	}
+
+	spin_unlock_irqrestore(&dev->lock, flags);
+	return ret;
+}
+
 static int send_single_character(struct atarisio_dev* dev, unsigned char c)
 {
 	unsigned long flags;
@@ -1534,95 +1635,6 @@ static int send_single_character(struct atarisio_dev* dev, unsigned char c)
 	return w;
 }
 
-static int receive_single_character(struct atarisio_dev* dev, unsigned int additional_timeout)
-{
-	unsigned long flags;
-	int w;
-	unsigned char c;
-
-	if ((w=wait_receive(dev, 1, additional_timeout)) >= 1) {
-		spin_lock_irqsave(&dev->lock, flags);
-		c = dev->rx_buf.buf[dev->rx_buf.tail];
-		dev->rx_buf.tail = (dev->rx_buf.tail + 1) % IOBUF_LENGTH;
-		spin_unlock_irqrestore(&dev->lock, flags);
-		return c;
-	} else {
-		if (w == 0) {
-			return -EATARISIO_COMMAND_TIMEOUT;
-		} else {
-			DBG_PRINTK(DEBUG_STANDARD, "error waiting for single character: %d\n",w);
-			return w;
-		}
-	}
-}
-
-static int receive_block(struct atarisio_dev* dev,
-	unsigned int block_len,
-	unsigned char* user_buffer,
-	unsigned int additional_timeout,
-	int handle_checksum)
-{
-	unsigned long flags;
-
-	int ret=0;
-	int received_len, want_len, copy_len;
-	unsigned char checksum;
-
-	if (block_len == 0) {
-		return -EINVAL;
-	}
-
-	want_len = block_len;
-	copy_len = block_len;
-
-	if (handle_checksum) {
-		want_len++;
-	}
-	/* receive data block and checksum*/
-	received_len = wait_receive(dev, want_len, additional_timeout);
-
-	if (received_len < 0) {
-		DBG_PRINTK(DEBUG_STANDARD, "wait_receive returned %d\n",received_len);
-		return received_len;
-	}
-	if (received_len < want_len) {
-		DBG_PRINTK(DEBUG_STANDARD, "receive block timed out [wanted %d got %d]\n",
-				want_len, received_len);
-		ret = -EATARISIO_COMMAND_TIMEOUT;
-	}
-	if (received_len < copy_len) {
-		copy_len = received_len;
-	}
-	if (copy_len > 0) {
-		if ( (ret=copy_received_data_to_user(dev, copy_len, user_buffer)) ) {
-			return ret;
-		}
-	}
-
-	if (handle_checksum && (received_len == want_len)) {
-		spin_lock_irqsave(&dev->lock, flags);
-
-		checksum = calculate_checksum((unsigned char*)(dev->rx_buf.buf),
-				dev->rx_buf.tail, block_len, IOBUF_LENGTH);
-
-		if (dev->rx_buf.buf[(dev->rx_buf.tail+block_len) % IOBUF_LENGTH ]
-			!= checksum) {
-			DBG_PRINTK(DEBUG_STANDARD, "checksum error : 0x%02x != 0x%02x\n",
-				checksum,
-				dev->rx_buf.buf[(dev->rx_buf.tail+block_len) % IOBUF_LENGTH]);
-			if (! ret) {
-				ret = -EATARISIO_CHECKSUM_ERROR;
-			}
-		}
-		dev->rx_buf.tail = (dev->rx_buf.tail + block_len + 1 ) % IOBUF_LENGTH;
-		spin_unlock_irqrestore(&dev->lock, flags);
-	}
-
-	if (dev->rx_buf.head != dev->rx_buf.tail) {
-		DBG_PRINTK(DEBUG_NOISY, "detected excess characters\n");
-	}
-	return ret;
-}
 
 static int send_block(struct atarisio_dev* dev,
         unsigned int block_len,
@@ -2409,7 +2421,6 @@ static int atarisio_ioctl(struct inode* inode, struct file* filp,
 		break;
 	case ATARISIO_IOC_SET_HIGHSPEED_BAUDRATE:
 		dev->highspeed_baudrate = arg;
-		ret = set_baudrate(dev, dev->highspeed_baudrate, 1);
 		break;
 	case ATARISIO_IOC_SET_AUTOBAUD:
 		dev->do_autobaud = arg;
@@ -2653,8 +2664,6 @@ static int atarisio_open(struct inode* inode, struct file* filp)
 		write_icr(dev, UART_CSR, 0);
 
 		if (dev->use_16c950_mode) {
-			DBG_PRINTK(DEBUG_STANDARD, "using extended 16C950 features\n");
-
 			/* set bit 4 of EFT to enable 16C950 mode */
 			serial_out(dev, UART_LCR, 0xbf);
 			serial_out(dev, UART_EFR, 0x10);
@@ -3083,20 +3092,23 @@ static int check_register_atarisio(struct atarisio_dev* dev)
 	 */
 	serial_out(dev, UART_SCR,0xaa);
 	if (serial_in(dev, UART_SCR) != 0xaa) {
-		PRINTK("couldn't detect 16550\n");
+		PRINTK("couldn't detect 16550/16C950\n");
 		ret = -ENODEV;
 		goto failure_release;
 	}
 
 	serial_out(dev, UART_SCR,0x55);
 	if (serial_in(dev, UART_SCR) != 0x55) {
-		PRINTK("couldn't detect 16550\n");
+		PRINTK("couldn't detect 16550/16C950\n");
 		ret = -ENODEV;
 		goto failure_release;
 	}
 
 	if (detect_16c950(dev)) {
 		dev->is_16c950 = 1;
+		if (dev->use_16c950_mode) {
+			PRINTK("using extended 16C950 features\n");
+		}
 	} else {
 		dev->is_16c950 = 0;
 	}

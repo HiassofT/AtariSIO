@@ -923,6 +923,9 @@ bool DeviceManager::SetHighSpeedMode(EHighSpeedMode mode)
 			GetSIOHandler((EDriveNumber)i)->EnableHighSpeed(fUseHighSpeed);
 		}
 	}
+
+	fSIOWrapper->SetBaudrate(ATARISIO_STANDARD_BAUDRATE);
+
 	return true;
 }
 
@@ -932,10 +935,13 @@ bool DeviceManager::SetHighSpeedParameters(unsigned int baudrate, unsigned char 
 	fPokeyDivisor = pokeyDivisor;
 	fSIOWrapper->SetHighSpeedBaudrate(baudrate);
 
-	int real_baudrate = fSIOWrapper->GetExactBaudrate();
+	if (fUseHighSpeed) {
+		fSIOWrapper->SetBaudrate(baudrate);
+		int real_baudrate = fSIOWrapper->GetExactBaudrate();
 
-	if (real_baudrate != (int)baudrate) {
-		AWARN("UART doesn't support %d baud, using %d instead", baudrate, real_baudrate);
+		if (real_baudrate != (int)baudrate) {
+			AWARN("UART doesn't support %d baud, using %d instead", baudrate, real_baudrate);
+		}
 	}
 	return SetHighSpeedMode(fHighSpeedMode);
 }
