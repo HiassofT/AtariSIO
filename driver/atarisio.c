@@ -1069,12 +1069,13 @@ static inline void check_modem_lines_before_receive(struct atarisio_dev* dev, un
 }
 
 #define DEBUG_PRINT_CMDFRAME_BUF(dev) \
-	"cmdframe_buf: %02x %02x %02x %02x %02x pos=%d rx=%d er=%d brk=%d\n",\
+	"cmdframe_buf: %02x %02x %02x %02x %02x rcv=%d pos=%d rx=%d er=%d brk=%d\n",\
 	dev->cmdframe_buf.buf[0],\
 	dev->cmdframe_buf.buf[1],\
 	dev->cmdframe_buf.buf[2],\
 	dev->cmdframe_buf.buf[3],\
 	dev->cmdframe_buf.buf[4],\
+	dev->cmdframe_buf.receiving,\
 	dev->cmdframe_buf.pos,\
 	dev->cmdframe_buf.ok_chars,\
 	dev->cmdframe_buf.error_chars,\
@@ -1089,6 +1090,13 @@ enum command_frame_quality {
 
 static enum command_frame_quality check_command_frame_quality(struct atarisio_dev* dev)
 {
+	if (!dev->cmdframe_buf.receiving) {
+		/* no characters have been received, but COMMAND trailing edge detected */
+		/* the UART might have locked up or the baudrate is way off */
+		IRQ_PRINTK(DEBUG_NOISY, "indicated end of command frame, but I'm not currently receiving\n");
+		return command_frame_major_error;
+	}
+
 	/* break characters may indicate that our speed is too high */
 	if (dev->cmdframe_buf.break_chars > 1) {
 		return command_frame_major_error;
@@ -1141,15 +1149,10 @@ static inline int validate_command_frame(struct atarisio_dev* dev)
 	last_switchbaud = dev->serial_config.just_switched_baud;
 	dev->serial_config.just_switched_baud = 0;
 
-	if (dev->cmdframe_buf.receiving) {
-		quality = check_command_frame_quality(dev);
-		if (quality == command_frame_ok) {
-			return 0;
-		}
-	} else {
-		IRQ_PRINTK(DEBUG_NOISY, "indicated end of command frame, but I'm not currently receiving\n");
-		/* the UART might have locked up or the baudrate is way off */
-		quality = command_frame_major_error;
+	quality = check_command_frame_quality(dev);
+
+	if (quality == command_frame_ok) {
+		return 0;
 	}
 
 	reset_fifos(dev);
@@ -1169,7 +1172,7 @@ static inline int validate_command_frame(struct atarisio_dev* dev)
 
 	reset_fifos(dev);
 
-	return 0;
+	return 1;
 }
 
 static inline void check_modem_lines_after_receive(struct atarisio_dev* dev, unsigned char new_msr)
