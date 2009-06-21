@@ -123,6 +123,8 @@ public:
 
 	void ProcessTapeEmulation(const char* loadfilename = 0);
 
+	void ProcessSetHighSpeedParameters();
+
 	void AddFilenameHistory(const char* string);
 
 	// return old status
@@ -185,6 +187,7 @@ private:
 	void ShowCreateDriveHint();
 	void ShowImageSizeHint(int minimumSectors);
 	void ShowHighSpeedHint();
+	void ShowHighSpeedParametersHint();
 	void ShowCasHint();
 
 	void ShowPrinterEOLHint();
@@ -295,6 +298,7 @@ private:
 	History fCasHistory;
 	History fPrinterHistory;
 	History fImageSizeHistory;
+	History fHighSpeedHistory;
 	RCPtr<DirectoryCache> fDirCache;
 
 	bool fCursorStatus;

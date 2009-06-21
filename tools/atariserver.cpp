@@ -136,11 +136,11 @@ static void process_args(RCPtr<DeviceManager>& manager, CursesFrontend* frontend
 						i++;
 						unsigned int baud;
 						unsigned char divisor;
-						if (MiscUtils::ParseHighSpeedParameters(argv[i], baud, divisor, true)) {
-							if (manager->SetHighSpeedParameters(baud, divisor)) {
-								ALOG("Configured high speed mode to pokey divisor %d / baudrate %d", divisor, baud);
+						if (MiscUtils::ParseHighSpeedParameters(argv[i], divisor, baud, true)) {
+							if (manager->SetHighSpeedParameters(divisor, baud)) {
+								ALOG("Configured high speed mode to pokey divisor %d / %d baud", divisor, baud);
 							} else {
-								ALOG("setting high speed parameters failed!");
+								AERROR("setting high speed parameters (divisor %d, baud %d) failed!", divisor, baud);
 							}
 						} else {
 							AERROR("invalid highspeed parameters in -S: use speed,divisor");
@@ -523,6 +523,9 @@ int main(int argc, char** argv)
 			break;
 		case 's':
 			frontend->ProcessSetHighSpeed();
+			break;
+		case 'S':
+			frontend->ProcessSetHighSpeedParameters();
 			break;
 		case 't':
 			frontend->ProcessSetTraceLevel();

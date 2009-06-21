@@ -105,8 +105,11 @@ public:
 	};
 
 	bool SetHighSpeedMode(EHighSpeedMode mode);
-	bool SetHighSpeedParameters(unsigned int baudrate, unsigned char pokeyDivisor);
 	EHighSpeedMode GetHighSpeedMode() const;
+
+	bool SetHighSpeedParameters(unsigned char pokeyDivsor, unsigned int baudrate);
+	inline unsigned char GetHighSpeedPokeyDivisor() const;
+	inline unsigned int GetHighSpeedBaudrate() const;
 
 	bool EnableXF551Mode(bool on);
 	bool GetXF551Mode() const;
@@ -177,4 +180,13 @@ inline bool DeviceManager::GetXF551Mode() const
 	return fEnableXF551Mode;
 }
 
+inline unsigned int DeviceManager::GetHighSpeedBaudrate() const
+{
+	return fHighSpeedBaudrate;
+}
+
+inline unsigned char DeviceManager::GetHighSpeedPokeyDivisor() const
+{
+	return fPokeyDivisor;
+}
 #endif

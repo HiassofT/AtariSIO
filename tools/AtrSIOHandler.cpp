@@ -1287,9 +1287,9 @@ bool AtrSIOHandler::EnableXF551Mode(bool on)
 	return true;
 }
 
-bool AtrSIOHandler::SetHighSpeedParameters(unsigned int baudrate, unsigned char pokeyDivisor)
+bool AtrSIOHandler::SetHighSpeedParameters(unsigned char pokeyDivisor, unsigned int baudrate)
 {
-	fHighSpeedBaudrate = baudrate;
 	fSpeedByte = pokeyDivisor;
+	fHighSpeedBaudrate = baudrate;
 	return true;
 }

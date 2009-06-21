@@ -71,7 +71,7 @@ namespace MiscUtils {
 
 	bool PokeyDivisorToBaudrate(unsigned char divisor, unsigned int& baudrate, bool enable_calculated_speed = true);
 
-	bool ParseHighSpeedParameters(const char* string, unsigned int& baudrate, unsigned char& pokeyDivisor, bool enable_calculated_speed = true);
+	bool ParseHighSpeedParameters(const char* string, unsigned char& pokeyDivisor, unsigned int& baudrate, bool enable_calculated_speed = true);
 
 };
 

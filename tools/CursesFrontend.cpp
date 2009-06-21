@@ -1349,6 +1349,13 @@ void CursesFrontend::ShowHighSpeedHint()
 	waddstr(fBottomLineWindow,"'0'=slow '1'=high '2'=high with pauses '^G','q'=abort");
 }
 
+void CursesFrontend::ShowHighSpeedParametersHint()
+{
+	werase(fBottomLineWindow);
+	wmove(fBottomLineWindow, 0, 0);
+	waddstr(fBottomLineWindow,"'0'..'63'[',baudrate'] '^G'=abort");
+}
+
 void CursesFrontend::ShowPrinterEOLHint()
 {
 	werase(fBottomLineWindow);
@@ -2343,6 +2350,70 @@ void CursesFrontend::ProcessSetHighSpeed()
 	UpdateScreen();
 }
 
+void CursesFrontend::ProcessSetHighSpeedParameters()
+{
+	unsigned char divisor = fDeviceManager->GetHighSpeedPokeyDivisor();
+	unsigned int baud = fDeviceManager->GetHighSpeedBaudrate();
+	unsigned int defaultBaudrate;
+
+	if (!MiscUtils::PokeyDivisorToBaudrate(divisor, defaultBaudrate, true)) {
+		AERROR("internal error: PokeyDivisorToBaudrate(%d) failed", divisor);
+		return;
+	}
+
+	char param[20];
+
+	if (baud == defaultBaudrate) {
+		snprintf(param, 20, "%d", divisor);
+	} else {
+		snprintf(param, 20, "%d,%d", divisor, baud);
+	}
+
+	ShowHighSpeedParametersHint();
+	ClearInputLine();
+	waddstr(fInputLineWindow, "high speed pokey divisor: ");
+	ShowCursor(true);
+	UpdateScreen();
+
+	StringInput input(this);
+
+	unsigned int x, y, width;
+
+	getyx(fInputLineWindow, y, x);
+	width=10;
+	if ( (x+width) > fScreenWidth ) {
+		x = 0;
+		if (fScreenWidth < width) {
+			width = fScreenWidth;
+		}
+	}
+
+	do {
+		StringInput::EInputResult res = 
+			input.InputString(fInputLineWindow, x, y, width, param, 20, -1, true, &fHighSpeedHistory);
+		if (res == StringInput::eInputAborted) {
+			AbortInput();
+			return;
+		}
+		if (MiscUtils::ParseHighSpeedParameters(param, divisor, baud, true)) {
+			break;
+		} else {
+			beep();
+		}
+	} while (1);
+
+	if (fDeviceManager->SetHighSpeedParameters(divisor, baud)) {
+		ALOG("Configured high speed mode to pokey divisor %d / %d baud", divisor, baud);
+	} else {
+		AERROR("setting high speed parameters (divisor %d, baud %d) failed!", divisor, baud);
+	}
+
+	ShowCursor(false);
+	ShowStandardHint();
+	UpdateScreen();
+}
+
+
 void CursesFrontend::ProcessSetXF551Mode()
 {
 	ShowYesNoHint();
@@ -2496,6 +2567,7 @@ static const char* const helpText[] =
 	        "T     tape emulation",
 		"C     set cable type",
 		"s     set SIO high speed mode",
+		"S     set high speed pokey divisor/baudrate",
 		"X     enable/disable XF551 commands",
 		"^L    redraw screen",
 		"h     show help screen",

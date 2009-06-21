@@ -183,7 +183,7 @@ bool DeviceManager::LoadDiskImage(EDriveNumber driveno, const char* filename, bo
 	} else if (image->IsAtrImage()) {
 		handler = new AtrSIOHandler(RCPtrStaticCast<AtrImage>(image));
 		handler->EnableHighSpeed(fUseHighSpeed);
-		handler->SetHighSpeedParameters(fHighSpeedBaudrate, fPokeyDivisor);
+		handler->SetHighSpeedParameters(fPokeyDivisor, fHighSpeedBaudrate);
 		handler->EnableXF551Mode(fEnableXF551Mode);
 	} else {
 		return false;
@@ -434,7 +434,7 @@ bool DeviceManager::CreateAtrMemoryImage(EDriveNumber driveno, EDiskFormat forma
 
 	RCPtr<AtrSIOHandler> handler(new AtrSIOHandler(img));
 	handler->EnableHighSpeed(fUseHighSpeed);
-	handler->SetHighSpeedParameters(fHighSpeedBaudrate, fPokeyDivisor);
+	handler->SetHighSpeedParameters(fPokeyDivisor, fHighSpeedBaudrate);
 	handler->EnableXF551Mode(fEnableXF551Mode);
 
 	if (DriveInUse(driveno) && forceUnload) {
@@ -467,7 +467,7 @@ bool DeviceManager::CreateAtrMemoryImage(EDriveNumber driveno, ESectorLength den
 
 	RCPtr<AtrSIOHandler> handler(new AtrSIOHandler(img));
 	handler->EnableHighSpeed(fUseHighSpeed);
-	handler->SetHighSpeedParameters(fHighSpeedBaudrate, fPokeyDivisor);
+	handler->SetHighSpeedParameters(fPokeyDivisor, fHighSpeedBaudrate);
 	handler->EnableXF551Mode(fEnableXF551Mode);
 
 	if (DriveInUse(driveno) && forceUnload) {
@@ -919,7 +919,7 @@ bool DeviceManager::SetHighSpeedMode(EHighSpeedMode mode)
 
 	for (int i=eMinDriveNumber; i<=eMaxDriveNumber; i++) {
 		if (DriveInUse(EDriveNumber(i))) {
-			GetSIOHandler((EDriveNumber)i)->SetHighSpeedParameters(fHighSpeedBaudrate, fPokeyDivisor);
+			GetSIOHandler((EDriveNumber)i)->SetHighSpeedParameters(fPokeyDivisor, fHighSpeedBaudrate);
 			GetSIOHandler((EDriveNumber)i)->EnableHighSpeed(fUseHighSpeed);
 		}
 	}
@@ -929,8 +929,12 @@ bool DeviceManager::SetHighSpeedMode(EHighSpeedMode mode)
 	return true;
 }
 
-bool DeviceManager::SetHighSpeedParameters(unsigned int baudrate, unsigned char pokeyDivisor)
+bool DeviceManager::SetHighSpeedParameters(unsigned char pokeyDivisor, unsigned int baudrate)
 {
+	if (pokeyDivisor >= 64) {
+		AERROR("illegal high speed pokey divisor %d", pokeyDivisor);
+	}
+
 	fHighSpeedBaudrate = baudrate;
 	fPokeyDivisor = pokeyDivisor;
 	fSIOWrapper->SetHighSpeedBaudrate(baudrate);

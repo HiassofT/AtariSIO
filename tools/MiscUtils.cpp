@@ -127,7 +127,7 @@ bool MiscUtils::PokeyDivisorToBaudrate(unsigned char divisor, unsigned int& baud
 }
 
 // format is "divisor[,baudrate]"
-bool MiscUtils::ParseHighSpeedParameters(const char* string, unsigned int& baudrate, unsigned char& divisor, bool enable_calculated_speed)
+bool MiscUtils::ParseHighSpeedParameters(const char* string, unsigned char& divisor, unsigned int& baudrate, bool enable_calculated_speed)
 {
 	char* tmp;
 	long l;
@@ -140,8 +140,10 @@ bool MiscUtils::ParseHighSpeedParameters(const char* string, unsigned int& baudr
 	}
 	divisor = l;
 
-	if (MiscUtils::PokeyDivisorToBaudrate(divisor, baudrate, enable_calculated_speed && (*tmp == 0))) {
-		return true;
+	if (MiscUtils::PokeyDivisorToBaudrate(divisor, baudrate, enable_calculated_speed)) {
+		if (*tmp == 0) {
+			return true;
+		}
 	}
 	if (*tmp != ',') {
 		return false;

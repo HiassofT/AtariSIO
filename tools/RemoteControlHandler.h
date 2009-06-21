@@ -43,7 +43,7 @@ public:
 	virtual RCPtr<DiskImage> GetDiskImage();
 	virtual RCPtr<const DiskImage> GetConstDiskImage() const;
 	virtual bool EnableHighSpeed(bool);
-	virtual bool SetHighSpeedParameters(unsigned int baudrate, unsigned char pokeyDivisor);
+	virtual bool SetHighSpeedParameters(unsigned char pokeyDivisor, unsigned int baudrate);
 	virtual bool EnableXF551Mode(bool on);
 
 	inline bool ValidDriveNo(const char);

@@ -317,7 +317,7 @@ bool RemoteControlHandler::EnableXF551Mode(bool)
 	return false;
 }
 
-bool RemoteControlHandler::SetHighSpeedParameters(unsigned int, unsigned char)
+bool RemoteControlHandler::SetHighSpeedParameters(unsigned char, unsigned int)
 {
 	return false;
 }
