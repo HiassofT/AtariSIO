@@ -455,7 +455,9 @@ failure:
 static bool set_and_check_highspeed_baudrate(unsigned int baud)
 {
 	if (SIO->SetHighSpeedBaudrate(baud) == 0) {
+		SIO->SetBaudrate(baud);
 		int real_baud = SIO->GetExactBaudrate();
+		SIO->SetBaudrate(ATARISIO_STANDARD_BAUDRATE);
 		if (real_baud != (int)baud) {
 			printf("warning: UART doesn't support %d baud, using %d instead\n", baud, real_baud);
 		}
