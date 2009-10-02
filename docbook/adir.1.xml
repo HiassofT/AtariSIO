@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="ISO-8859-1"?>
 <!DOCTYPE chapter PUBLIC "-//OASIS//DTD DocBook XML V4.5//EN"
 "http://www.oasis-open.org/docbook/xml/4.5/docbookx.dtd"> 
-<refentry id="refadir">
+<refentry id="adir">
   <refmeta>
     <refentrytitle>adir</refentrytitle>
 
@@ -113,9 +113,9 @@
     <title>See also</title>
 
     <para>
-      <xref linkend="refdir2atr" />,
-      <xref linkend="refatariserver" />,
-      <xref linkend="refatarixfer" />
+      <xref linkend="dir2atr" />,
+      <xref linkend="atariserver" />,
+      <xref linkend="atarixfer" />
     </para>
 
     <para>AtariSIO website: <ulink

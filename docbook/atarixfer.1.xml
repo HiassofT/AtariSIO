@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="ISO-8859-1"?>
 <!DOCTYPE chapter PUBLIC "-//OASIS//DTD DocBook XML V4.5//EN"
 "http://www.oasis-open.org/docbook/xml/4.5/docbookx.dtd"> 
-<refentry id="refatarixfer">
+<refentry id="atarixfer">
   <refmeta>
     <refentrytitle>atarixfer</refentrytitle>
 
@@ -21,19 +21,13 @@
 
       <arg><option>-f</option> <replaceable>device</replaceable></arg>
 
-      <arg><option>-p</option></arg>
-
-      <arg><option>-d</option></arg>
-
-      <arg>-<replaceable>driveno</replaceable></arg>
+      <arg><replaceable>options</replaceable></arg>
 
       <group choice="plain">
-        <arg choice="plain"><option>-r</option>
-        <replaceable>imagefile</replaceable></arg>
-
-        <arg choice="plain"><option>-w</option>
-        <replaceable>imagefile</replaceable></arg>
+	<arg choice="plain"><option>-r</option></arg>
+	<arg choice="plain"><option>-w</option></arg>
       </group>
+      <arg choice="plain"><replaceable>imagefile</replaceable></arg>
     </cmdsynopsis>
   </refsynopsisdiv>
 
@@ -80,6 +74,42 @@
       </varlistentry>
 
       <varlistentry>
+        <term><option>-e</option></term>
+
+        <listitem>
+          <para>Continue on read or write errors.</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><option>-s</option></term>
+
+        <listitem>
+          <para>Enable Happy Warp Speed and XF551 highspeed (2xSIO speed at 38400 bit/sec)
+          if supported by the drive.</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><option>-S</option></term>
+
+        <listitem>
+          <para>Enable Happy Warp Speed, XF551 highspeed, 1050 Turbo highspeed and Ultra Speed if supported by the drive.</para>
+	  <para><emphasis>Note:</emphasis> Ultra Speed and 1050 Turbo highspeed only work with 16C950 serial cards,
+          16550 cards don't support these baudrates.</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><option>-x</option></term>
+
+        <listitem>
+          <para>Enable workaround for XF551 format detection bugs.</para>
+        </listitem>
+      </varlistentry>
+
+
+      <varlistentry>
         <term><option>-<replaceable>driveno</replaceable></option></term>
 
         <listitem>
@@ -97,7 +127,7 @@
           type of image to create is decided by the extension of the filename,
           which should end in <literal>.atr</literal>,
           <literal>.xfd</literal>, or <literal>.dcm</literal>
-          (case-insensitive). If the filename doesn't match any of these, ATR
+          (case-insensitive). If the extension doesn't match any of these, ATR
           image format is assumed.</para>
         </listitem>
       </varlistentry>
@@ -113,10 +143,23 @@
   </refsect1>
 
   <refsect1>
+    <title>Environment variables</title>
+    <variablelist>
+      <varlistentry>
+        <term><envar>ATARIXFER_DEVICE</envar></term>
+        <listitem>
+          <para>Default AtariSIO device, use <filename>/dev/atarisio0</filename> if not set.</para>
+        </listitem>
+      </varlistentry>
+    </variablelist>
+
+  </refsect1>
+
+  <refsect1>
     <title>See also</title>
 
-    <para><xref linkend="refatariserver" />, <xref linkend="refadir" />, <xref
-    linkend="refdir2atr" /></para>
+    <para><xref linkend="atariserver" />, <xref linkend="adir" />, <xref
+    linkend="dir2atr" /></para>
 
     <para>AtariSIO website: <ulink
     url="http://www.horus.com/~hias/atari/"></ulink></para>

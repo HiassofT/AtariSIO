@@ -24,7 +24,7 @@
 
   <xi:include href="intro.xml" xmlns:xi="http://www.w3.org/2001/XInclude" />
 
-  <reference id="ref">
+  <reference id="manpages">
     <referenceinfo>
       <title>HiassofT's Atari 8-bit Tools</title>
 

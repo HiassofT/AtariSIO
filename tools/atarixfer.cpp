@@ -731,7 +731,8 @@ int main(int argc, char** argv)
 		goto usage;
 	}
 usage:
-	printf("usage: [-f device ] [-dpsSx12345678] -r|-w imagefile\n\n");
+	printf("usage: [-f device ] [options] -r|-w imagefile\n\n");
+        printf("options:\n");
 	printf("  -f device     use alternative AtariSIO device (default: /dev/atarisio0)\n");
 	printf("  -r imagefile  create ATR/XFD/DCM image of disk\n");
 	printf("  -w imagefile  write given ATR/XFD/DCM image to disk\n");

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="ISO-8859-1"?>
 <!DOCTYPE chapter PUBLIC "-//OASIS//DTD DocBook XML V4.5//EN"
 "http://www.oasis-open.org/docbook/xml/4.5/docbookx.dtd"> 
-<refentry id="refdir2atr">
+<refentry id="dir2atr">
   <refmeta>
     <refentrytitle>dir2atr</refentrytitle>
 
@@ -18,13 +18,7 @@
     <cmdsynopsis>
       <command>dir2atr</command>
 
-      <arg><option>-d</option></arg>
-
-      <arg><option>-m</option></arg>
-
-      <arg><option>-p</option></arg>
-
-      <arg><option>-b</option> <replaceable>boottype</replaceable></arg>
+      <arg><replaceable>options</replaceable></arg>
 
       <arg><replaceable>sectors</replaceable></arg>
 
@@ -217,8 +211,7 @@
   <refsect1>
     <title>See also</title>
 
-    <para><xref linkend="refadir" />, <xref linkend="refatariserver" />, <xref
-    linkend="refatarixfer" /></para>
+    <para><xref linkend="adir" />, <xref linkend="atariserver" />, <xref linkend="atarixfer" /></para>
 
     <para>AtariSIO website: <ulink
     url="http://www.horus.com/~hias/atari/"></ulink></para>
