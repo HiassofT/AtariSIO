@@ -44,7 +44,7 @@
 
 using namespace MiscUtils;
 
-char* MiscUtils::ShortenFilename(const char* filename, unsigned int maxlen)
+char* MiscUtils::ShortenFilename(const char* filename, unsigned int maxlen, bool stripExtension)
 {
 	if (filename == NULL) {
 		return NULL;
@@ -55,6 +55,19 @@ char* MiscUtils::ShortenFilename(const char* filename, unsigned int maxlen)
 	}
 	unsigned int len = strlen(filename);
 	char * s = new char[maxlen+1];
+
+	char * tmpstr = NULL;
+	if (stripExtension) {
+		tmpstr = strdup(filename);
+		filename = tmpstr;
+		char * dotpos = strrchr(tmpstr, '.');
+		if (dotpos) {
+			unsigned int dotidx = dotpos - tmpstr;
+			if (len - dotidx <= 4) {
+				tmpstr[dotidx] = 0;
+			}
+		}
+	}
 
 	if (len<=maxlen) {
 		strcpy(s, filename);
@@ -70,17 +83,21 @@ char* MiscUtils::ShortenFilename(const char* filename, unsigned int maxlen)
 				strncpy(s + 3, p, maxlen - 2);
 				return s;
 			}
-		}
-
-		const char *fn = strrchr(filename, DIR_SEPARATOR);
-		if (fn == NULL) {
-			strncpy(s, filename, maxlen);
 		} else {
-			strncpy(s, fn + 1, maxlen);
+			const char *fn = strrchr(filename, DIR_SEPARATOR);
+			if (fn == NULL) {
+				strncpy(s, filename, maxlen);
+			} else {
+				strncpy(s, fn + 1, maxlen);
+			}
+			s[maxlen] = 0;
+			return s;
 		}
-		s[maxlen] = 0;
-		return s;
 	}
+	if (tmpstr) {
+		free(tmpstr);
+	}
+	return 0;
 }
 
 // pokey divisor to baudrate table

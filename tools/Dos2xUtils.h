@@ -33,7 +33,13 @@ public:
 
 	virtual ~Dos2xUtils();
 
-	void AddFiles(bool createPiconame = false);
+	enum EPicoNameType {
+		eNoPicoName,
+		ePicoName,
+		ePicoNameWithoutExtension
+	};
+
+	void AddFiles(EPicoNameType piconametype = eNoPicoName);
 
 	// DOS 2.x file access methods
 	enum EDosFormat {
@@ -90,7 +96,7 @@ public:
 	bool AddBootFile(EBootType type);
 
 	static unsigned int EstimateDiskSize(const char* directory, ESectorLength seclen, 
-		bool withPiconame, EBootType bootType = eBootDefault);
+		EPicoNameType piconametype = eNoPicoName, EBootType bootType = eBootDefault);
 
 	unsigned int GetNumberOfFreeSectors();
 	bool AllocSectors(unsigned int num, unsigned int * secnums, bool allocdir = false);
@@ -186,7 +192,7 @@ public:
 	void DumpRawDirectory(bool beQuiet = false) const;
 
 	bool AddFile(const char* filename);
-	bool CreatePiconame();
+	bool CreatePiconame(EPicoNameType piconametype);
 
 private:
 	friend class VirtualImageObserver;

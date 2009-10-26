@@ -1760,7 +1760,7 @@ void CursesFrontend::ProcessLoadDrive()
 		
 		bool haveDefault = false;
 		if (densityNum == -1) {
-			numSectors = Dos2xUtils::EstimateDiskSize(filename, seclen, true);
+			numSectors = Dos2xUtils::EstimateDiskSize(filename, seclen, Dos2xUtils::ePicoName);
 			haveDefault = true;
 		}
 

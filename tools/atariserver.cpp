@@ -245,7 +245,7 @@ illegal_p:
 							bool ok;
 							if (virtual_format == eUserDefDisk) {
 								if (autoSectors) {
-									virtual_sector_count = Dos2xUtils::EstimateDiskSize(argv[i], virtual_sector_length, true);
+									virtual_sector_count = Dos2xUtils::EstimateDiskSize(argv[i], virtual_sector_length, Dos2xUtils::ePicoName);
 									ALOG("using %d sectors for virtual drive D%d:", virtual_sector_count, drive);
 								}
 								ok = manager->CreateVirtualDrive(driveNo, argv[i],

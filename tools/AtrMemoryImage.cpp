@@ -195,7 +195,7 @@ bool AtrMemoryImage::ReadImageFromFile(const char* filename, bool beQuiet)
 			strncat(p, ".atr", PATH_MAX);
 			p[PATH_MAX-1] = 0;
 			SetFilename(p);
-			unsigned int sectors = Dos2xUtils::EstimateDiskSize(filename, e128BytesPerSector, true);
+			unsigned int sectors = Dos2xUtils::EstimateDiskSize(filename, e128BytesPerSector, Dos2xUtils::ePicoName);
 			Dos2xUtils::EDosFormat dosformat = Dos2xUtils::eDos2x;
 			if (sectors <= 1040) {
 				// create standard ED image
@@ -226,7 +226,7 @@ bool AtrMemoryImage::ReadImageFromFile(const char* filename, bool beQuiet)
 			if (!dosutils->AddFile(filename)) {
 				return false;
 			}
-			dosutils->CreatePiconame();
+			dosutils->CreatePiconame(Dos2xUtils::ePicoName);
 			SetChanged(false);
 		}
 		return true;

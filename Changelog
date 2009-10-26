@@ -143,3 +143,5 @@ AtariSIO changelog:
   - atarisio: refactored a lot of common code
   - atarisio: changed locking strategy to use a single lock
   - dir2atr: added support for MyDos4.53/3
+  - atariserver, dir2atr: added support for stripping file extensions
+    when creating PICONAME.TXT

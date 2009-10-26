@@ -408,7 +408,7 @@ lo_usage:
 			break;
 		case 'S':
 			{
-				int sectors = Dos2xUtils::EstimateDiskSize(arg, e128BytesPerSector, true);
+				int sectors = Dos2xUtils::EstimateDiskSize(arg, e128BytesPerSector, Dos2xUtils::ePicoName);
 				arg++; EatSpace(arg);
 				ret = fDeviceManager->CreateVirtualDrive(driveno, arg, e128BytesPerSector, sectors, true);
 				break;
@@ -416,7 +416,7 @@ lo_usage:
 		case 'D':
 			{
 				arg++; EatSpace(arg);
-				int sectors = Dos2xUtils::EstimateDiskSize(arg, e256BytesPerSector, true);
+				int sectors = Dos2xUtils::EstimateDiskSize(arg, e256BytesPerSector, Dos2xUtils::ePicoName);
 				ret = fDeviceManager->CreateVirtualDrive(driveno, arg, e256BytesPerSector, sectors, true);
 				break;
 			}

@@ -29,7 +29,7 @@
 #endif
 
 namespace MiscUtils {
-	char* ShortenFilename(const char* filename, unsigned int maxlen);
+	char* ShortenFilename(const char* filename, unsigned int maxlen, bool stripExtension = false);
 
 #ifndef WINVER
 	bool drop_root_privileges();

@@ -150,7 +150,7 @@ Dos2xUtils::~Dos2xUtils()
 	}
 }
 
-void Dos2xUtils::AddFiles(bool createPiconame)
+void Dos2xUtils::AddFiles(EPicoNameType piconametype)
 {
 	if (!fDirectory) {
 		DPRINTF("AddFiles: directory is NULL");
@@ -180,7 +180,7 @@ void Dos2xUtils::AddFiles(bool createPiconame)
 					fSubdir[entryNum] = new Dos2xUtils(fImage, newpath, fObserver, dirsec,
 						fDosFormat, fIsDos25EnhancedDensity, fUse16BitSectorLinks,
 						fNumberOfVTOCs);
-					fSubdir[entryNum]->AddFiles(createPiconame);
+					fSubdir[entryNum]->AddFiles(piconametype);
 					if (fSubdir[entryNum]->fDiskFull) {
 						fDiskFull = true;
 					}
@@ -201,9 +201,9 @@ void Dos2xUtils::AddFiles(bool createPiconame)
 	if ((fEntryCount == eMaxEntries) && (i<num)) {
 		AWARN("more than %d entries in \"%s\", skipping files", eMaxEntries, fDirectory);
 	}
-	if (createPiconame) {
+	if (piconametype != eNoPicoName) {
 	       	if (fEntryCount < eMaxEntries) {
-			if (!CreatePiconame()) {
+			if (!CreatePiconame(piconametype)) {
 				AWARN("adding PICONAME.TXT failed!");
 			}
 		} else {
@@ -593,7 +593,7 @@ bool Dos2xUtils::CheckNameUnique(unsigned int entryNum)
 	return true;
 }
 
-bool Dos2xUtils::CreatePiconame()
+bool Dos2xUtils::CreatePiconame(EPicoNameType piconametype)
 {
 	const int maxlen = 4096;
 	const char EOL = 155;
@@ -604,6 +604,8 @@ bool Dos2xUtils::CreatePiconame()
 	int len, shtlen;
 	bool isdir;
 	char* name;
+
+	Assert(piconametype != eNoPicoName);
 
 	if (fDirectory) {
 		if (fIsRootDirectory) {
@@ -616,7 +618,7 @@ bool Dos2xUtils::CreatePiconame()
 				name++;
 			}
 		}
-		shortstring = ShortenFilename(name, 38);
+		shortstring = ShortenFilename(name, 38, (piconametype == ePicoNameWithoutExtension));
 		if (shortstring != 0) {
 			len = strlen(shortstring);
 			memcpy(buf+pos, shortstring, len);
@@ -641,7 +643,7 @@ bool Dos2xUtils::CreatePiconame()
 			} else {
 				name++;
 			}
-			shortstring = ShortenFilename(name, shtlen);
+			shortstring = ShortenFilename(name, shtlen, (piconametype == ePicoNameWithoutExtension));
 			if (shortstring) {
 				len = strlen(shortstring);
 				if (len + 15 < maxlen) {
@@ -2108,7 +2110,7 @@ bool  Dos2xUtils::AllocSectors(unsigned int num, unsigned int * secnums, bool al
 	return (num == 0);
 }
 
-static void EstimateDirectorySize(const char* in_directory, ESectorLength seclen, bool withPiconame,
+static void EstimateDirectorySize(const char* in_directory, ESectorLength seclen, Dos2xUtils::EPicoNameType piconametype,
 	bool reserveBootEntry, unsigned int& numSectors)
 {
 	numSectors += 8;
@@ -2149,7 +2151,7 @@ static void EstimateDirectorySize(const char* in_directory, ESectorLength seclen
 		}
 		fileio->Close();
 		numSectors += filesize;
-		if (withPiconame) {
+		if (piconametype != Dos2xUtils::eNoPicoName) {
 			// with a single file piconame will never be larger than 125 bytes
 			numSectors++;
 		}
@@ -2165,7 +2167,7 @@ static void EstimateDirectorySize(const char* in_directory, ESectorLength seclen
 		maxEntries--;
 	}
 
-	if (withPiconame) {
+	if (piconametype != Dos2xUtils::eNoPicoName) {
 		if (directory[0] == DIR_SEPARATOR && directory[1] == 0) {
 			picosize = 2;
 		} else {
@@ -2175,8 +2177,11 @@ static void EstimateDirectorySize(const char* in_directory, ESectorLength seclen
 			} else {
 				dirname++;
 			}
-			shortstring = ShortenFilename(dirname, 38);
-			picosize = strlen(shortstring) + 1;
+			shortstring = ShortenFilename(dirname, 38, (piconametype == Dos2xUtils::ePicoNameWithoutExtension));
+			if (shortstring) {
+				picosize = strlen(shortstring) + 1;
+				delete[] shortstring;
+			}
 		}
 	}
 
@@ -2192,23 +2197,29 @@ static void EstimateDirectorySize(const char* in_directory, ESectorLength seclen
 			}
 			numSectors += filesize;
 			count++;
-			if (withPiconame) {
-				shortstring = ShortenFilename(e->fName, 38);
-				picosize += strlen(shortstring) + 13;
+			if (piconametype != Dos2xUtils::eNoPicoName) {
+				shortstring = ShortenFilename(e->fName, 38, (piconametype == Dos2xUtils::ePicoNameWithoutExtension));
+				if (shortstring) {
+					picosize += strlen(shortstring) + 13;
+					delete[] shortstring;
+				}
 			}
 			break;
 		case DirEntry::eDirectory:
-			EstimateDirectorySize(fullpath, seclen, withPiconame, false, numSectors);
-			if (withPiconame) {
-				shortstring = ShortenFilename(e->fName, 36);
-				picosize += strlen(shortstring) + 15;
+			EstimateDirectorySize(fullpath, seclen, piconametype, false, numSectors);
+			if (piconametype != Dos2xUtils::eNoPicoName) {
+				shortstring = ShortenFilename(e->fName, 36, (piconametype == Dos2xUtils::ePicoNameWithoutExtension));
+				if (shortstring) {
+					picosize += strlen(shortstring) + 15;
+					delete[] shortstring;
+				}
 			}
 			count++;
 			break;
 		default: break;
 		}
 	}
-	if (withPiconame) {
+	if (piconametype != Dos2xUtils::eNoPicoName) {
 		if (count < 64) {
 			filesize = (picosize+seclen-4)/(seclen-3);
 			numSectors += filesize;
@@ -2228,7 +2239,7 @@ static unsigned int GetNumVTOC(unsigned int sectors, ESectorLength seclen)
 }
 
 unsigned int Dos2xUtils::EstimateDiskSize(const char* directory, ESectorLength seclen,
-	bool withPiconame, EBootType bootType)
+	Dos2xUtils::EPicoNameType piconametype, EBootType bootType)
 {
 	unsigned int numSectors = 0;
 	unsigned int bootFileLen = 0;
@@ -2241,7 +2252,7 @@ unsigned int Dos2xUtils::EstimateDiskSize(const char* directory, ESectorLength s
 	}
 
 	// calculate size of directories/files
-	EstimateDirectorySize(directory, seclen, withPiconame, reserveBootEntry, numSectors);
+	EstimateDirectorySize(directory, seclen, piconametype, reserveBootEntry, numSectors);
 
 	// 3 boot sectors
 	numSectors += 3;

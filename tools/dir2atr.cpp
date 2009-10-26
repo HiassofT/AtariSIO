@@ -55,7 +55,7 @@ int main(int argc, char**argv)
 
 	bool dd = false;
 	bool mydos = false;
-	bool piconame = false;
+	Dos2xUtils::EPicoNameType piconametype = Dos2xUtils::eNoPicoName;
 	bool autoSectors = false;
 	int sectors;
 	char* directory;
@@ -67,11 +67,12 @@ int main(int argc, char**argv)
 	Dos2xUtils::EBootType bootType = Dos2xUtils::eBootDefault;
 
 	char c;
-	while ( (c = getopt(argc, argv, "dmpb:")) != -1) {
+	while ( (c = getopt(argc, argv, "dmpPb:")) != -1) {
 		switch(c) {
 		case 'd': dd = true; printf("using double density sectors\n"); break;
 		case 'm': mydos = true; printf("using mydos format\n"); break;
-		case 'p': piconame = true; printf("creating PICONAME.TXT\n"); break;
+		case 'p': piconametype = Dos2xUtils::ePicoName; printf("creating PICONAME.TXT\n"); break;
+		case 'P': piconametype = Dos2xUtils::ePicoNameWithoutExtension; printf("creating PICONAME.TXT (without file extensions)\n"); break;
 		case 'b':
 			if (strcasecmp(optarg,"dos20") == 0) {
 				bootType = Dos2xUtils::eBootDos20;
@@ -166,7 +167,7 @@ int main(int argc, char**argv)
 			mydos = true;
 		}
 
-		sectors = Dos2xUtils::EstimateDiskSize(directory, seclen, piconame, bootType);
+		sectors = Dos2xUtils::EstimateDiskSize(directory, seclen, piconametype, bootType);
 		printf("calculated disk size is %d sectors\n", sectors);
 	}
 
@@ -214,7 +215,7 @@ int main(int argc, char**argv)
 		printf("adding boot file failed\n");
 		return 1;
 	}
-	dos2xutils->AddFiles(piconame);
+	dos2xutils->AddFiles(piconametype);
 
 	if (!dos2xutils->WriteBootSectors(bootType)) {
 		printf("writing boot sectors failed\n");
@@ -235,6 +236,7 @@ usage:
 	printf("  -d        create double density image (default: single density)\n");
 	printf("  -m        create MyDOS image (default: DOS 2.x)\n");
 	printf("  -p        create PICONAME.TXT (long filename description)\n");
+	printf("  -P        create PICONAME.TXT (with file extensions stripped)\n");
 	printf("  -b <DOS>  create bootable disk for specified DOS\n");
 	printf("            Supported DOS are: Dos20, Dos25, MyDos4533, MyDos4534\n");
 	printf("            TurboDos21, TurboDos21HS, MyPicoDos403, MyPicoDos403HS,\n");

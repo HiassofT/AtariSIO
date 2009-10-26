@@ -281,7 +281,7 @@ bool DeviceManager::CreateVirtualDrive(
 	}
 
 	//rootdir->AddFiles(false);
-	rootdir->AddFiles(true);
+	rootdir->AddFiles(Dos2xUtils::ePicoName);
 
 	sioHandler = RCPtrStaticCast<AtrSIOHandler>(GetSIOHandler(driveno));
 	sioHandler->SetVirtualImageObserver(observer);
@@ -402,7 +402,7 @@ bool DeviceManager::ReloadDrive(EDriveNumber driveno)
 
 				UnloadDiskImage(driveno);
 				if (diskFormat == eUserDefDisk) {
-					unsigned int estimatedSectors = Dos2xUtils::EstimateDiskSize(path, seclen, true);
+					unsigned int estimatedSectors = Dos2xUtils::EstimateDiskSize(path, seclen, Dos2xUtils::ePicoName);
 					if (estimatedSectors > sectors) {
 						sectors = estimatedSectors;
 					}
