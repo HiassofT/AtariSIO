@@ -615,12 +615,13 @@ int main(int argc, char** argv)
 	int prosys = 0;
 	int ret;
 	int use_highspeed = 0;
+	int relaxed_transmission = 0;
 
 	char* atarisioDevName = getenv("ATARIXFER_DEVICE");
 
 	printf("atarixfer %s\n(c) 2002-2009 by Matthias Reichl <hias@horus.com>\n\n",VERSION_STRING);
 	while(!finished) {
-		c = getopt(argc, argv, "prw12345678df:sSx");
+		c = getopt(argc, argv, "prw12345678df:sStx");
 		if (c == -1) {
 			break;
 		}
@@ -671,6 +672,9 @@ int main(int argc, char** argv)
 		case 'S':
 			use_highspeed = 2;
 			break;
+		case 't':
+			relaxed_transmission = 1;
+			break;
 		case 'x':
 			xf551_format_detection = true;
 			break;
@@ -717,6 +721,13 @@ int main(int argc, char** argv)
 			return 1;
 		}
 
+		if (relaxed_transmission) {
+			ret = SIO->SetHighSpeedPause(ATARISIO_HIGHSPEEDPAUSE_BYTE_DELAY);
+			if (ret) {
+				printf("couldn't set relaxed data transmission: error %d\n", ret);
+			}
+		}
+
 		if (use_highspeed) {
 			detect_highspeed_mode(use_highspeed == 2);
 		}
@@ -741,6 +752,7 @@ usage:
 	printf("  -p            use APE prosystem cable (default: 1050-2-PC cable)\n");
 	printf("  -s            enable Happy Warp/XF551 speeds\n");
 	printf("  -S            enable Ultra/Turbo/Happy Warp/XF551 speeds\n");
+	printf("  -t            enable relaxed data transmission\n");
 	printf("  -x            enable workaround for XF551 format detection bugs\n");
 	printf("  -1 ... -8     use drive number 1...8\n");
 	return 1;

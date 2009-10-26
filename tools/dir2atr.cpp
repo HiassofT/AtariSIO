@@ -77,8 +77,10 @@ int main(int argc, char**argv)
 				bootType = Dos2xUtils::eBootDos20;
 			} else if (strcasecmp(optarg,"dos25") == 0) {
 				bootType = Dos2xUtils::eBootDos25;
-			} else if (strcasecmp(optarg,"mydos453") == 0) {
-				bootType = Dos2xUtils::eBootMyDos453;
+			} else if (strcasecmp(optarg,"mydos4533") == 0) {
+				bootType = Dos2xUtils::eBootMyDos4533;
+			} else if (strcasecmp(optarg,"mydos4534") == 0) {
+				bootType = Dos2xUtils::eBootMyDos4534;
 			} else if (strcasecmp(optarg,"turbodos21") == 0) {
 				bootType = Dos2xUtils::eBootTurboDos21;
 			} else if (strcasecmp(optarg,"turbodos21hs") == 0) {
@@ -234,7 +236,7 @@ usage:
 	printf("  -m        create MyDOS image (default: DOS 2.x)\n");
 	printf("  -p        create PICONAME.TXT (long filename description)\n");
 	printf("  -b <DOS>  create bootable disk for specified DOS\n");
-	printf("            Supported DOS are: Dos20, Dos25, MyDos453,\n");
+	printf("            Supported DOS are: Dos20, Dos25, MyDos4533, MyDos4534\n");
 	printf("            TurboDos21, TurboDos21HS, MyPicoDos403, MyPicoDos403HS,\n");
 	printf("            MyPicoDos404, MyPicoDos404N, MyPicoDos404R, MyPicoDos404RN,\n");
 	printf("            MyPicoDos404B, MyPicoDos405, MyPicoDos405A, MyPicoDos405N,\n");

@@ -142,3 +142,4 @@ AtariSIO changelog:
   - atarixfer: added support for highspeed SIO
   - atarisio: refactored a lot of common code
   - atarisio: changed locking strategy to use a single lock
+  - dir2atr: added support for MyDos4.53/3

@@ -53,32 +53,34 @@ public:
 
 	enum EBootType {
 		eBootAtariSIOMyPicoDos = 0,
-		eBootDos20 = 1,
-		eBootDos25 = 2,
-		eBootMyDos453 = 3,
-		eBootTurboDos21 = 4,
-		eBootTurboDos21HS = 5,
+		eBootDos20,
+		eBootDos25,
+		eBootMyDos4533,
+		eBootMyDos4534,
 
-		eBootMyPicoDos403 = 6,
-		eBootMyPicoDos403HS = 7,
+		eBootTurboDos21,
+		eBootTurboDos21HS,
 
-		eBootMyPicoDos404 = 8,
-		eBootMyPicoDos404N = 9,
-		eBootMyPicoDos404R = 10,
-		eBootMyPicoDos404RN = 11,
-		eBootMyPicoDos404B = 12,
+		eBootMyPicoDos403,
+		eBootMyPicoDos403HS,
 
-		eBootMyPicoDos405 = 13,
-		eBootMyPicoDos405A = 14,
-		eBootMyPicoDos405N = 15,
-		eBootMyPicoDos405R = 16,
-		eBootMyPicoDos405RA = 17,
-		eBootMyPicoDos405RN = 18,
-		eBootMyPicoDos405B = 19,
-		eBootMyPicoDos405S0 = 20,
-		eBootMyPicoDos405S1 = 21,
+		eBootMyPicoDos404,
+		eBootMyPicoDos404N,
+		eBootMyPicoDos404R,
+		eBootMyPicoDos404RN,
+		eBootMyPicoDos404B,
 
-		ePicoBoot405 = 22,
+		eBootMyPicoDos405,
+		eBootMyPicoDos405A,
+		eBootMyPicoDos405N,
+		eBootMyPicoDos405R,
+		eBootMyPicoDos405RA,
+		eBootMyPicoDos405RN,
+		eBootMyPicoDos405B,
+		eBootMyPicoDos405S0,
+		eBootMyPicoDos405S1,
+
+		ePicoBoot405,
 
 		eBootDefault = eBootAtariSIOMyPicoDos
 	};

@@ -1629,7 +1629,8 @@ static int send_block(struct atarisio_dev* dev,
 
 	if (block_len) {
 		spin_lock_irqsave(&dev->lock, flags);
-		if ((dev->add_highspeedpause & ATARISIO_HIGHSPEEDPAUSE_BYTE_DELAY) && (dev->serial_config.baudrate != ATARISIO_STANDARD_BAUDRATE)) {
+		if ((dev->add_highspeedpause & ATARISIO_HIGHSPEEDPAUSE_BYTE_DELAY) && 
+			( (dev->serial_config.baudrate != ATARISIO_STANDARD_BAUDRATE) || (dev->current_mode == MODE_1050_2_PC) ) ) {
 			set_lcr(dev, dev->slow_lcr);
 		}
 		ret = setup_send_frame(dev, block_len, user_buffer, add_checksum);
@@ -1648,7 +1649,8 @@ static int send_block(struct atarisio_dev* dev,
 				PRINT_TIMESTAMP("send_block: end wait_send");
 			}
 		}
-		if ((dev->add_highspeedpause & ATARISIO_HIGHSPEEDPAUSE_BYTE_DELAY) && (dev->serial_config.baudrate != ATARISIO_STANDARD_BAUDRATE)) {
+		if ((dev->add_highspeedpause & ATARISIO_HIGHSPEEDPAUSE_BYTE_DELAY) && 
+			( (dev->serial_config.baudrate != ATARISIO_STANDARD_BAUDRATE) || (dev->current_mode == MODE_1050_2_PC) ) ) {
 			spin_lock_irqsave(&dev->lock, flags);
 			set_lcr(dev, dev->standard_lcr);
 			spin_unlock_irqrestore(&dev->lock, flags);
@@ -1737,6 +1739,9 @@ static int send_command_frame(struct atarisio_dev* dev, Ext_SIO_parameters* para
 		} else {
 			set_baudrate(dev, dev->default_baudrate, 0);
 		}
+		if (dev->add_highspeedpause & ATARISIO_HIGHSPEEDPAUSE_BYTE_DELAY) {
+			set_lcr(dev, dev->slow_lcr);
+		}
 		spin_unlock_irqrestore(&dev->lock, flags);
 
 		udelay(DELAY_T0);
@@ -1766,6 +1771,9 @@ static int send_command_frame(struct atarisio_dev* dev, Ext_SIO_parameters* para
 		spin_lock_irqsave(&dev->lock, flags);
 		if (highspeed_mode == ATARISIO_EXTSIO_SPEED_TURBO) {
 			set_baudrate(dev, dev->highspeed_baudrate, 0);
+		}
+		if (dev->add_highspeedpause & ATARISIO_HIGHSPEEDPAUSE_BYTE_DELAY) {
+			set_lcr(dev, dev->standard_lcr);
 		}
 
 		dev->rx_buf.tail = dev->rx_buf.head; /* clear rx-buffer */
