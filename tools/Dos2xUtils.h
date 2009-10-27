@@ -67,6 +67,9 @@ public:
 		eBootTurboDos21,
 		eBootTurboDos21HS,
 
+		eBootXDos243F,
+		eBootXDos243N,
+
 		eBootMyPicoDos403,
 		eBootMyPicoDos403HS,
 

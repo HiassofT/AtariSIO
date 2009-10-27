@@ -145,3 +145,4 @@ AtariSIO changelog:
   - dir2atr: added support for MyDos4.53/3
   - atariserver, dir2atr: added support for stripping file extensions
     when creating PICONAME.TXT
+  - dir2atr: added support for XDOS 2.43F and XDOS 2.43N

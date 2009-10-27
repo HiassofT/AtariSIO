@@ -86,6 +86,10 @@ int main(int argc, char**argv)
 				bootType = Dos2xUtils::eBootTurboDos21;
 			} else if (strcasecmp(optarg,"turbodos21hs") == 0) {
 				bootType = Dos2xUtils::eBootTurboDos21HS;
+			} else if (strcasecmp(optarg,"xdos243f") == 0) {
+				bootType = Dos2xUtils::eBootXDos243F;
+			} else if (strcasecmp(optarg,"xdos243n") == 0) {
+				bootType = Dos2xUtils::eBootXDos243N;
 			} else if (strcasecmp(optarg,"mypicodos403") == 0) {
 				bootType = Dos2xUtils::eBootMyPicoDos403;
 			} else if (strcasecmp(optarg,"mypicodos403hs") == 0) {
@@ -238,11 +242,13 @@ usage:
 	printf("  -p        create PICONAME.TXT (long filename description)\n");
 	printf("  -P        create PICONAME.TXT (with file extensions stripped)\n");
 	printf("  -b <DOS>  create bootable disk for specified DOS\n");
-	printf("            Supported DOS are: Dos20, Dos25, MyDos4533, MyDos4534\n");
-	printf("            TurboDos21, TurboDos21HS, MyPicoDos403, MyPicoDos403HS,\n");
+	printf("            Supported DOS are: Dos20, Dos25, MyDos4533, MyDos4534,\n");
+	printf("            TurboDos21, TurboDos21HS, XDos243F, XDos243N,\n");
+	printf("            MyPicoDos403, MyPicoDos403HS,\n");
 	printf("            MyPicoDos404, MyPicoDos404N, MyPicoDos404R, MyPicoDos404RN,\n");
-	printf("            MyPicoDos404B, MyPicoDos405, MyPicoDos405A, MyPicoDos405N,\n");
-	printf("            MyPicoDos405R, MyPicoDos405RA, MyPicoDos405RN, MyPicoDos405B,\n");
+	printf("            MyPicoDos404B,\n");
+	printf("            MyPicoDos405, MyPicoDos405A, MyPicoDos405N, MyPicoDos405R\n");
+	printf("            MyPicoDos405RA, MyPicoDos405RN, MyPicoDos405B,\n");
 	printf("            MyPicoDos405S0, MyPicoDos405S1, PicoBoot405\n");
 
 	SIOTracer::GetInstance()->RemoveAllTracers();
