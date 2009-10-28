@@ -34,6 +34,49 @@
 #include "VirtualImageObserver.h"
 #include "Version.h"
 
+struct BootEntry {
+	const char* name;
+	Dos2xUtils::EBootType bootType;
+};
+
+#define BOOT_ENTRY(name) \
+{ #name, Dos2xUtils::eBoot##name },
+
+struct BootEntry BootTypeTable[] = {
+BOOT_ENTRY(Dos20)
+BOOT_ENTRY(Dos25)
+BOOT_ENTRY(MyDos4533)
+BOOT_ENTRY(MyDos4534)
+BOOT_ENTRY(TurboDos21)
+BOOT_ENTRY(TurboDos21HS)
+BOOT_ENTRY(XDos243F)
+BOOT_ENTRY(XDos243N)
+
+BOOT_ENTRY(MyPicoDos403)
+BOOT_ENTRY(MyPicoDos403HS)
+
+BOOT_ENTRY(MyPicoDos404)
+BOOT_ENTRY(MyPicoDos404N)
+BOOT_ENTRY(MyPicoDos404R)
+BOOT_ENTRY(MyPicoDos404RN)
+BOOT_ENTRY(MyPicoDos404B)
+
+BOOT_ENTRY(MyPicoDos405)
+BOOT_ENTRY(MyPicoDos405A)
+BOOT_ENTRY(MyPicoDos405N)
+BOOT_ENTRY(MyPicoDos405R)
+BOOT_ENTRY(MyPicoDos405RA)
+BOOT_ENTRY(MyPicoDos405RN)
+BOOT_ENTRY(MyPicoDos405B)
+BOOT_ENTRY(MyPicoDos405S0)
+BOOT_ENTRY(MyPicoDos405S1)
+
+{ "PicoBoot405", Dos2xUtils::ePicoBoot405 },
+{ NULL, Dos2xUtils::eBootDefault }
+};
+
+#undef BOOT_ENTRY
+
 #ifdef ALL_IN_ONE
 int dir2atr_main(int argc, char**argv)
 #else
@@ -61,6 +104,7 @@ int main(int argc, char**argv)
 	char* directory;
 	char* atrfilename;
 	ESectorLength seclen;
+	unsigned int idx;
 
 	struct stat statbuf;
 
@@ -74,60 +118,15 @@ int main(int argc, char**argv)
 		case 'p': piconametype = Dos2xUtils::ePicoName; printf("creating PICONAME.TXT\n"); break;
 		case 'P': piconametype = Dos2xUtils::ePicoNameWithoutExtension; printf("creating PICONAME.TXT (without file extensions)\n"); break;
 		case 'b':
-			if (strcasecmp(optarg,"dos20") == 0) {
-				bootType = Dos2xUtils::eBootDos20;
-			} else if (strcasecmp(optarg,"dos25") == 0) {
-				bootType = Dos2xUtils::eBootDos25;
-			} else if (strcasecmp(optarg,"mydos4533") == 0) {
-				bootType = Dos2xUtils::eBootMyDos4533;
-			} else if (strcasecmp(optarg,"mydos4534") == 0) {
-				bootType = Dos2xUtils::eBootMyDos4534;
-			} else if (strcasecmp(optarg,"turbodos21") == 0) {
-				bootType = Dos2xUtils::eBootTurboDos21;
-			} else if (strcasecmp(optarg,"turbodos21hs") == 0) {
-				bootType = Dos2xUtils::eBootTurboDos21HS;
-			} else if (strcasecmp(optarg,"xdos243f") == 0) {
-				bootType = Dos2xUtils::eBootXDos243F;
-			} else if (strcasecmp(optarg,"xdos243n") == 0) {
-				bootType = Dos2xUtils::eBootXDos243N;
-			} else if (strcasecmp(optarg,"mypicodos403") == 0) {
-				bootType = Dos2xUtils::eBootMyPicoDos403;
-			} else if (strcasecmp(optarg,"mypicodos403hs") == 0) {
-				bootType = Dos2xUtils::eBootMyPicoDos403HS;
-
-			} else if (strcasecmp(optarg,"mypicodos404") == 0) {
-				bootType = Dos2xUtils::eBootMyPicoDos404;
-			} else if (strcasecmp(optarg,"mypicodos404n") == 0) {
-				bootType = Dos2xUtils::eBootMyPicoDos404N;
-			} else if (strcasecmp(optarg,"mypicodos404r") == 0) {
-				bootType = Dos2xUtils::eBootMyPicoDos404R;
-			} else if (strcasecmp(optarg,"mypicodos404rn") == 0) {
-				bootType = Dos2xUtils::eBootMyPicoDos404RN;
-			} else if (strcasecmp(optarg,"mypicodos404b") == 0) {
-				bootType = Dos2xUtils::eBootMyPicoDos404B;
-
-			} else if (strcasecmp(optarg,"mypicodos405") == 0) {
-				bootType = Dos2xUtils::eBootMyPicoDos405;
-			} else if (strcasecmp(optarg,"mypicodos405a") == 0) {
-				bootType = Dos2xUtils::eBootMyPicoDos405A;
-			} else if (strcasecmp(optarg,"mypicodos405n") == 0) {
-				bootType = Dos2xUtils::eBootMyPicoDos405N;
-			} else if (strcasecmp(optarg,"mypicodos405r") == 0) {
-				bootType = Dos2xUtils::eBootMyPicoDos405R;
-			} else if (strcasecmp(optarg,"mypicodos405ra") == 0) {
-				bootType = Dos2xUtils::eBootMyPicoDos405RA;
-			} else if (strcasecmp(optarg,"mypicodos405rn") == 0) {
-				bootType = Dos2xUtils::eBootMyPicoDos405RN;
-			} else if (strcasecmp(optarg,"mypicodos405b") == 0) {
-				bootType = Dos2xUtils::eBootMyPicoDos405B;
-			} else if (strcasecmp(optarg,"mypicodos405s0") == 0) {
-				bootType = Dos2xUtils::eBootMyPicoDos405S0;
-			} else if (strcasecmp(optarg,"mypicodos405s1") == 0) {
-				bootType = Dos2xUtils::eBootMyPicoDos405S1;
-			} else if (strcasecmp(optarg,"picoboot405") == 0) {
-				bootType = Dos2xUtils::ePicoBoot405;
+			idx = 0;
+			while (BootTypeTable[idx].name && strcasecmp(optarg, BootTypeTable[idx].name)) {
+				idx++;
+			}
+			if (BootTypeTable[idx].name) {
+				bootType = BootTypeTable[idx].bootType;
 			} else {
 				printf("unknown boot sector type \"%s\"\n", optarg);
+				goto usage;
 			}
 		}
 	}

@@ -58,7 +58,9 @@ public:
 	bool InitVTOC();
 
 	enum EBootType {
-		eBootAtariSIOMyPicoDos = 0,
+		eBootNone = 0,
+
+		eBootAtariSIOMyPicoDos,
 		eBootDos20,
 		eBootDos25,
 		eBootMyDos4533,
