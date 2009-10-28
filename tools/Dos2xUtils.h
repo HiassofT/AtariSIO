@@ -211,7 +211,7 @@ private:
 		bool use16BitLinks,
 		unsigned int numVTOC);
 
-	bool AddDataBlock(const char* atariname, unsigned char* datablock, unsigned int blocklen);
+	bool AddDataBlock(const char* atariname, const unsigned char* datablock, unsigned int blocklen);
 	unsigned int AddDirectory(const char* dirname, unsigned int& entryNum);
 	
 	bool AddEntry(const char* longname, char*& atariname, unsigned int& entryNumber);
@@ -235,6 +235,9 @@ private:
 		const char* filename,
 		unsigned int starting_sector,
 		bool use16BitSectorLinks);
+
+	// returns index in DosBootTable
+	static unsigned int FindDosBootTableIdx(EBootType type);
 
 	void BuildAtariName(const char* name, char* atariname);
 

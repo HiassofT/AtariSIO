@@ -360,7 +360,7 @@ unsigned int Dos2xUtils::AddDirectory(const char* name, unsigned int& entryNum)
 	return sectors[0];
 }
 
-bool Dos2xUtils::AddDataBlock(const char* atariname, unsigned char* buffer, unsigned int blocklen)
+bool Dos2xUtils::AddDataBlock(const char* atariname, const unsigned char* buffer, unsigned int blocklen)
 {
 	unsigned int fileSeclen;
 	bool sector720 = false;
@@ -1657,229 +1657,206 @@ static unsigned char PicoDosSys405S[] = {
 #include "6502/picosd405.c"
 };
 
+struct DosBootEntry {
+	Dos2xUtils::EBootType bootType;
+	const unsigned char* bootSectors;
+	const char* dosSysName;
+	const char* dosSysAtariName;
+	const unsigned char* dosSysData;
+	const unsigned int dosSysDataLen;
+	const unsigned int dosSysOfsLo;
+	const unsigned int dosSysOfsHi;
+	bool isMyPicoDos;
+};
+
+#define BOOTONLY_ENTRY(name, bootsec) \
+{ name, bootsec, NULL, NULL, NULL, 0, 0, 0, false },
+
+#define DOS_ENTRY(name, lo, hi) \
+{ Dos2xUtils::eBoot##name, BootSectors##name, "DOS.SYS", "DOS     SYS", NULL, 0, (lo), (hi), false },
+
+#define MYPDOS_ENTRY(name, data) \
+{ Dos2xUtils::eBootMyPicoDos##name, BootSectorsMyPicoDos##data, "PICODOS.SYS", "PICODOS SYS", (PicoDosSys##data), sizeof(PicoDosSys##data), 0x09, 0x0a, true },
+
+static struct DosBootEntry DosBootTable[] = {
+BOOTONLY_ENTRY(Dos2xUtils::eBootAtariSIOMyPicoDos, MyPicoDosCode::fBootCode)
+
+DOS_ENTRY(Dos20, 0x0f, 0x10)
+DOS_ENTRY(Dos25, 0x0f, 0x10)
+DOS_ENTRY(MyDos4533, 0x0f, 0x10)
+DOS_ENTRY(MyDos4534, 0x0f, 0x10)
+DOS_ENTRY(TurboDos21, 0x23, 0x21)
+DOS_ENTRY(TurboDos21HS, 0x23, 0x21)
+DOS_ENTRY(XDos243F, 0x32, 0x34)
+DOS_ENTRY(XDos243N, 0x32, 0x34)
+
+MYPDOS_ENTRY(403, 403)
+MYPDOS_ENTRY(403HS, 403HS)
+
+MYPDOS_ENTRY(404, 404)
+MYPDOS_ENTRY(404N, 404)
+MYPDOS_ENTRY(404R, 404R)
+MYPDOS_ENTRY(404RN, 404R)
+MYPDOS_ENTRY(404B, 404B)
+
+MYPDOS_ENTRY(405, 405)
+MYPDOS_ENTRY(405A, 405)
+MYPDOS_ENTRY(405N, 405)
+MYPDOS_ENTRY(405R, 405R)
+MYPDOS_ENTRY(405RA, 405R)
+MYPDOS_ENTRY(405RN, 405R)
+MYPDOS_ENTRY(405B, 405B)
+MYPDOS_ENTRY(405S0, 405S)
+MYPDOS_ENTRY(405S1, 405S)
+
+BOOTONLY_ENTRY(Dos2xUtils::ePicoBoot405, BootSectorsPicoBoot405)
+
+};
+
+#undef DOS_ENTRY
+#undef MYPDOS_ENTRY
+#undef BOOTONLY_ENTRY
+
+unsigned int Dos2xUtils::FindDosBootTableIdx(EBootType type)
+{
+	unsigned int i;
+	for (i=0; i<sizeof(DosBootTable); i++) {
+		if (DosBootTable[i].bootType == type) {
+			return i;
+		}
+	}
+	char msg[100];
+	snprintf(msg, 100, "unknown BootType %d in FindDosBootTableIdx", type);
+	AssertMsg(false, msg);
+	return 0;
+}
 
 bool Dos2xUtils::WriteBootSectors(EBootType type)
 {
 	int s;
 	unsigned char buf[384];
 
-	// default boot code: get MyPicoDos from AtariSIO
-	MyPicoDosCode* mypd = MyPicoDosCode::GetInstance();
-	for (s=1;s<=3;s++) {
-		mypd->GetBootCodeSector(s, buf+(s-1)*128, 128);
-	}
+	DosBootEntry* entry = DosBootTable + FindDosBootTableIdx(type);
 
-	RCPtr<Dos2Dir> dir = GetDos2Directory();
-
-	unsigned char entry;
+	unsigned char dosentry;
 	unsigned char status;
 	unsigned int startsec;
 
+	memcpy(buf, entry->bootSectors, 384);
 	bool dd = (fImage->GetSectorLength() == 256);
 
+	if (entry->dosSysName) {
+		RCPtr<Dos2Dir> dir = GetDos2Directory();
+		if (dir->FindFile(entry->dosSysAtariName, dosentry, status, startsec)) {
+			buf[entry->dosSysOfsLo] = startsec & 0xff;
+			buf[entry->dosSysOfsHi] = startsec >> 8;
+		} else {
+			AWARN("cannot find %s - using default boot sectors", entry->dosSysName);
+			type = eBootDefault;
+			entry = DosBootTable + FindDosBootTableIdx(eBootDefault);
+			memcpy(buf, entry->bootSectors, 384);
+		}
+	}
+
+	if (entry->isMyPicoDos) {
+		if (dd) {
+			buf[0x0b] = 0xfd;
+			buf[0x0d] = 0x00;
+			buf[0x0e] = 0x01;
+		} else {
+			buf[0x0b] = 0x7d;
+			buf[0x0d] = 0x80;
+			buf[0x0e] = 0x00;
+		}
+		if (fUse16BitSectorLinks) {
+			buf[0x0c] = 0xff;
+		} else {
+			buf[0x0c] = 0x03;
+		}
+	}
+
 	switch (type) {
-	case eBootDos20:
-		if (dir->FindFile("DOS     SYS", entry, status, startsec)) {
-			memcpy(buf, BootSectorsDos20, 384);
-			buf[0x000f] = startsec & 0xff;
-			buf[0x0010] = startsec >> 8;
-		} else {
-			AWARN("cannot find DOS.SYS - using default boot sectors");
-		}
-		break;
-	case eBootDos25:
-		if (dir->FindFile("DOS     SYS", entry, status, startsec)) {
-			memcpy(buf, BootSectorsDos25, 384);
-			buf[0x000f] = startsec & 0xff;
-			buf[0x0010] = startsec >> 8;
-		} else {
-			AWARN("cannot find DOS.SYS - using default boot sectors");
-		}
-		break;
 	case eBootMyDos4533:
 	case eBootMyDos4534:
-		if (dir->FindFile("DOS     SYS", entry, status, startsec)) {
-			if (type == eBootMyDos4533) {
-				memcpy(buf, BootSectorsMyDos4533, 384);
-			} else {
-				memcpy(buf, BootSectorsMyDos4534, 384);
-			}
-			if (dd) {
-				buf[0x000e] = 2;
-				buf[0x00c4] = 2;
-				buf[0x0011] = 0xfd;
-				buf[0x0170] = 0xfd;
-			} else {
-				buf[0x000e] = 1;
-				buf[0x00c4] = 1;
-				buf[0x0011] = 0x7d;
-				buf[0x0170] = 0x7d;
-			}
-			if (fUse16BitSectorLinks) {
-				buf[0x0034] = 0xff;
-			} else {
-				buf[0x0034] = 0x03;
-			}
-			buf[0x000f] = startsec & 0xff;
-			buf[0x0010] = startsec >> 8;
+		if (dd) {
+			buf[0x000e] = 2;
+			buf[0x00c4] = 2;
+			buf[0x0011] = 0xfd;
+			buf[0x0170] = 0xfd;
 		} else {
-			AWARN("cannot find DOS.SYS - using default boot sectors");
+			buf[0x000e] = 1;
+			buf[0x00c4] = 1;
+			buf[0x0011] = 0x7d;
+			buf[0x0170] = 0x7d;
+		}
+		if (fUse16BitSectorLinks) {
+			buf[0x0034] = 0xff;
+		} else {
+			buf[0x0034] = 0x03;
 		}
 		break;
-	case eBootTurboDos21:
-		if (dir->FindFile("DOS     SYS", entry, status, startsec)) {
-			memcpy(buf, BootSectorsTurboDos21, 384);
-			buf[0x0023] = startsec & 0xff;
-			buf[0x0021] = startsec >> 8;
-		} else {
-			AWARN("cannot find DOS.SYS - using default boot sectors");
-		}
-		break;
-	case eBootTurboDos21HS:
-		if (dir->FindFile("DOS     SYS", entry, status, startsec)) {
-			memcpy(buf, BootSectorsTurboDos21HS, 384);
-			buf[0x0023] = startsec & 0xff;
-			buf[0x0021] = startsec >> 8;
-		} else {
-			AWARN("cannot find DOS.SYS - using default boot sectors");
-		}
-		break;
+
 	case eBootXDos243F:
 	case eBootXDos243N:
-		if (dir->FindFile("DOS     SYS", entry, status, startsec)) {
-			if (type == eBootXDos243F) {
-				memcpy(buf, BootSectorsXDos243F, 384);
-			} else {
-				memcpy(buf, BootSectorsXDos243N, 384);
-			}
-			buf[0x0032] = startsec & 0xff;
-			buf[0x0034] = startsec >> 8;
-			if (dd) {
-				buf[0x0021] = 0xfd;
-			} else {
-				buf[0x0021] = 0x7d;
-			}
+		if (dd) {
+			buf[0x0021] = 0xfd;
 		} else {
-			AWARN("cannot find DOS.SYS - using default boot sectors");
+			buf[0x0021] = 0x7d;
 		}
+		break;
+
+	case eBootMyPicoDos404:
+		buf[0x0f]=1;
+		break;
+	case eBootMyPicoDos404N:
+		buf[0x0f]=0;
+		break;
+
+	case eBootMyPicoDos404R:
+		buf[0x0f]=1;
+		break;
+	case eBootMyPicoDos404RN:
+		buf[0x0f]=0;
+		break;
+
+	case eBootMyPicoDos405:
+		buf[0x0f]=0x81;
+		break;
+	case eBootMyPicoDos405A:
+		buf[0x0f]=0x01;
+		break;
+	case eBootMyPicoDos405N:
+		buf[0x0f]=0;
+		break;
+
+	case eBootMyPicoDos405R:
+		buf[0x0f]=0x81;
+		break;
+	case eBootMyPicoDos405RA:
+		buf[0x0f]=0x01;
+		break;
+	case eBootMyPicoDos405RN:
+		buf[0x0f]=0;
+		break;
+
+	case eBootMyPicoDos405S0:
+		buf[0x0f]=0x81;
+		buf[0x11]=0;
+		break;
+	case eBootMyPicoDos405S1:
+		buf[0x0f]=0x81;
+		buf[0x11]=1;
 		break;
 
 	case ePicoBoot405:
-		memcpy(buf, BootSectorsPicoBoot405, 384);
 		if (dd) {
 			buf[0] = 0;
 		} else {
 			buf[0] = 0x80;
 		}
 		break;
-	case eBootMyPicoDos403:
-	case eBootMyPicoDos403HS:
-	case eBootMyPicoDos404:
-	case eBootMyPicoDos404N:
-	case eBootMyPicoDos404R:
-	case eBootMyPicoDos404RN:
-	case eBootMyPicoDos404B:
-	case eBootMyPicoDos405:
-	case eBootMyPicoDos405A:
-	case eBootMyPicoDos405N:
-	case eBootMyPicoDos405R:
-	case eBootMyPicoDos405RA:
-	case eBootMyPicoDos405RN:
-	case eBootMyPicoDos405B:
-	case eBootMyPicoDos405S0:
-	case eBootMyPicoDos405S1:
-		if (dir->FindFile("PICODOS SYS", entry, status, startsec)) {
-			switch (type) {
-			case eBootMyPicoDos403:
-				memcpy(buf, BootSectorsMyPicoDos403, 384);
-				break;
-			case eBootMyPicoDos403HS:
-				memcpy(buf, BootSectorsMyPicoDos403HS, 384);
-				break;
 
-			case eBootMyPicoDos404:
-				memcpy(buf, BootSectorsMyPicoDos404, 384);
-				buf[0x0f]=1;
-				break;
-			case eBootMyPicoDos404N:
-				memcpy(buf, BootSectorsMyPicoDos404, 384);
-				buf[0x0f]=0;
-				break;
-			case eBootMyPicoDos404R:
-				memcpy(buf, BootSectorsMyPicoDos404R, 384);
-				buf[0x0f]=1;
-				break;
-			case eBootMyPicoDos404RN:
-				memcpy(buf, BootSectorsMyPicoDos404R, 384);
-				buf[0x0f]=0;
-				break;
-			case eBootMyPicoDos404B:
-				memcpy(buf, BootSectorsMyPicoDos404B, 384);
-				break;
-
-			case eBootMyPicoDos405:
-				memcpy(buf, BootSectorsMyPicoDos405, 384);
-				buf[0x0f]=0x81;
-				break;
-			case eBootMyPicoDos405A:
-				memcpy(buf, BootSectorsMyPicoDos405, 384);
-				buf[0x0f]=0x01;
-				break;
-			case eBootMyPicoDos405N:
-				memcpy(buf, BootSectorsMyPicoDos405, 384);
-				buf[0x0f]=0;
-				break;
-			case eBootMyPicoDos405R:
-				memcpy(buf, BootSectorsMyPicoDos405R, 384);
-				buf[0x0f]=0x81;
-				break;
-			case eBootMyPicoDos405RA:
-				memcpy(buf, BootSectorsMyPicoDos405R, 384);
-				buf[0x0f]=0x01;
-				break;
-			case eBootMyPicoDos405RN:
-				memcpy(buf, BootSectorsMyPicoDos405R, 384);
-				buf[0x0f]=0;
-				break;
-			case eBootMyPicoDos405B:
-				memcpy(buf, BootSectorsMyPicoDos405B, 384);
-				break;
-			case eBootMyPicoDos405S0:
-				memcpy(buf, BootSectorsMyPicoDos405S, 384);
-				buf[0x0f]=0x81;
-				buf[0x11]=0;
-				break;
-			case eBootMyPicoDos405S1:
-				memcpy(buf, BootSectorsMyPicoDos405S, 384);
-				buf[0x0f]=0x81;
-				buf[0x11]=1;
-				break;
-
-			default:
-				Assert(false);
-				break;
-			}
-			buf[0x09] = startsec & 0xff;
-			buf[0x0a] = startsec >> 8;
-			if (dd) {
-				buf[0x0b] = 0xfd;
-				buf[0x0d] = 0x00;
-				buf[0x0e] = 0x01;
-			} else {
-				buf[0x0b] = 0x7d;
-				buf[0x0d] = 0x80;
-				buf[0x0e] = 0x00;
-			}
-			if (fUse16BitSectorLinks) {
-				buf[0x0c] = 0xff;
-			} else {
-				buf[0x0c] = 0x03;
-			}
-		} else {
-			AWARN("cannot find PICODOS.SYS - using default boot sectors");
-		}
-		break;
-	case eBootAtariSIOMyPicoDos:
+	default:
 		break;
 	}
 
@@ -1891,93 +1868,19 @@ bool Dos2xUtils::WriteBootSectors(EBootType type)
 
 unsigned int Dos2xUtils::GetBootFileLength(EBootType type)
 {
-	switch (type) {
-	case eBootMyPicoDos403:
-		return sizeof(PicoDosSys403);
-	case eBootMyPicoDos403HS:
-		return sizeof(PicoDosSys403HS);
-
-	case eBootMyPicoDos404:
-	case eBootMyPicoDos404N:
-		return sizeof(PicoDosSys404);
-	case eBootMyPicoDos404R:
-	case eBootMyPicoDos404RN:
-		return sizeof(PicoDosSys404R);
-	case eBootMyPicoDos404B:
-		return sizeof(PicoDosSys404B);
-
-	case eBootMyPicoDos405:
-	case eBootMyPicoDos405A:
-	case eBootMyPicoDos405N:
-		return sizeof(PicoDosSys405);
-	case eBootMyPicoDos405R:
-	case eBootMyPicoDos405RA:
-	case eBootMyPicoDos405RN:
-		return sizeof(PicoDosSys405R);
-	case eBootMyPicoDos405B:
-		return sizeof(PicoDosSys405B);
-	case eBootMyPicoDos405S0:
-	case eBootMyPicoDos405S1:
-		return sizeof(PicoDosSys405S);
-	default:
-		return 0;
-	}
+	DosBootEntry* entry = DosBootTable + FindDosBootTableIdx(type);
+	return entry->dosSysDataLen;
 }
 
 bool Dos2xUtils::AddBootFile(EBootType type)
 {
-	int len = 0;
-	unsigned char* buf = 0;
-	switch (type) {
-	case eBootMyPicoDos403:
-		len = sizeof(PicoDosSys403);
-		buf = PicoDosSys403;
-		break;
-	case eBootMyPicoDos403HS:
-		len = sizeof(PicoDosSys403HS);
-		buf = PicoDosSys403HS;
-		break;
+	DosBootEntry* entry = DosBootTable + FindDosBootTableIdx(type);
 
-	case eBootMyPicoDos404:
-	case eBootMyPicoDos404N:
-		len = sizeof(PicoDosSys404);
-		buf = PicoDosSys404;
-		break;
-	case eBootMyPicoDos404R:
-	case eBootMyPicoDos404RN:
-		len = sizeof(PicoDosSys404R);
-		buf = PicoDosSys404R;
-		break;
-	case eBootMyPicoDos404B:
-		len = sizeof(PicoDosSys404B);
-		buf = PicoDosSys404B;
-		break;
-
-	case eBootMyPicoDos405:
-	case eBootMyPicoDos405A:
-	case eBootMyPicoDos405N:
-		len = sizeof(PicoDosSys405);
-		buf = PicoDosSys405;
-		break;
-	case eBootMyPicoDos405R:
-	case eBootMyPicoDos405RA:
-	case eBootMyPicoDos405RN:
-		len = sizeof(PicoDosSys405R);
-		buf = PicoDosSys405R;
-		break;
-	case eBootMyPicoDos405B:
-		len = sizeof(PicoDosSys405B);
-		buf = PicoDosSys405B;
-		break;
-	case eBootMyPicoDos405S0:
-	case eBootMyPicoDos405S1:
-		len = sizeof(PicoDosSys405S);
-		buf = PicoDosSys405S;
-		break;
-	default:
+	if (entry->dosSysAtariName && entry->dosSysData && entry->dosSysDataLen) {
+		return AddDataBlock(entry->dosSysAtariName, entry->dosSysData, entry->dosSysDataLen);
+	} else {
 		return true;
 	}
-	return AddDataBlock("PICODOS SYS", buf, len);
 }
 
 void Dos2xUtils::MarkSectorsFree(unsigned int first_sector, unsigned int last_sector)

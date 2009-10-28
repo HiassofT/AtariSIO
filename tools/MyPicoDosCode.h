@@ -49,8 +49,9 @@ private:
 
 #include "6502/mypicodoscode.h"
 
-	static unsigned char fCode[eCodeLength];
-	static unsigned char fBootCode[eBootLength];
+public:
+	static const unsigned char fCode[eCodeLength];
+	static const unsigned char fBootCode[eBootLength];
 };
 
 inline MyPicoDosCode* MyPicoDosCode::GetInstance()

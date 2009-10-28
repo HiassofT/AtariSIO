@@ -86,10 +86,10 @@ int main(void)
 		printf("cannot create mypicodoscode.c\n");
 		return 1;
 	}
-	fprintf(out,"unsigned char MyPicoDosCode::fCode[] = {");
+	fprintf(out,"const unsigned char MyPicoDosCode::fCode[] = {");
 	dump_buf(out, buf, len);
 	fprintf(out,"\n};\n\n");
-	fprintf(out,"unsigned char MyPicoDosCode::fBootCode[] = {");
+	fprintf(out,"const unsigned char MyPicoDosCode::fBootCode[] = {");
 	dump_buf(out, bootbuf, bootlen);
 	fprintf(out,"\n};\n\n");
 
