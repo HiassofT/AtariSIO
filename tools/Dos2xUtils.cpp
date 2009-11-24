@@ -521,7 +521,7 @@ bool Dos2xUtils::AddEntry(const char* atariname, bool allowNameChange, unsigned 
 	if (allowNameChange) {
 
 		// find first blank in filename, otherwise replace last two characters
-		char* ablank = strchr(atariname, ' ');
+		const char* ablank = strchr(atariname, ' ');
 		int pos = 6;
 		if (ablank) {
 			pos = ablank - atariname;

@@ -146,3 +146,4 @@ AtariSIO changelog:
   - atariserver, dir2atr: added support for stripping file extensions
     when creating PICONAME.TXT
   - dir2atr: added support for XDOS 2.43F and XDOS 2.43N
+  - fix compile errors with Ubuntu 9.10/glibc2.10
