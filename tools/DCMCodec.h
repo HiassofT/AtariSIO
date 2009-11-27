@@ -80,9 +80,9 @@ private:
 	bool	fLastPassFlag;
 	uint8_t	fCurrentBuffer[ 0x100 ];
 	uint8_t	fPrevBuffer[ 0x100 ];
-	unsigned int	fSectorSize;
-	unsigned int	fCurrentSector;
-	unsigned int	fFileLength;
+	uint16_t	fSectorSize;
+	uint16_t	fCurrentSector;
+	off_t 	fFileLength;
 	bool	fAlreadyFormatted;
 
 	uint8_t* fCurrentPtr;

@@ -42,23 +42,23 @@ public:
 
 	virtual bool Close() = 0;
 
-	virtual unsigned int ReadBlock(void* buf, unsigned int len) = 0;
-	virtual unsigned int WriteBlock(const void* buf, unsigned int len) = 0;
+	virtual size_t ReadBlock(void* buf, size_t len) = 0;
+	virtual size_t WriteBlock(const void* buf, size_t len) = 0;
 
-	virtual unsigned int GetFileLength() = 0;
-	virtual bool Seek(unsigned int pos) = 0;
-	virtual unsigned int Tell() = 0;
+	virtual off_t GetFileLength() = 0;
+	virtual bool Seek(off_t pos) = 0;
+	virtual off_t Tell() = 0;
 
 	bool ReadByte(uint8_t& byte);
 	bool WriteByte(const uint8_t& byte);
 
 	/* read/write lo, hi byte */
-	bool ReadWord(unsigned int& word);
-	bool WriteWord(const unsigned int& word);
+	bool ReadWord(uint16_t& word);
+	bool WriteWord(const uint16_t& word);
 
 	/* read/write hi, lo byte */
-	bool ReadBigEndianWord(unsigned int& word);
-	bool WriteBigEndianWord(const unsigned int& word);
+	bool ReadBigEndianWord(uint16_t& word);
+	bool WriteBigEndianWord(const uint16_t& word);
 
 	virtual bool Unlink(const char* filename);
 
@@ -79,12 +79,12 @@ public:
 
 	virtual bool Close();
 
-	virtual unsigned int ReadBlock(void* buf, unsigned int len);
-	virtual unsigned int WriteBlock(const void* buf, unsigned int len);
+	virtual size_t ReadBlock(void* buf, size_t len);
+	virtual size_t WriteBlock(const void* buf, size_t len);
 
-	virtual unsigned int GetFileLength();
-	virtual bool Seek(unsigned int pos);
-	virtual unsigned int Tell();
+	virtual off_t GetFileLength();
+	virtual bool Seek(off_t pos);
+	virtual off_t Tell();
 
 	virtual bool IsOpen() const;
 
@@ -107,12 +107,12 @@ public:
 
 	virtual bool Close();
 
-	virtual unsigned int ReadBlock(void* buf, unsigned int len);
-	virtual unsigned int WriteBlock(const void* buf, unsigned int len);
+	virtual size_t ReadBlock(void* buf, size_t len);
+	virtual size_t WriteBlock(const void* buf, size_t len);
 
-	virtual unsigned int GetFileLength();
-	virtual bool Seek(unsigned int pos);
-	virtual unsigned int Tell();
+	virtual off_t GetFileLength();
+	virtual bool Seek(off_t pos);
+	virtual off_t Tell();
 
 	virtual bool IsOpen() const;
 

@@ -37,7 +37,7 @@ DirEntry::DirEntry()
 {
 }
 
-DirEntry::DirEntry(const char* name, EEntryType type, size_t bytesize)
+DirEntry::DirEntry(const char* name, EEntryType type, off_t bytesize)
 	: fName(0), fLen(0), fType(type), fByteSize(bytesize)
 {
 	SetName(name);
@@ -111,7 +111,7 @@ DirEntry* Directory::Get(unsigned int num)
 	}
 }
 
-void Directory::AddEntry(const char* name, DirEntry::EEntryType type, size_t bytesize)
+void Directory::AddEntry(const char* name, DirEntry::EEntryType type, off_t bytesize)
 {
 	PrepareForIndex(fSize);
 	fEntries[fSize] = new DirEntry(name, type, bytesize);

@@ -36,7 +36,7 @@ public:
 	};
 
 	DirEntry();
-	DirEntry(const char* name, EEntryType type, size_t bytesize);
+	DirEntry(const char* name, EEntryType type, off_t bytesize);
 
 	~DirEntry();
 
@@ -55,7 +55,7 @@ public:
 	char* fName;
 	unsigned int fLen;
 	EEntryType fType;
-	size_t fByteSize;
+	off_t fByteSize;
 };
 
 class Directory : public RefCounted {
@@ -79,7 +79,7 @@ private:
 	void Init();
 	void Realloc(unsigned int newsize);
 	inline void PrepareForIndex(unsigned int num);
-	void AddEntry(const char* name, DirEntry::EEntryType type, size_t bytesize);
+	void AddEntry(const char* name, DirEntry::EEntryType type, off_t bytesize);
 
 	DirEntry** fEntries;
 	unsigned int fSize;

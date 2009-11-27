@@ -29,7 +29,7 @@
 ComBlock::ComBlock(RCPtr<FileIO>& f)
 	: fData(0), fFileOffset(0)
 {
-	unsigned int endadr;
+	uint16_t endadr;
 	Assert(f.IsNotNull());
 	Assert(f->IsOpen());
 
@@ -61,7 +61,7 @@ ComBlock::ComBlock(RCPtr<FileIO>& f)
 	}
 }
 
-ComBlock::ComBlock(const uint8_t* data, unsigned int len, unsigned int start_address)
+ComBlock::ComBlock(const uint8_t* data, uint32_t len, uint16_t start_address)
 	: fData(0), fFileOffset(0)
 {
 	if (!data) {
@@ -91,7 +91,7 @@ void ComBlock::ClearData()
 
 bool ComBlock::WriteToFile(RCPtr<FileIO>& f, bool include_ffff) const
 {
-	unsigned int tmp;
+	uint16_t tmp;
 	Assert(f.IsNotNull());
 	Assert(f->IsOpen());
 

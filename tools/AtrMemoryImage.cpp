@@ -601,10 +601,10 @@ bool AtrMemoryImage::ReadImageFromDiFile(const char* filename, bool beQuiet)
 	uint8_t buf[256];
 	uint8_t* map;
 	uint8_t unknown;
-	unsigned int sectorsPerTrack;
+	uint16_t sectorsPerTrack;
         uint8_t tracksPerSide;
 	uint8_t sides;
-	unsigned int sectorLength;
+	uint16_t sectorLength;
 	unsigned int totalSectors;
 	ESectorLength density;
 
@@ -640,7 +640,7 @@ bool AtrMemoryImage::ReadImageFromDiFile(const char* filename, bool beQuiet)
 		}
 
 		// check version
-		unsigned int version;
+		uint16_t version;
 		if (!fileio->ReadWord(version)) {
 			goto failure_eof;
 		}

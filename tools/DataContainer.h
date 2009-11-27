@@ -45,22 +45,22 @@ public:
 	bool AppendBlock(const void* data, unsigned int len);
 	bool AppendString(const char* data);
 
-	inline size_t GetLength() const;
+	inline off_t GetLength() const;
 
-	bool GetDataBlock(void* data, size_t start, size_t len);
+	bool GetDataBlock(void* data, off_t start, off_t len);
 
 	inline const void* GetInternalDataPointer() const;
 
 private:
-	inline void PrepareForSize(size_t size);
+	inline void PrepareForSize(off_t size);
 
-	size_t fAllocatedSize;
-	size_t fSize;
+	off_t fAllocatedSize;
+	off_t fSize;
 
 	uint8_t* fData;
 };
 
-inline void DataContainer::PrepareForSize(size_t size)
+inline void DataContainer::PrepareForSize(off_t size)
 {
 	if (size > fAllocatedSize) {
 		fAllocatedSize = (size) * 2;
@@ -68,7 +68,7 @@ inline void DataContainer::PrepareForSize(size_t size)
 	}
 }
 
-inline size_t DataContainer::GetLength() const
+inline off_t DataContainer::GetLength() const
 {
 	return fSize;
 }

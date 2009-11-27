@@ -35,16 +35,16 @@ public:
 	ComBlock(RCPtr<FileIO>& f);
 
 	// create COM block from data
-	ComBlock(const uint8_t* data, unsigned int len, unsigned int start_address);
+	ComBlock(const uint8_t* data, uint32_t len, uint16_t start_address);
 
 	virtual ~ComBlock();
 
-	unsigned int GetStartAddress() const;
-	unsigned int GetEndAddress() const;
-	unsigned int GetLength() const;
-	long GetFileOffset() const;
+	uint16_t GetStartAddress() const;
+	uint16_t GetEndAddress() const;
+	uint32_t GetLength() const;
+	off_t GetFileOffset() const;
 
-	bool ContainsAddress(unsigned int adr) const;
+	bool ContainsAddress(uint16_t) const;
 
 	// write with COM header and, optionally, including the $FF, $FF start header
 	bool WriteToFile(RCPtr<FileIO>& f, bool include_ffff = false) const;
@@ -52,7 +52,7 @@ public:
 	// write without COM header
 	bool WriteRawToFile(RCPtr<FileIO>& f) const;
 
-	uint8_t GetByte(unsigned int address) const;
+	uint8_t GetByte(uint16_t address) const;
 
 	const uint8_t* GetRawData() const;
 
@@ -62,38 +62,38 @@ private:
 	void SetData(uint8_t* data, unsigned int len, unsigned int start_address);
 	void ClearData();
 
-	unsigned int fStartAddress;
-	unsigned int fLen;
+	uint16_t fStartAddress;
+	uint32_t fLen;
 	uint8_t* fData;
-	long fFileOffset;
+	off_t fFileOffset;
 };
 
-inline unsigned int ComBlock::GetStartAddress() const
+inline uint16_t ComBlock::GetStartAddress() const
 {
 	return fStartAddress;
 }
 
-inline unsigned int ComBlock::GetEndAddress() const
+inline uint16_t ComBlock::GetEndAddress() const
 {
 	return fStartAddress + fLen - 1;
 }
 
-inline unsigned int ComBlock::GetLength() const
+inline uint32_t ComBlock::GetLength() const
 {
 	return fLen;
 }
 
-inline long ComBlock::GetFileOffset() const
+inline off_t ComBlock::GetFileOffset() const
 {
 	return fFileOffset;
 }
 
-inline bool ComBlock::ContainsAddress(unsigned int adr) const
+inline bool ComBlock::ContainsAddress(uint16_t adr) const
 {
 	return ((fStartAddress <= adr) && (fStartAddress + fLen - 1 >= adr));
 }
 
-inline uint8_t ComBlock::GetByte(unsigned int adr) const
+inline uint8_t ComBlock::GetByte(uint16_t adr) const
 {
 	Assert(ContainsAddress(adr));
 	return fData[adr - fStartAddress];

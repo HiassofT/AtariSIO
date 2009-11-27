@@ -42,7 +42,7 @@ bool FileIO::WriteByte(const uint8_t& byte)
 	return WriteBlock(&byte, 1) == 1;
 }
 
-bool FileIO::ReadWord(unsigned int& word)
+bool FileIO::ReadWord(uint16_t& word)
 {
 	uint8_t buf[2];
 
@@ -53,7 +53,7 @@ bool FileIO::ReadWord(unsigned int& word)
 	return true;
 }
 
-bool FileIO::WriteWord(const unsigned int& word)
+bool FileIO::WriteWord(const uint16_t& word)
 {
 	uint8_t buf[2];
 
@@ -66,7 +66,7 @@ bool FileIO::WriteWord(const unsigned int& word)
 	return true;
 }
 
-bool FileIO::ReadBigEndianWord(unsigned int& word)
+bool FileIO::ReadBigEndianWord(uint16_t& word)
 {
 	uint8_t buf[2];
 
@@ -77,7 +77,7 @@ bool FileIO::ReadBigEndianWord(unsigned int& word)
 	return true;
 }
 
-bool FileIO::WriteBigEndianWord(const unsigned int& word)
+bool FileIO::WriteBigEndianWord(const uint16_t& word)
 {
 	uint8_t buf[2];
 
@@ -143,7 +143,7 @@ bool StdFileIO::Close()
 }
 
 
-unsigned int StdFileIO::ReadBlock(void* buf, unsigned int len)
+size_t StdFileIO::ReadBlock(void* buf, size_t len)
 {
 	if (!IsOpen()) {
 		Assert(false);
@@ -152,7 +152,7 @@ unsigned int StdFileIO::ReadBlock(void* buf, unsigned int len)
 	return fread(buf, 1, len, fFile);
 }
 
-unsigned int StdFileIO::WriteBlock(const void* buf, unsigned int len)
+size_t StdFileIO::WriteBlock(const void* buf, size_t len)
 {
 	if (!IsOpen()) {
 		Assert(false);
@@ -161,35 +161,35 @@ unsigned int StdFileIO::WriteBlock(const void* buf, unsigned int len)
 	return fwrite(buf, 1, len, fFile);
 }
 
-unsigned int StdFileIO::GetFileLength()
+off_t StdFileIO::GetFileLength()
 {
 	if (!IsOpen()) {
 		Assert(false);
 		return 0;
 	}
-	unsigned int current_pos = ftell(fFile);
-	fseek(fFile, 0, SEEK_END);
-	long len = ftell(fFile);
-	fseek(fFile, current_pos, SEEK_SET);
+	off_t current_pos = ftello(fFile);
+	fseeko(fFile, 0, SEEK_END);
+	off_t len = ftello(fFile);
+	fseeko(fFile, current_pos, SEEK_SET);
 	return len;
 }
 
-unsigned int StdFileIO::Tell()
+off_t StdFileIO::Tell()
 {
 	if (!IsOpen()) {
 		Assert(false);
 		return 0;
 	}
-	return ftell(fFile);
+	return ftello(fFile);
 }
 
-bool StdFileIO::Seek(unsigned int pos)
+bool StdFileIO::Seek(off_t pos)
 {
 	if (!IsOpen()) {
 		Assert(false);
 		return false;
 	}
-	if (fseek(fFile, pos, SEEK_SET) != 0) {
+	if (fseeko(fFile, pos, SEEK_SET) != 0) {
 		return false;
 	}
 	return true;
@@ -250,7 +250,7 @@ bool GZFileIO::Close()
 }
 
 
-unsigned int GZFileIO::ReadBlock(void* buf, unsigned int len)
+size_t GZFileIO::ReadBlock(void* buf, size_t len)
 {
 	if (!IsOpen()) {
 		Assert(false);
@@ -259,7 +259,7 @@ unsigned int GZFileIO::ReadBlock(void* buf, unsigned int len)
 	return gzread(fFile, buf, len);
 }
 
-unsigned int GZFileIO::WriteBlock(const void* buf, unsigned int len)
+size_t GZFileIO::WriteBlock(const void* buf, size_t len)
 {
 	if (!IsOpen()) {
 		Assert(false);
@@ -269,15 +269,15 @@ unsigned int GZFileIO::WriteBlock(const void* buf, unsigned int len)
 	return gzwrite(fFile, const_cast<void*>(buf), len);
 }
 
-unsigned int GZFileIO::GetFileLength()
+off_t GZFileIO::GetFileLength()
 {
 	if (!IsOpen()) {
 		Assert(false);
 		return 0;
 	}
-	unsigned int current_pos = gztell(fFile);
-	unsigned int len = current_pos;
-	unsigned int s;
+	off_t current_pos = gztell(fFile);
+	off_t len = current_pos;
+	off_t s;
 
 	uint8_t buf[256];
 
@@ -289,7 +289,7 @@ unsigned int GZFileIO::GetFileLength()
 	return len;
 }
 
-unsigned int GZFileIO::Tell()
+off_t GZFileIO::Tell()
 {
 	if (!IsOpen()) {
 		Assert(false);
@@ -298,7 +298,7 @@ unsigned int GZFileIO::Tell()
 	return gztell(fFile);
 }
 
-bool GZFileIO::Seek(unsigned int pos)
+bool GZFileIO::Seek(off_t pos)
 {
 	if (!IsOpen()) {
 		Assert(false);

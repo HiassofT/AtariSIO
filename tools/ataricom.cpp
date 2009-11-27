@@ -151,7 +151,7 @@ int main(int argc, char** argv)
 
 	unsigned int iblk = 1;
 	unsigned int oblk = 1;
-	unsigned int tmpword;
+	uint16_t tmpword;
 
 	unsigned int create_address = 0;
 
