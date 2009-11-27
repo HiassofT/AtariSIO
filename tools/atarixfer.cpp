@@ -77,7 +77,7 @@ static void print_error(int error)
 
 static int get_density(unsigned int& bytesPerSector, unsigned int& sectorsPerDisk)
 {
-	unsigned char buf[256];
+	uint8_t buf[256];
 	int result;
 
 
@@ -158,7 +158,7 @@ static int get_density(unsigned int& bytesPerSector, unsigned int& sectorsPerDis
 
 static int format_disk(EDiskFormat diskFormat)
 {
-	unsigned char buf[256];
+	uint8_t buf[256];
 	int result;
 	int bytesPerSector;
 
@@ -290,7 +290,7 @@ static int read_image(char* filename)
 	unsigned int sec;
 
 	bool OK = true;
-	unsigned char buf[256];
+	uint8_t buf[256];
 
 	if (get_density(sector_length, total_sectors)) {
 		printf("cannot determine density!\n");
@@ -401,7 +401,7 @@ static int write_image(char *filename)
 		return 1;
 	}
 
-	unsigned char zero[256];
+	uint8_t zero[256];
 
 	memset(zero, 0, 256);
 
@@ -410,7 +410,7 @@ static int write_image(char *filename)
 	unsigned int sec;
 	EDiskFormat diskFormat;
 
-	unsigned char buf[256];
+	uint8_t buf[256];
 
 	diskFormat = image.GetDiskFormat();
 	total_sectors = image.GetNumberOfSectors();
@@ -470,7 +470,7 @@ static bool set_and_check_highspeed_baudrate(unsigned int baud)
 
 static bool check_ultraspeed()
 {
-	unsigned char pokey_div;
+	uint8_t pokey_div;
 	unsigned int baud;
 
         Ext_SIO_parameters params;
@@ -529,9 +529,9 @@ static bool check_happy_1050()
 	return false;
 }
 
-static bool check_high_status(unsigned int baudrate, unsigned char highspeed_mode)
+static bool check_high_status(unsigned int baudrate, uint8_t highspeed_mode)
 {
-	unsigned char buf[4];
+	uint8_t buf[4];
 	if (SIO->SetHighSpeedBaudrate(baudrate)) {
 		printf("setting baudrate to %d failed\n", baudrate);
 		return false;

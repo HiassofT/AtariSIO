@@ -22,7 +22,7 @@
 
 static char speedyfile[]="speedy.bin";
 
-static void dump_buf(FILE* out, unsigned char* buf, int len)
+static void dump_buf(FILE* out, uint8_t* buf, int len)
 {
 	int i;
 	for (i=0;i<len;i++) {
@@ -38,7 +38,7 @@ int main(void)
 
 	FILE *in;
 	FILE *out;
-	unsigned char buf[16384];
+	uint8_t buf[16384];
 
 	int len, bootlen;
 	int i;
@@ -70,7 +70,7 @@ int main(void)
 		printf("cannot create speedycode.c\n");
 		return 1;
 	}
-	fprintf(out,"unsigned char DiskDriveCode::fSpeedyCode[] = {");
+	fprintf(out,"uint8_t DiskDriveCode::fSpeedyCode[] = {");
 	dump_buf(out, buf, len);
 	fprintf(out,"\n};\n\n");
 

@@ -38,7 +38,7 @@ public:
 	virtual int ProcessCommandFrame(SIO_command_frame& frame, const RCPtr<SIOWrapper>& wrapper);
 
 	virtual bool EnableHighSpeed(bool on);
-	virtual bool SetHighSpeedParameters(unsigned char pokeyDivisor, unsigned int baudrate);
+	virtual bool SetHighSpeedParameters(uint8_t pokeyDivisor, unsigned int baudrate);
 	virtual bool EnableXF551Mode(bool on);
 	virtual bool IsAtpSIOHandler() const;
 
@@ -66,7 +66,7 @@ private:
 	Atari1050Model::EDiskDensity fCurrentDensity;
 	unsigned int fCurrentTrack;
 
-	unsigned char fLastFDCStatus;
+	uint8_t fLastFDCStatus;
 	uint64_t fLastDiskAccessTimestamp;
 
 	SIOTracer* fTracer;

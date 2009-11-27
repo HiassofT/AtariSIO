@@ -41,11 +41,11 @@ public:
 	virtual bool WriteImageToFile(const char* filename) const;
 
 	bool ReadSector(unsigned int sector,
-		       unsigned char* buffer,
+		       uint8_t* buffer,
 		       unsigned int buffer_length) const;
 
 	bool WriteSector(unsigned int sector,
-		       const unsigned char* buffer,
+		       const uint8_t* buffer,
 		       unsigned int buffer_length);
 
 	virtual bool IsAtrMemoryImage() const;
@@ -83,13 +83,13 @@ private:
 	bool ReadImageFromDiFile(const char* filename, bool beQuiet);
 	bool WriteImageToDiFile(const char* filename, const bool useGz) const;
 
-	unsigned char CalculateDiSectorChecksum(unsigned char* buf, unsigned int len) const;
+	uint8_t CalculateDiSectorChecksum(uint8_t* buf, unsigned int len) const;
 
 	bool SetSectorInUse(unsigned int sector, bool inUse);
 
 	typedef AtrImage super;
 
-	unsigned char *fData;
+	uint8_t *fData;
 
 };
 

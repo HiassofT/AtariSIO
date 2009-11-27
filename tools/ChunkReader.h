@@ -40,7 +40,7 @@ public:
 	inline unsigned int GetChunkLength() const;
 	inline unsigned int GetCurrentPosition() const;
 
-	bool ReadByte(unsigned char& byte);
+	bool ReadByte(uint8_t& byte);
 	bool ReadWord(unsigned short& word);
 	bool ReadDword(unsigned int &dword);
 	bool ReadBlock(void* buf, unsigned int len);

@@ -43,8 +43,8 @@ DCMCodec::~DCMCodec()
 
 bool DCMCodec::Load( const char* filename, bool beQuiet)
 {
-	unsigned char	btArcType = 0;		//Block type for first block
-	unsigned char	btBlkType;		//Current block type
+	uint8_t	btArcType = 0;		//Block type for first block
+	uint8_t	btBlkType;		//Current block type
 
 	fAlreadyFormatted = false;
 	fLastPassFlag = false;
@@ -222,8 +222,8 @@ bool DCMCodec::DecodeRec41(bool beQuiet)
 	if (!beQuiet) {
 		DDPRINTF("%d: 41", fCurrentSector);
 	}
-	unsigned char iOffset;
-	unsigned char* pbt = fCurrentBuffer + iOffset;
+	uint8_t iOffset;
+	uint8_t* pbt = fCurrentBuffer + iOffset;
        	if (!fFileIO->ReadByte(iOffset)) {
 		goto failure_EOF;
 	}
@@ -266,13 +266,13 @@ bool DCMCodec::DecodeRec43(bool beQuiet)
 	if (!beQuiet) {
 		DDPRINTF("%d: 43", fCurrentSector);
 	}
-	unsigned char* pbtP = fCurrentBuffer;
-	unsigned char* pbtE;
+	uint8_t* pbtP = fCurrentBuffer;
+	uint8_t* pbtE;
 
-	unsigned char* pbtEnd = fCurrentBuffer + fSectorSize;
+	uint8_t* pbtEnd = fCurrentBuffer + fSectorSize;
 
 	unsigned int iTmp;
-	unsigned char cTmp;
+	uint8_t cTmp;
 
 	do
 	{
@@ -379,10 +379,10 @@ bool DCMCodec::DecodeRec47(bool beQuiet)
 
 bool DCMCodec::DecodeRecFA(bool beQuiet)
 {
-	unsigned char btPom;
+	uint8_t btPom;
 	EDiskFormat dformat = eNoDisk;
-	unsigned char btDensity;
-	unsigned char btPass;
+	uint8_t btDensity;
+	uint8_t btPass;
        
 	if (!fFileIO->ReadByte(btPom)) {
 		goto failure_EOF;
@@ -445,7 +445,7 @@ failure_EOF:
 
 bool DCMCodec::ReadOffset( unsigned int& off, bool beQuiet )
 {
-	unsigned char bt;
+	uint8_t bt;
 	if (!fFileIO->ReadByte(bt)) {
 		if (!beQuiet) {
 			AERROR("unexpected EOF in DCM-file (ReadOffset)");
@@ -487,7 +487,7 @@ bool DCMCodec::Save( const char* filename )
 
 	int iPass = 1;
 
-	fPassBuffer = new unsigned char [ 0x6500 ];
+	fPassBuffer = new uint8_t [ 0x6500 ];
 
 	unsigned int iFirstSector = 0;
 	unsigned int iPrevSector = 0;
@@ -577,7 +577,7 @@ bool DCMCodec::Save( const char* filename )
 		//encode end
 		EncodeRec45();
 
-		unsigned char* pEnd = fCurrentPtr;
+		uint8_t* pEnd = fCurrentPtr;
 
 		//change beginning block
 		if ( fCurrentSector > iNumSectors )
@@ -620,7 +620,7 @@ void DCMCodec::EncodeRecFA( bool bLast, int iPass, int iDensity, int iFirstSec )
 	
 	fLastRec = fCurrentPtr;
 
-	unsigned char btType = bLast ? 0x80 : 0;
+	uint8_t btType = bLast ? 0x80 : 0;
 
 	btType |= ( iDensity & 3 ) << 5;
 
@@ -653,10 +653,10 @@ void DCMCodec::EncodeRec( bool bIsFirstSector )
 {
 	fLastRec = fCurrentPtr;
 
-	unsigned char abtBuff41[ 0x300 ];
-	unsigned char abtBuff43[ 0x300 ];
-	unsigned char abtBuff44[ 0x300 ];
-	unsigned char* abtBuff47 = fCurrentBuffer;
+	uint8_t abtBuff41[ 0x300 ];
+	uint8_t abtBuff43[ 0x300 ];
+	uint8_t abtBuff44[ 0x300 ];
+	uint8_t* abtBuff47 = fCurrentBuffer;
 
 	int iEnd41 = 0x300;
 	int iEnd43 = 0x300;
@@ -664,7 +664,7 @@ void DCMCodec::EncodeRec( bool bIsFirstSector )
 
 	int iBestMethod = eDCM_UNCOMPRESSED;
 	int iBestEnd = fSectorSize;
-	unsigned char* pbtBest = abtBuff47;
+	uint8_t* pbtBest = abtBuff47;
 
 	EncodeRec43( abtBuff43, &iEnd43, fCurrentBuffer, fSectorSize );
 
@@ -702,12 +702,12 @@ void DCMCodec::EncodeRec( bool bIsFirstSector )
 	fCurrentPtr += iBestEnd;
 }
 
-void DCMCodec::EncodeRec41( unsigned char* pbtDest, int* piDestLen, unsigned char* pbtSrc, unsigned char* pbtSrcOld, int iSrcLen )
+void DCMCodec::EncodeRec41( uint8_t* pbtDest, int* piDestLen, uint8_t* pbtSrc, uint8_t* pbtSrcOld, int iSrcLen )
 {
-	unsigned char* pbtS = pbtSrc + iSrcLen - 1;
+	uint8_t* pbtS = pbtSrc + iSrcLen - 1;
 	pbtSrcOld += iSrcLen - 1;
 
-	unsigned char* pbtD = pbtDest;
+	uint8_t* pbtD = pbtDest;
 
 	for( int i = 0; i < iSrcLen; i++ )
 	{
@@ -729,18 +729,18 @@ void DCMCodec::EncodeRec41( unsigned char* pbtDest, int* piDestLen, unsigned cha
 	*piDestLen = pbtD - pbtDest;
 }
 
-void DCMCodec::EncodeRec43( unsigned char* pbtDest, int* piDestLen, unsigned char* pbtSrc, int iSrcLen )
+void DCMCodec::EncodeRec43( uint8_t* pbtDest, int* piDestLen, uint8_t* pbtSrc, int iSrcLen )
 {
-	unsigned char* pbtEnd = pbtSrc + iSrcLen;
-	unsigned char* pbtCur = pbtSrc;
+	uint8_t* pbtEnd = pbtSrc + iSrcLen;
+	uint8_t* pbtCur = pbtSrc;
 
-	unsigned char* pbtD = pbtDest;
+	uint8_t* pbtD = pbtDest;
 
 	while( pbtCur < pbtEnd )
 	{
 		bool bFound = false;
 
-		for( unsigned char* pbtNow = pbtCur; pbtNow < ( pbtEnd - 2 ); pbtNow++ )
+		for( uint8_t* pbtNow = pbtCur; pbtNow < ( pbtEnd - 2 ); pbtNow++ )
 		{
 
 			if ( ( *pbtNow == *(pbtNow+1) ) && ( *pbtNow == *(pbtNow+2) ) )
@@ -754,8 +754,8 @@ void DCMCodec::EncodeRec43( unsigned char* pbtDest, int* piDestLen, unsigned cha
 					pbtD += iUnc;
 				}
 
-				unsigned char bt = *pbtNow;
-				unsigned char*p;
+				uint8_t bt = *pbtNow;
+				uint8_t*p;
 				for( p = pbtNow + 1; p < pbtEnd; p++ )
 				{
 					if ( *p != bt )
@@ -791,12 +791,12 @@ void DCMCodec::EncodeRec43( unsigned char* pbtDest, int* piDestLen, unsigned cha
 	*piDestLen = pbtD - pbtDest;
 }
 
-void DCMCodec::EncodeRec44( unsigned char* pbtDest, int* piDestLen, unsigned char* pbtSrc, unsigned char* pbtSrcOld, int iSrcLen )
+void DCMCodec::EncodeRec44( uint8_t* pbtDest, int* piDestLen, uint8_t* pbtSrc, uint8_t* pbtSrcOld, int iSrcLen )
 {
-	unsigned char* pbtS = pbtSrc;
-	unsigned char* pbtEnd = pbtSrc + iSrcLen;
+	uint8_t* pbtS = pbtSrc;
+	uint8_t* pbtEnd = pbtSrc + iSrcLen;
 
-	unsigned char* pbtD = pbtDest;
+	uint8_t* pbtD = pbtDest;
 
 	for( int i = 0; i < iSrcLen; i++ )
 	{

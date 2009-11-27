@@ -35,7 +35,7 @@ MyPicoDosCode::~MyPicoDosCode()
 {
 }
 
-bool MyPicoDosCode::GetMyPicoDosSector(unsigned int sector, unsigned char* buf, unsigned int buflen) const
+bool MyPicoDosCode::GetMyPicoDosSector(unsigned int sector, uint8_t* buf, unsigned int buflen) const
 {
 	if (!SectorNumberOK(sector)) {
 		return false;
@@ -47,7 +47,7 @@ bool MyPicoDosCode::GetMyPicoDosSector(unsigned int sector, unsigned char* buf, 
 	return true;
 }
 
-bool MyPicoDosCode::GetBootCodeSector(unsigned int sector, unsigned char* buf, unsigned int buflen) const
+bool MyPicoDosCode::GetBootCodeSector(unsigned int sector, uint8_t* buf, unsigned int buflen) const
 {
 	if ((sector < 1) || (sector > 3)) {
 		return false;
@@ -61,7 +61,7 @@ bool MyPicoDosCode::GetBootCodeSector(unsigned int sector, unsigned char* buf, u
 
 bool MyPicoDosCode::WriteBootCodeToImage(RCPtr<DiskImage> img, bool autorun) const
 {
-	unsigned char buf[128];
+	uint8_t buf[128];
 	int i;
 	for (i=1;i<=3;i++) {
         	bool ok;

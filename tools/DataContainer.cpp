@@ -27,7 +27,7 @@ DataContainer::DataContainer()
 {
 	fSize = 0;
 	fAllocatedSize = 16;
-	fData =(unsigned char*) malloc(fAllocatedSize);
+	fData =(uint8_t*) malloc(fAllocatedSize);
 }
 
 DataContainer::~DataContainer()
@@ -37,7 +37,7 @@ DataContainer::~DataContainer()
 	}
 }
 
-bool DataContainer::AppendByte(unsigned char byte)
+bool DataContainer::AppendByte(uint8_t byte)
 {
 	PrepareForSize(fSize+1);
 	fData[fSize++] = byte;

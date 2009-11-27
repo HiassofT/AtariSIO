@@ -87,7 +87,7 @@ int RemoteControlHandler::ProcessCommandFrame(SIO_command_frame& frame, const RC
 		}
 
 
-		unsigned char buf[buflen+1];
+		uint8_t buf[buflen+1];
 		const char* description = "[ remote command ]";
 
 		if (buflen) {
@@ -142,7 +142,7 @@ int RemoteControlHandler::ProcessCommandFrame(SIO_command_frame& frame, const RC
 		}
 
 		unsigned int buflen = 4;
-		unsigned char buf[buflen];
+		uint8_t buf[buflen];
 		const char* description = "[ get remote control status ]";
 
 		unsigned int resultlen = fResult->GetLength();
@@ -195,7 +195,7 @@ int RemoteControlHandler::ProcessCommandFrame(SIO_command_frame& frame, const RC
 
 		unsigned int buflen = 128;
 		unsigned int copylen = buflen;
-		unsigned char buf[buflen];
+		uint8_t buf[buflen];
 
 		const char* description = "[ read remote control result ]";
 
@@ -250,7 +250,7 @@ int RemoteControlHandler::ProcessCommandFrame(SIO_command_frame& frame, const RC
 		}
 
 		unsigned int buflen = 6;
-		unsigned char buf[buflen];
+		uint8_t buf[buflen];
 		const char* description = "[ remote control get time ]";
 		time_t current_time;
 		struct tm* ltime;
@@ -317,7 +317,7 @@ bool RemoteControlHandler::EnableXF551Mode(bool)
 	return false;
 }
 
-bool RemoteControlHandler::SetHighSpeedParameters(unsigned char, unsigned int)
+bool RemoteControlHandler::SetHighSpeedParameters(uint8_t, unsigned int)
 {
 	return false;
 }

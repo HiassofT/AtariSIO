@@ -32,8 +32,8 @@ public:
 
 	inline static bool SectorNumberOK(unsigned int sec);
 
-	bool GetMyPicoDosSector(unsigned int sector, unsigned char* buf, unsigned int buflen) const;
-	bool GetBootCodeSector(unsigned int sector, unsigned char* buf, unsigned int buflen) const;
+	bool GetMyPicoDosSector(unsigned int sector, uint8_t* buf, unsigned int buflen) const;
+	bool GetBootCodeSector(unsigned int sector, uint8_t* buf, unsigned int buflen) const;
 
 	bool WriteBootCodeToImage(RCPtr<DiskImage> img, bool autorun = false) const;
 
@@ -50,8 +50,8 @@ private:
 #include "6502/mypicodoscode.h"
 
 public:
-	static const unsigned char fCode[eCodeLength];
-	static const unsigned char fBootCode[eBootLength];
+	static const uint8_t fCode[eCodeLength];
+	static const uint8_t fBootCode[eBootLength];
 };
 
 inline MyPicoDosCode* MyPicoDosCode::GetInstance()

@@ -133,7 +133,7 @@ int AtrSIOHandler::ProcessCommandFrame(SIO_command_frame& frame, const RCPtr<SIO
 		}
 
 		unsigned int buflen = 4;
-		unsigned char buf[buflen];
+		uint8_t buf[buflen];
 
 		const char* description = 0;
 		switch (frame.command) {
@@ -227,7 +227,7 @@ int AtrSIOHandler::ProcessCommandFrame(SIO_command_frame& frame, const RCPtr<SIO
 		}
 
 		unsigned int buflen = fImageConfig.GetSectorLength(sec);
-		unsigned char buf[buflen];
+		uint8_t buf[buflen];
 
 		const char* description = 0;
 		switch (frame.command) {
@@ -315,7 +315,7 @@ int AtrSIOHandler::ProcessCommandFrame(SIO_command_frame& frame, const RCPtr<SIO
 		}
 
 		unsigned int buflen = fImageConfig.GetSectorLength(sec);
-		unsigned char buf[buflen];
+		uint8_t buf[buflen];
 
 		const char* description = 0;
 		switch (frame.command) {
@@ -430,7 +430,7 @@ int AtrSIOHandler::ProcessCommandFrame(SIO_command_frame& frame, const RCPtr<SIO
 		}
 
 		unsigned int buflen = 12;
-		unsigned char buf[buflen];
+		uint8_t buf[buflen];
 
 		const char* description = 0;
 		switch (frame.command) {
@@ -513,7 +513,7 @@ int AtrSIOHandler::ProcessCommandFrame(SIO_command_frame& frame, const RCPtr<SIO
 		}
 
 		unsigned int buflen = 12;
-		unsigned char buf[buflen];
+		uint8_t buf[buflen];
 
 		const char* description = 0;
 		switch (frame.command) {
@@ -667,7 +667,7 @@ int AtrSIOHandler::ProcessCommandFrame(SIO_command_frame& frame, const RCPtr<SIO
 		}
 
 		unsigned int buflen = fFormatConfig.fSectorLength;
-		unsigned char buf[buflen];
+		uint8_t buf[buflen];
 
 		const char* description = 0;
 		switch (frame.command) {
@@ -761,7 +761,7 @@ int AtrSIOHandler::ProcessCommandFrame(SIO_command_frame& frame, const RCPtr<SIO
 		}
 
 		unsigned int buflen = 128;
-		unsigned char buf[buflen];
+		uint8_t buf[buflen];
 
 		const char* description = 0;
 		switch (frame.command) {
@@ -835,7 +835,7 @@ int AtrSIOHandler::ProcessCommandFrame(SIO_command_frame& frame, const RCPtr<SIO
 		if (fEnableHighSpeed) {
 
 			unsigned int buflen = 1;
-			unsigned char buf[buflen];
+			uint8_t buf[buflen];
 			const char* description = "[ get speed byte ]";
 
 			buf[0] = fSpeedByte;
@@ -881,7 +881,7 @@ int AtrSIOHandler::ProcessCommandFrame(SIO_command_frame& frame, const RCPtr<SIO
 		if (fEnableHighSpeed) {
 
 			unsigned int buflen = 2;
-			unsigned char buf[buflen];
+			uint8_t buf[buflen];
 			const char * description = "[ get SIO length ]";
 
 			if ((ret=wrapper->SendCommandACK())) {
@@ -925,7 +925,7 @@ int AtrSIOHandler::ProcessCommandFrame(SIO_command_frame& frame, const RCPtr<SIO
 		if (fEnableHighSpeed) {
 
 			unsigned int buflen = HighSpeedSIOCode::GetInstance()->GetCodeSize();
-			unsigned char buf[buflen];
+			uint8_t buf[buflen];
 			const char* description = "[ get SIO code ]";
 
 			if ((ret=wrapper->SendCommandACK())) {
@@ -1016,7 +1016,7 @@ int AtrSIOHandler::ProcessCommandFrame(SIO_command_frame& frame, const RCPtr<SIO
 		}
 
 		unsigned int buflen = 128;
-		unsigned char buf[buflen];
+		uint8_t buf[buflen];
 		const char* description = "[ read MyPicoDos ]";
 		MyPicoDosCode* mypdos = MyPicoDosCode::GetInstance();
 
@@ -1063,7 +1063,7 @@ int AtrSIOHandler::ProcessCommandFrame(SIO_command_frame& frame, const RCPtr<SIO
 			// ape time
 
 			unsigned int buflen = 6;
-			unsigned char buf[buflen];
+			uint8_t buf[buflen];
 			const char* shortdesc = "get time";
 			const char* description = "[ get APE time ]";
 
@@ -1103,7 +1103,7 @@ int AtrSIOHandler::ProcessCommandFrame(SIO_command_frame& frame, const RCPtr<SIO
 
 		case 0xf0: { // get image filename
 			unsigned int buflen = 256;
-			unsigned char buf[buflen];
+			uint8_t buf[buflen];
 			const char* shortdesc = "get image name";
 			const char* description = "[ get APE image name ]";
 
@@ -1142,7 +1142,7 @@ int AtrSIOHandler::ProcessCommandFrame(SIO_command_frame& frame, const RCPtr<SIO
 		}
 		case 0xf1: { // get version
 			unsigned int buflen = 256;
-			unsigned char buf[buflen];
+			uint8_t buf[buflen];
 			const char* shortdesc = "get version";
 			const char* description = "[ get APE version ]";
 
@@ -1218,7 +1218,7 @@ int AtrSIOHandler::ProcessCommandFrame(SIO_command_frame& frame, const RCPtr<SIO
 			}
 
 			unsigned int buflen = 3;
-			unsigned char buf[buflen];
+			uint8_t buf[buflen];
 			const char* description = "[ add command ]";
 
 			if ((ret=wrapper->ReceiveDataFrame(buf, buflen)) ) {
@@ -1287,7 +1287,7 @@ bool AtrSIOHandler::EnableXF551Mode(bool on)
 	return true;
 }
 
-bool AtrSIOHandler::SetHighSpeedParameters(unsigned char pokeyDivisor, unsigned int baudrate)
+bool AtrSIOHandler::SetHighSpeedParameters(uint8_t pokeyDivisor, unsigned int baudrate)
 {
 	fSpeedByte = pokeyDivisor;
 	fHighSpeedBaudrate = baudrate;

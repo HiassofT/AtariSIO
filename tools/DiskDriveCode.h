@@ -35,7 +35,7 @@ public:
 
 	bool SetReferenceSector(int sector, int trackno);
 
-	bool ScanTrack(int trackno, unsigned char* buf);
+	bool ScanTrack(int trackno, uint8_t* buf);
 
 	// buffer layout of ScanTrack
 	enum {
@@ -47,7 +47,7 @@ public:
 		eScanRemainTime = 0x62
 	};
 	      
-	bool SetupSectorRead(unsigned char* buf);
+	bool SetupSectorRead(uint8_t* buf);
 
 	// buffer layout of SetupSectorRead
 	enum {
@@ -59,7 +59,7 @@ public:
 	};
 
 	// read 129 bytes (128 data + 1 byte sector status)
-	bool ReadSector(int idx, unsigned char* buf);
+	bool ReadSector(int idx, uint8_t* buf);
 
 private:
 	RCPtr<SIOWrapper> fSIOWrapper;
@@ -91,7 +91,7 @@ private:
 
 #include "6502/speedycode.h"
 
-	static unsigned char fSpeedyCode[eSpeedyCodeLength];
+	static uint8_t fSpeedyCode[eSpeedyCodeLength];
 };
 
 #endif

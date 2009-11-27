@@ -239,7 +239,7 @@ bool AtpTrack::InitFromTRAKChunk(RCPtr<ChunkReader> chunk, bool beQuiet)
 	}
 
 	// unsigned int current_position=0;
-	for (unsigned char i=0;i<secNo;i++) {
+	for (uint8_t i=0;i<secNo;i++) {
 
 		RCPtr<ChunkReader> sectorChunk;
 		do {

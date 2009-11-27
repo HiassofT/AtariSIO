@@ -64,7 +64,7 @@ CasImage::EBlockType CasImage::ReadBlockFromFile(
 	unsigned int& aux,
 	bool readUnknownBlockData)
 {
-	unsigned char buf[8];
+	uint8_t buf[8];
 
 	unsigned int tmp;
 	tmp = fileio->ReadBlock(buf, 8);
@@ -221,7 +221,7 @@ exit_error:
 void CasImage::AllocTempBuf()
 {
 	FreeTempBuf();
-	fTempBuf = new unsigned char[65536];
+	fTempBuf = new uint8_t[65536];
 }
 
 void CasImage::FreeTempBuf()
@@ -232,7 +232,7 @@ void CasImage::FreeTempBuf()
 	}
 }
 
-void CasImage::SetDescription(unsigned char* str, unsigned int length)
+void CasImage::SetDescription(uint8_t* str, unsigned int length)
 {
 	if (fDescription) {
 		delete[] fDescription;

@@ -86,16 +86,16 @@ public:
 		const char *prefix = 0);
 
 	void TraceCommandOK();
-	void TraceCommandError(int returncode, unsigned char FDCstatus=255);
+	void TraceCommandError(int returncode, uint8_t FDCstatus=255);
 
 	void TraceDataBlock(
-		const unsigned char* block,
+		const uint8_t* block,
 		int len,
 		const char *prefix = 0);
 
 	void TraceDecodedPercomBlock(
 		unsigned int driveno,
-		const unsigned char* block /* 12 bytes long */,
+		const uint8_t* block /* 12 bytes long */,
 		bool getBlock,
 		bool XF551 = false);
 

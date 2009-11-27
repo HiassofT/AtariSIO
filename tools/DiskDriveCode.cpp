@@ -47,7 +47,7 @@ bool DiskDriveCode::SendCodeToDrive()
 	int ret;
 	int adr;
 	SIO_parameters params;
-	unsigned char buf[256];
+	uint8_t buf[256];
 
 	// set drive slow
 	params.device_id = 0x31;
@@ -146,7 +146,7 @@ bool DiskDriveCode::CheckTrackTiming()
 {
 	int ret;
 	SIO_parameters params;
-	unsigned char buf[256];
+	uint8_t buf[256];
 
 	params.device_id = 0x31;
 	params.command = 'z';
@@ -191,7 +191,7 @@ bool DiskDriveCode::SetReferenceSector(int sector, int trackno)
 	return true;
 }
 
-bool DiskDriveCode::ScanTrack(int trackno, unsigned char* buf)
+bool DiskDriveCode::ScanTrack(int trackno, uint8_t* buf)
 {
 	int ret;
 
@@ -213,7 +213,7 @@ bool DiskDriveCode::ScanTrack(int trackno, unsigned char* buf)
 	return true;
 }
 
-bool DiskDriveCode::SetupSectorRead(unsigned char* buf)
+bool DiskDriveCode::SetupSectorRead(uint8_t* buf)
 {
 	int ret;
 	int adr;
@@ -237,7 +237,7 @@ bool DiskDriveCode::SetupSectorRead(unsigned char* buf)
 	return true;
 }
 
-bool DiskDriveCode::ReadSector(int idx, unsigned char* buf)
+bool DiskDriveCode::ReadSector(int idx, uint8_t* buf)
 {
 	int ret;
 

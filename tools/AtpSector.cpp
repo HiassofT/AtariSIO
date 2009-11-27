@@ -28,10 +28,10 @@
 AtpSector::AtpSector(
 		unsigned int id,
 		unsigned int data_len,
-		const unsigned char* data,
+		const uint8_t* data,
 	       	unsigned int pos,
 		unsigned int time_len,
-		unsigned char status)
+		uint8_t status)
 	: fID(id),
 	  fDataLength(data_len),
 	  fPosition(pos),
@@ -39,7 +39,7 @@ AtpSector::AtpSector(
 	  fSectorStatus(status)
 {
 	if (fDataLength) {
-		fSectorData = new unsigned char[fDataLength];
+		fSectorData = new uint8_t[fDataLength];
 		memcpy(fSectorData, data, fDataLength);
 	} else {
 		fSectorData = 0;
@@ -65,7 +65,7 @@ AtpSector::~AtpSector()
 	fDataLength = 0;
 }
 
-bool AtpSector::GetData(unsigned char* dest, unsigned int len) const
+bool AtpSector::GetData(uint8_t* dest, unsigned int len) const
 {
 	if (len != fDataLength) {
 		return false;
@@ -75,7 +75,7 @@ bool AtpSector::GetData(unsigned char* dest, unsigned int len) const
 	}
 }
 
-bool AtpSector::SetData(const unsigned char* src, unsigned int len)
+bool AtpSector::SetData(const uint8_t* src, unsigned int len)
 {
 	if (len != fDataLength) {
 		return false;
@@ -147,7 +147,7 @@ bool AtpSector::InitFromSectorChunk(RCPtr<ChunkReader> chunk, bool beQuiet)
 	if (!chunk->ReadByte(fSectorStatus)) return false;
 
 	try {
-		fSectorData = new unsigned char[fDataLength];
+		fSectorData = new uint8_t[fDataLength];
 	}
 	catch(...) {
 		fSectorData = 0;

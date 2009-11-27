@@ -609,7 +609,7 @@ illegal_option:
 		while (running) {
 			ret = manager->DoServing(fileno(stdin));
 			if (ret==0) {
-				unsigned char c;
+				uint8_t c;
 				int bytes = read(fileno(stdin),&c,1);
 	
 				if (bytes==1) {

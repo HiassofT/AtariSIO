@@ -2352,7 +2352,7 @@ void CursesFrontend::ProcessSetHighSpeed()
 
 void CursesFrontend::ProcessSetHighSpeedParameters()
 {
-	unsigned char divisor = fDeviceManager->GetHighSpeedPokeyDivisor();
+	uint8_t divisor = fDeviceManager->GetHighSpeedPokeyDivisor();
 	unsigned int baud = fDeviceManager->GetHighSpeedBaudrate();
 	unsigned int defaultBaudrate;
 

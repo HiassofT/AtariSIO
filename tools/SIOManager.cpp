@@ -37,7 +37,7 @@ SIOManager::~SIOManager()
 {
 }
 
-bool SIOManager::RegisterHandler(unsigned char device_id, const RCPtr<AbstractSIOHandler>& handler)
+bool SIOManager::RegisterHandler(uint8_t device_id, const RCPtr<AbstractSIOHandler>& handler)
 {
 	if (fHandlers[device_id]) {
 		return false;
@@ -47,7 +47,7 @@ bool SIOManager::RegisterHandler(unsigned char device_id, const RCPtr<AbstractSI
 	}
 }
 
-bool SIOManager::UnregisterHandler(unsigned char device_id)
+bool SIOManager::UnregisterHandler(uint8_t device_id)
 {
 	if (fHandlers[device_id]) {
 		fHandlers[device_id] = RCPtr<AbstractSIOHandler>();

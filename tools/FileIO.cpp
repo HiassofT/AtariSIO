@@ -32,19 +32,19 @@ FileIO::~FileIO()
 {
 }
 
-bool FileIO::ReadByte(unsigned char& byte)
+bool FileIO::ReadByte(uint8_t& byte)
 {
 	return ReadBlock(&byte, 1) == 1;
 }
 
-bool FileIO::WriteByte(const unsigned char& byte)
+bool FileIO::WriteByte(const uint8_t& byte)
 {
 	return WriteBlock(&byte, 1) == 1;
 }
 
 bool FileIO::ReadWord(unsigned int& word)
 {
-	unsigned char buf[2];
+	uint8_t buf[2];
 
 	if (ReadBlock(buf,2) != 2) {
 		return false;
@@ -55,7 +55,7 @@ bool FileIO::ReadWord(unsigned int& word)
 
 bool FileIO::WriteWord(const unsigned int& word)
 {
-	unsigned char buf[2];
+	uint8_t buf[2];
 
 	buf[0] = word & 0xff;
 	buf[1] = word >> 8;
@@ -68,7 +68,7 @@ bool FileIO::WriteWord(const unsigned int& word)
 
 bool FileIO::ReadBigEndianWord(unsigned int& word)
 {
-	unsigned char buf[2];
+	uint8_t buf[2];
 
 	if (ReadBlock(buf,2) != 2) {
 		return false;
@@ -79,7 +79,7 @@ bool FileIO::ReadBigEndianWord(unsigned int& word)
 
 bool FileIO::WriteBigEndianWord(const unsigned int& word)
 {
-	unsigned char buf[2];
+	uint8_t buf[2];
 
 	buf[0] = word >> 8;
 	buf[1] = word & 0xff;
@@ -279,7 +279,7 @@ unsigned int GZFileIO::GetFileLength()
 	unsigned int len = current_pos;
 	unsigned int s;
 
-	unsigned char buf[256];
+	uint8_t buf[256];
 
 	while ( (s = gzread(fFile,buf,256)) ) {
 		len += s;

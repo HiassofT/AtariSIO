@@ -238,7 +238,7 @@ bool Dos2xUtils::AddFile(const char* name)
 	}
 	fn++;
 
-	unsigned char * buffer = 0;
+	uint8_t * buffer = 0;
 
 	unsigned int seclen = fImage->GetSectorLength();
 	unsigned int fileSeclen;
@@ -255,7 +255,7 @@ bool Dos2xUtils::AddFile(const char* name)
 	fseek(f, 0, SEEK_SET);
 
 	if (filelen > 0) {
-		buffer = new unsigned char[filelen];
+		buffer = new uint8_t[filelen];
 		if (fread(buffer, 1, filelen, f) != (size_t) filelen) {
 			AWARN("reading file \"%s\" failed", p);
 			fclose(f);
@@ -351,7 +351,7 @@ unsigned int Dos2xUtils::AddDirectory(const char* name, unsigned int& entryNum)
 
 
 	int i;
-	unsigned char buf[256];
+	uint8_t buf[256];
 	memset(buf, 0, seclen);
 	for (i=0;i<8;i++) {
 		fImage->WriteSector(sectors[i], buf, seclen);
@@ -362,7 +362,7 @@ unsigned int Dos2xUtils::AddDirectory(const char* name, unsigned int& entryNum)
 	return sectors[0];
 }
 
-bool Dos2xUtils::AddDataBlock(const char* atariname, const unsigned char* buffer, unsigned int blocklen)
+bool Dos2xUtils::AddDataBlock(const char* atariname, const uint8_t* buffer, unsigned int blocklen)
 {
 	unsigned int fileSeclen;
 	bool sector720 = false;
@@ -408,7 +408,7 @@ bool Dos2xUtils::AddDataBlock(const char* atariname, const unsigned char* buffer
 
 bool Dos2xUtils::WriteBufferToImage(
 	unsigned int entryNum,
-	const unsigned char* buffer, unsigned int buffer_size,
+	const uint8_t* buffer, unsigned int buffer_size,
 	const unsigned int* sectors, unsigned int num_sectors,
 	bool& sector720)
 {
@@ -419,7 +419,7 @@ bool Dos2xUtils::WriteBufferToImage(
 	unsigned int next;
 	sector720 = false;
 	unsigned int i;
-	unsigned char buf[256];
+	uint8_t buf[256];
 	for (i=0;i<num_sectors;i++) {
 		memset(buf, 0, seclen);
 		if (remain > seclen - 3) {
@@ -460,7 +460,7 @@ bool Dos2xUtils::SetAtariDirectory(
 	unsigned int sectorCount)
 {
 	unsigned int seclen = fImage->GetSectorLength();
-	unsigned char buf[256];
+	uint8_t buf[256];
 	unsigned int dirsec = fDirSector + (entryNum >> 3);
 	fImage->ReadSector(dirsec, buf, seclen);
 
@@ -599,7 +599,7 @@ bool Dos2xUtils::CreatePiconame(EPicoNameType piconametype)
 {
 	const int maxlen = 4096;
 	const char EOL = 155;
-	unsigned char buf[maxlen];
+	uint8_t buf[maxlen];
 	char* shortstring;
 	unsigned int pos = 0;
 	unsigned int e;
@@ -686,12 +686,12 @@ bool Dos2xUtils::WriteAtariFileToDisk(
 		return false;
 	}
 	unsigned int mapsize = (numsec+8) >> 3;
-	unsigned char* visited = new unsigned char[mapsize];
+	uint8_t* visited = new uint8_t[mapsize];
 	memset(visited, 0, mapsize);
 
 	unsigned int sector = starting_sector;
 	unsigned int bytes;
-	unsigned char buf[256];
+	uint8_t buf[256];
 
 	while (1) {
 		if (visited[sector>>3] & (1<<(sector & 7))) {
@@ -743,14 +743,14 @@ void Dos2xUtils::IndicateSectorWrite(unsigned int sector)
 		DPRINTF("virtual image observer is NULL");
 		return;
 	}
-	unsigned char* oldBuf = fObserver->fOldSectorBuffer;
-	unsigned char* newBuf = fObserver->fNewSectorBuffer;
+	uint8_t* oldBuf = fObserver->fOldSectorBuffer;
+	uint8_t* newBuf = fObserver->fNewSectorBuffer;
 
 	int i, base;
 	base = (sector - fDirSector) * 8;
 	for (i=0;i<8;i++) {
-		unsigned char oldstat = oldBuf[i*16];
-		unsigned char newstat = newBuf[i*16];
+		uint8_t oldstat = oldBuf[i*16];
+		uint8_t newstat = newBuf[i*16];
 		if (oldstat != newstat) {
 			//DPRINTF("status change %d: %02x->%02x", i+base, oldstat, newstat);
 			char atariname[12];
@@ -795,7 +795,7 @@ void Dos2xUtils::IndicateDeleteEntry(unsigned int num, const char* /*atariname*/
 	fSubdir[num] = 0;
 }
 
-void Dos2xUtils::IndicateCloseFile(unsigned int entryNum, const char* atariname, unsigned int sector, unsigned char fileStat)
+void Dos2xUtils::IndicateCloseFile(unsigned int entryNum, const char* atariname, unsigned int sector, uint8_t fileStat)
 {
 	//DPRINTF("IndicateCloseFile %d \"%s\" %d", entryNum, atariname, sector);
 	const char* origname = GetOrigName(entryNum, atariname);
@@ -931,7 +931,7 @@ Dos2xUtils::Dos2Dir::~Dos2Dir()
 	}
 }
 
-bool Dos2xUtils::Dos2Dir::FindFile(const char* rawname, unsigned char& entryNum, unsigned char& status, unsigned int& startSec) const
+bool Dos2xUtils::Dos2Dir::FindFile(const char* rawname, uint8_t& entryNum, uint8_t& status, unsigned int& startSec) const
 {
 	unsigned int i;
 	for (i=0;i<fFileCount;i++) {
@@ -951,7 +951,7 @@ RCPtr<Dos2xUtils::Dos2Dir> Dos2xUtils::GetDos2Directory(bool beQuiet, unsigned i
 
 	unsigned int sector = dirSector;
 	unsigned int fileno;
-	unsigned char secbuf[256];
+	uint8_t secbuf[256];
 	unsigned int seclen;
 	bool done = false;
 	unsigned int i;
@@ -1000,7 +1000,7 @@ RCPtr<Dos2xUtils::Dos2Dir> Dos2xUtils::GetDos2Directory(bool beQuiet, unsigned i
 		}
 		fileno = 0;
 		while (fileno < entriesPerSector) {
-			unsigned char stat = secbuf[fileno*16];
+			uint8_t stat = secbuf[fileno*16];
 			if (stat == 0) {
 				done = true;
 				break;
@@ -1070,7 +1070,7 @@ void Dos2xUtils::DumpRawDirectory(bool beQuiet) const
 {
 	unsigned int sector = 361;
 	unsigned int fileno;
-	unsigned char secbuf[256];
+	uint8_t secbuf[256];
 	unsigned int seclen;
 	bool done = false;
 	unsigned int i;
@@ -1121,7 +1121,7 @@ void Dos2xUtils::DumpRawDirectory(bool beQuiet) const
 		}
 		fileno = 0;
 		while (fileno < entriesPerSector) {
-			unsigned char stat = secbuf[fileno*16];
+			uint8_t stat = secbuf[fileno*16];
 			if (stat == 0) {
 				done = true;
 				break;
@@ -1178,7 +1178,7 @@ bool Dos2xUtils::SetDosFormat(EDosFormat format)
 
 bool Dos2xUtils::InitVTOC()
 {
-	unsigned char buf[256];
+	uint8_t buf[256];
 	unsigned int numsec = fImage->GetNumberOfSectors();
 	unsigned int seclen = fImage->GetSectorLength();
 	memset(buf, 0, 256);
@@ -1316,9 +1316,9 @@ unsigned int Dos2xUtils::FindDosBootTableIdx(EBootType type)
 bool Dos2xUtils::WriteBootSectors(EBootType type)
 {
 	int s;
-	unsigned char buf[384];
-	unsigned char dosentry;
-	unsigned char status;
+	uint8_t buf[384];
+	uint8_t dosentry;
+	uint8_t status;
 	unsigned int startsec;
 
 	DosBootEntry* entry = DosBootTable + FindDosBootTableIdx(type);
@@ -1474,7 +1474,7 @@ bool Dos2xUtils::AddBootFile(EBootType type)
 
 void Dos2xUtils::MarkSectorsFree(unsigned int first_sector, unsigned int last_sector)
 {
-	unsigned char vtocBuf[256];
+	uint8_t vtocBuf[256];
 
 	unsigned int secBit;
 	unsigned int secByte;
@@ -1483,7 +1483,7 @@ void Dos2xUtils::MarkSectorsFree(unsigned int first_sector, unsigned int last_se
 	unsigned int sector;
 
 	if (IsDos25EnhancedDensity()) {
-		unsigned char vtoc2Buf[256];
+		uint8_t vtoc2Buf[256];
 		fImage->ReadSector(eVTOCSector, vtocBuf, seclen);
 		fImage->ReadSector(eVTOC2Sector, vtoc2Buf, seclen);
 
@@ -1539,7 +1539,7 @@ unsigned int Dos2xUtils::GetNumberOfFreeSectors()
 	}
 
 	unsigned int seclen = fImage->GetSectorLength();
-	unsigned char buf[seclen];
+	uint8_t buf[seclen];
 
 	fImage->ReadSector(eVTOCSector, buf, seclen);
 	unsigned int freesec = buf[3] + (buf[4] << 8);
@@ -1573,10 +1573,10 @@ bool  Dos2xUtils::AllocSectors(unsigned int num, unsigned int * secnums, bool al
 	unsigned int count = 0;
 	int base = 0;
 
-	unsigned char vtocBuf[256];
+	uint8_t vtocBuf[256];
 
 	if (IsDos25EnhancedDensity()) {
-		unsigned char vtoc2Buf[256];
+		uint8_t vtoc2Buf[256];
 
 		fImage->ReadSector(eVTOCSector, vtocBuf, seclen);
 		fImage->ReadSector(eVTOC2Sector, vtoc2Buf, seclen);

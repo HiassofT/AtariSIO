@@ -68,9 +68,9 @@ private:
 
 	bool ReadOffset(unsigned int& off, bool beQuiet);
 
-	void EncodeRec41( unsigned char*, int*, unsigned char*, unsigned char*, int );
-	void EncodeRec43( unsigned char*, int*, unsigned char*, int );
-	void EncodeRec44( unsigned char*, int*, unsigned char*, unsigned char*, int );
+	void EncodeRec41( uint8_t*, int*, uint8_t*, uint8_t*, int );
+	void EncodeRec43( uint8_t*, int*, uint8_t*, int );
+	void EncodeRec44( uint8_t*, int*, uint8_t*, uint8_t*, int );
 
 	void EncodeRec45();
 	void EncodeRec46();
@@ -78,16 +78,16 @@ private:
 	void EncodeRecFA( bool, int, int, int );
 
 	bool	fLastPassFlag;
-	unsigned char	fCurrentBuffer[ 0x100 ];
-	unsigned char	fPrevBuffer[ 0x100 ];
+	uint8_t	fCurrentBuffer[ 0x100 ];
+	uint8_t	fPrevBuffer[ 0x100 ];
 	unsigned int	fSectorSize;
 	unsigned int	fCurrentSector;
 	unsigned int	fFileLength;
 	bool	fAlreadyFormatted;
 
-	unsigned char* fCurrentPtr;
-	unsigned char* fPassBuffer;
-	unsigned char* fLastRec;
+	uint8_t* fCurrentPtr;
+	uint8_t* fPassBuffer;
+	uint8_t* fLastRec;
 
 	RCPtr<FileIO> fFileIO;
 	RCPtr<AtrMemoryImage> fAtrMemoryImage;

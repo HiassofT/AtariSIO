@@ -38,7 +38,7 @@ public:
 	virtual ~ChunkWriter();
 
 	// append byte (8 bit)
-	bool AppendByte(unsigned char byte);
+	bool AppendByte(uint8_t byte);
 	// append word (16 bit)
 	bool AppendWord(unsigned short word);
 	// append dword (32 bit)
@@ -65,14 +65,14 @@ private:
 	unsigned int fAllocatedSize;
 	unsigned int fSize;
 
-	unsigned char* fData;
+	uint8_t* fData;
 };
 
 inline void ChunkWriter::PrepareForSize(unsigned int size)
 {
 	if (size > fAllocatedSize) {
 		fAllocatedSize = (size) * 2;
-		fData = (unsigned char*) realloc(fData, fAllocatedSize);
+		fData = (uint8_t*) realloc(fData, fAllocatedSize);
 	}
 }
 

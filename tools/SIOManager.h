@@ -30,11 +30,11 @@ public:
 	SIOManager(const RCPtr<SIOWrapper>& wrapper);
 	virtual ~SIOManager();
 
-	bool RegisterHandler(unsigned char device_id, const RCPtr<AbstractSIOHandler>& handler);
-	RCPtr<AbstractSIOHandler>& GetHandler(unsigned char device_id);
-	RCPtr<const AbstractSIOHandler> GetConstHandler(unsigned char device_id) const;
+	bool RegisterHandler(uint8_t device_id, const RCPtr<AbstractSIOHandler>& handler);
+	RCPtr<AbstractSIOHandler>& GetHandler(uint8_t device_id);
+	RCPtr<const AbstractSIOHandler> GetConstHandler(uint8_t device_id) const;
 
-	bool UnregisterHandler(unsigned char device_id);
+	bool UnregisterHandler(uint8_t device_id);
 
 	/*
 	 * return:
@@ -51,12 +51,12 @@ private:
 	// debugging stuff (default = off)
 };
 
-inline RCPtr<AbstractSIOHandler>& SIOManager::GetHandler(unsigned char device_id)
+inline RCPtr<AbstractSIOHandler>& SIOManager::GetHandler(uint8_t device_id)
 {
 	return fHandlers[device_id];
 }
 
-inline RCPtr<const AbstractSIOHandler> SIOManager::GetConstHandler(unsigned char device_id) const
+inline RCPtr<const AbstractSIOHandler> SIOManager::GetConstHandler(uint8_t device_id) const
 {
 	return fHandlers[device_id];
 }

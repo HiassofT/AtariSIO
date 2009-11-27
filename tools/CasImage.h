@@ -50,7 +50,7 @@ private:
 	void AllocTempBuf();
 	void FreeTempBuf();
 
-	void SetDescription(unsigned char* str, unsigned int length);
+	void SetDescription(uint8_t* str, unsigned int length);
 
 	enum EBlockType {
 		eBlockIOError = 0,
@@ -75,7 +75,7 @@ private:
 	char* fDescription;
 	char* fFilename;
 
-	unsigned char* fTempBuf;
+	uint8_t* fTempBuf;
 };
 
 inline unsigned int CasImage::GetNumberOfBlocks() const

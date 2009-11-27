@@ -81,7 +81,7 @@ int AtpSIOHandler::ProcessCommandFrame(SIO_command_frame& frame, const RCPtr<SIO
 		}
 
 		unsigned int buflen = 4;
-		unsigned char buf[buflen];
+		uint8_t buf[buflen];
 		const char* description = "[ get status ]";
 
 		if (currentTime < fLastDiskAccessTimestamp +
@@ -151,7 +151,7 @@ int AtpSIOHandler::ProcessCommandFrame(SIO_command_frame& frame, const RCPtr<SIO
 		}
 
                 unsigned int buflen = 128;
-		unsigned char buf[buflen];
+		uint8_t buf[buflen];
 		const char* description = "[ read sector ]";
 
 		unsigned int delay = 0;
@@ -257,7 +257,7 @@ int AtpSIOHandler::ProcessCommandFrame(SIO_command_frame& frame, const RCPtr<SIO
 		}
 
 		unsigned int buflen = 128;
-		unsigned char buf[buflen];
+		uint8_t buf[buflen];
 		const char* description;
 
 		if (frame.command == 0x50) {
@@ -374,7 +374,7 @@ int AtpSIOHandler::ProcessCommandFrame(SIO_command_frame& frame, const RCPtr<SIO
 		}
 
 		unsigned int buflen = 128;
-		unsigned char buf[buflen];
+		uint8_t buf[buflen];
 		const char* description;
 
 		if (frame.command == 0x21) {
@@ -530,7 +530,7 @@ bool AtpSIOHandler::EnableXF551Mode(bool)
 	return false;
 }
 
-bool AtpSIOHandler::SetHighSpeedParameters(unsigned char, unsigned int)
+bool AtpSIOHandler::SetHighSpeedParameters(uint8_t, unsigned int)
 {
 	return false;
 }

@@ -20,6 +20,7 @@
 */
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 
 static char objfile[]="atarisio-highsio.bin";
 
@@ -28,8 +29,8 @@ int main(void)
 
 	FILE *in;
 	FILE *out;
-	unsigned char hdr[6];
-	unsigned char* buf;
+	uint8_t hdr[6];
+	uint8_t* buf;
 	int len, objlen, rellen, origstart, origend;
 	int i;
 
@@ -50,7 +51,7 @@ int main(void)
 		return 1;
 	}
 
-	buf = (unsigned char*) malloc(origend-origstart+1);
+	buf = (uint8_t*) malloc(origend-origstart+1);
 	len=fread(buf,1,origend-origstart+1,in);
 
 	fclose(in);
@@ -84,7 +85,7 @@ int main(void)
 		printf("cannot create atarisio-highsio.c\n");
 		return 1;
 	}
-	fprintf(out,"unsigned char HighSpeedSIOCode::fSIOCode[] = {");
+	fprintf(out,"uint8_t HighSpeedSIOCode::fSIOCode[] = {");
 	for (i=0;i<objlen;i++) {
 		if (i % 12 == 0) {
 			fprintf(out,"\n\t");

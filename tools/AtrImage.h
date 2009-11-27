@@ -75,11 +75,11 @@ public:
 	virtual unsigned int GetImageSize() const { return fImageConfig.fImageSize; }
 
 	virtual bool ReadSector(unsigned int sector,
-		       unsigned char* buffer,
+		       uint8_t* buffer,
 		       unsigned int buffer_length) const;
 
 	virtual bool WriteSector(unsigned int sector,
-		       const unsigned char* buffer,
+		       const uint8_t* buffer,
 		       unsigned int buffer_length);
 
 	virtual bool CreateImage(EDiskFormat format) = 0;
@@ -97,8 +97,8 @@ protected:
 	bool SetFormat(ESectorLength density, unsigned int numberOfSectors);
 	bool SetFormat(ESectorLength density, unsigned int sectors, unsigned int tracks, unsigned int sides);
 
-	bool SetFormatFromATRHeader(const unsigned char* header);
-	bool CreateATRHeaderFromFormat(unsigned char* header) const;
+	bool SetFormatFromATRHeader(const uint8_t* header);
+	bool CreateATRHeaderFromFormat(uint8_t* header) const;
 
 	int CalculateOffset(unsigned int sector) const;
 	// -1 = error

@@ -35,7 +35,7 @@ public:
 	ComBlock(RCPtr<FileIO>& f);
 
 	// create COM block from data
-	ComBlock(const unsigned char* data, unsigned int len, unsigned int start_address);
+	ComBlock(const uint8_t* data, unsigned int len, unsigned int start_address);
 
 	virtual ~ComBlock();
 
@@ -52,19 +52,19 @@ public:
 	// write without COM header
 	bool WriteRawToFile(RCPtr<FileIO>& f) const;
 
-	unsigned char GetByte(unsigned int address) const;
+	uint8_t GetByte(unsigned int address) const;
 
-	const unsigned char* GetRawData() const;
+	const uint8_t* GetRawData() const;
 
 	std::string GetDescription() const;
 
 private:
-	void SetData(unsigned char* data, unsigned int len, unsigned int start_address);
+	void SetData(uint8_t* data, unsigned int len, unsigned int start_address);
 	void ClearData();
 
 	unsigned int fStartAddress;
 	unsigned int fLen;
-	unsigned char* fData;
+	uint8_t* fData;
 	long fFileOffset;
 };
 
@@ -93,13 +93,13 @@ inline bool ComBlock::ContainsAddress(unsigned int adr) const
 	return ((fStartAddress <= adr) && (fStartAddress + fLen - 1 >= adr));
 }
 
-inline unsigned char ComBlock::GetByte(unsigned int adr) const
+inline uint8_t ComBlock::GetByte(unsigned int adr) const
 {
 	Assert(ContainsAddress(adr));
 	return fData[adr - fStartAddress];
 }
 
-inline const unsigned char* ComBlock::GetRawData() const
+inline const uint8_t* ComBlock::GetRawData() const
 {
 	return fData;
 }

@@ -38,7 +38,7 @@ HighSpeedSIOCode::~HighSpeedSIOCode()
 {
 }
 
-void HighSpeedSIOCode::RelocateCode(unsigned char* buf, unsigned short address) const
+void HighSpeedSIOCode::RelocateCode(uint8_t* buf, unsigned short address) const
 {
 	memcpy(buf, fSIOCode, eSIOCodeLength);
 

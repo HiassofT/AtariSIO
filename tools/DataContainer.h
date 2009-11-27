@@ -23,6 +23,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <stdint.h>
 
 #include "RefCounted.h"
 #include "RCPtr.h"
@@ -35,7 +36,7 @@ public:
 	virtual ~DataContainer();
 
 	// append byte (8 bit)
-	bool AppendByte(unsigned char byte);
+	bool AppendByte(uint8_t byte);
 	// append word (16 bit)
 	bool AppendWord(unsigned short word);
 	// append dword (32 bit)
@@ -56,14 +57,14 @@ private:
 	size_t fAllocatedSize;
 	size_t fSize;
 
-	unsigned char* fData;
+	uint8_t* fData;
 };
 
 inline void DataContainer::PrepareForSize(size_t size)
 {
 	if (size > fAllocatedSize) {
 		fAllocatedSize = (size) * 2;
-		fData = (unsigned char*) realloc(fData, fAllocatedSize);
+		fData = (uint8_t*) realloc(fData, fAllocatedSize);
 	}
 }
 

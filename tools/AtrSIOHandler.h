@@ -41,7 +41,7 @@ public:
 	virtual bool IsAtrSIOHandler() const;
 
 	virtual bool EnableHighSpeed(bool on);
-	virtual bool SetHighSpeedParameters(unsigned char pokeyDivisor, unsigned int baudrate);
+	virtual bool SetHighSpeedParameters(uint8_t pokeyDivisor, unsigned int baudrate);
 	virtual bool EnableXF551Mode(bool on);
 
 	virtual RCPtr<DiskImage> GetDiskImage();
@@ -67,10 +67,10 @@ private:
 
 	bool fEnableHighSpeed;
 	bool fEnableXF551Mode;
-	unsigned char fSpeedByte;
+	uint8_t fSpeedByte;
 	unsigned int fHighSpeedBaudrate;
 
-	unsigned char fLastFDCStatus;
+	uint8_t fLastFDCStatus;
 
 	SIOTracer* fTracer;
 

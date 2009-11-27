@@ -435,7 +435,7 @@ int main(int argc, char** argv)
 			std::cout << "warning: input file too big, truncating to end address $FFFF" << std::endl;
 			len = 65536 - create_address;
 		}
-		unsigned char* buf = new unsigned char[len];
+		uint8_t* buf = new uint8_t[len];
 		if (f->ReadBlock(buf, len) != len) {
 			std::cout << "error reading input file!" << std::endl;
 			f->Close();
@@ -575,7 +575,7 @@ int main(int argc, char** argv)
 								unsigned int adr;
 								unsigned int blk_len;
 
-								const unsigned char* data = block->GetRawData();
+								const uint8_t* data = block->GetRawData();
 
 								std::cout << "   splitting block "
 									<< std::setw(4) << iblk
@@ -669,7 +669,7 @@ int main(int argc, char** argv)
 		}
 	}
 	if (run_address >= 0 || init_address >= 0) {
-		unsigned char buf[4];
+		uint8_t buf[4];
 		unsigned int start = 0, len = 0;
 		if (run_address >= 0) {
 			std::cout << "  create RUN block "

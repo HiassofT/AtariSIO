@@ -45,14 +45,14 @@
    store data_length bytes!
 */
 typedef struct SIO_param_struct {
-	unsigned char  device_id;
-	unsigned char  command;
-	unsigned char  direction; /* 0=receive, 1=send data block */
-	unsigned char  timeout; /* in seconds */
-	unsigned char  aux1; /* auxiliary data, eg. sector number */
-	unsigned char  aux2; 
+	uint8_t  device_id;
+	uint8_t  command;
+	uint8_t  direction; /* 0=receive, 1=send data block */
+	uint8_t  timeout; /* in seconds */
+	uint8_t  aux1; /* auxiliary data, eg. sector number */
+	uint8_t  aux2; 
 	unsigned int   data_length;
-	unsigned char* data_buffer;
+	uint8_t* data_buffer;
 } SIO_parameters;
 
 
@@ -74,16 +74,16 @@ typedef struct SIO_param_struct {
    store data_length bytes!
 */
 typedef struct Ext_SIO_param_struct {
-	unsigned char  device;
-	unsigned char  unit;
-	unsigned char  command;
-	unsigned char  direction; /* 0=none, 0x40 = read from device, 0x80 = write to device */
-	unsigned char  timeout; /* in seconds */
-	unsigned char  aux1; /* auxiliary data, eg. sector number */
-	unsigned char  aux2; 
+	uint8_t  device;
+	uint8_t  unit;
+	uint8_t  command;
+	uint8_t  direction; /* 0=none, 0x40 = read from device, 0x80 = write to device */
+	uint8_t  timeout; /* in seconds */
+	uint8_t  aux1; /* auxiliary data, eg. sector number */
+	uint8_t  aux2; 
 	unsigned int   data_length;
-	unsigned char* data_buffer;
-	unsigned char  highspeed_mode;	/* use ATARISIO_EXTSIO_* */
+	uint8_t* data_buffer;
+	uint8_t  highspeed_mode;	/* use ATARISIO_EXTSIO_* */
 } Ext_SIO_parameters;
 
 /*
@@ -96,10 +96,10 @@ typedef struct Ext_SIO_param_struct {
    frame. Usually, this member should be 0.
 */
 typedef struct SIO_command_frame_struct {
-	unsigned char device_id;
-	unsigned char command;
-	unsigned char aux1;
-	unsigned char aux2;
+	uint8_t device_id;
+	uint8_t command;
+	uint8_t aux1;
+	uint8_t aux2;
 	uint64_t reception_timestamp;
 	unsigned int  missed_count;
 } SIO_command_frame;
@@ -110,7 +110,7 @@ typedef struct SIO_command_frame_struct {
    (at least) data_length bytes.
 */
 typedef struct SIO_data_frame_struct {
-	unsigned char* data_buffer;
+	uint8_t* data_buffer;
 	unsigned int   data_length;
 } SIO_data_frame;
 

@@ -274,7 +274,7 @@ CasHandler::EPlayResult CasHandler::DoPlaying()
 					AERROR("illegal CAS block length %d", len);
 					ok = false;
 				} else {
-					int ret = fSIOWrapper->SendTapeBlock((unsigned char*) (block->GetData()), len);
+					int ret = fSIOWrapper->SendTapeBlock((uint8_t*) (block->GetData()), len);
 					if (ret) {
 						AERROR("transmitting CAS block %d failed: %d ", fCurrentBlockNumber + 1, ret);
 						ok = false;

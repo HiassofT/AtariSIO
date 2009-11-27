@@ -25,7 +25,7 @@ CasBlock::CasBlock(
 	unsigned int baudrate,
 	unsigned int gap,
 	unsigned int length,
-	unsigned char* data,
+	uint8_t* data,
 	unsigned int partnumber)
 	: fBaudRate(baudrate),
 	  fGap(gap),
@@ -33,7 +33,7 @@ CasBlock::CasBlock(
 	  fPartNumber(partnumber)
 {
 	if (length) {
-		fData = new unsigned char[length];
+		fData = new uint8_t[length];
 		memcpy(fData, data, length);
 	} else {
 		fData = 0;

@@ -39,7 +39,7 @@ RCPtr<AtpImage> AtpUtils::CreateAtpImageFromAtrImage(RCPtr<AtrImage> atrImage)
 			for (unsigned int sector=1;sector<=18;sector++) {
 				unsigned int position = CalculatePositionOfSDSector(
 					track, sector);
-				unsigned char buf[128];
+				uint8_t buf[128];
 				if (!atrImage->ReadSector(track*18+sector,buf,128)) {
 					DPRINTF("error accessing internal ATR image!");
 					return RCPtr<AtpImage>();
@@ -60,7 +60,7 @@ RCPtr<AtpImage> AtpUtils::CreateAtpImageFromAtrImage(RCPtr<AtrImage> atrImage)
 			for (unsigned int sector=1;sector<=26;sector++) {
 				unsigned int position = CalculatePositionOfEDSector(
 					track, sector);
-				unsigned char buf[128];
+				uint8_t buf[128];
 				if (!atrImage->ReadSector(track*26+sector,buf,128)) {
 					DPRINTF("error accessing internal ATR image!");
 					return RCPtr<AtpImage>();

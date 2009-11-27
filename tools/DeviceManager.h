@@ -107,8 +107,8 @@ public:
 	bool SetHighSpeedMode(EHighSpeedMode mode);
 	EHighSpeedMode GetHighSpeedMode() const;
 
-	bool SetHighSpeedParameters(unsigned char pokeyDivsor, unsigned int baudrate);
-	inline unsigned char GetHighSpeedPokeyDivisor() const;
+	bool SetHighSpeedParameters(uint8_t pokeyDivsor, unsigned int baudrate);
+	inline uint8_t GetHighSpeedPokeyDivisor() const;
 	inline unsigned int GetHighSpeedBaudrate() const;
 
 	bool EnableXF551Mode(bool on);
@@ -144,7 +144,7 @@ private:
 	EHighSpeedMode fHighSpeedMode;
 	bool fUseHighSpeed;
 	unsigned int fHighSpeedBaudrate;
-	unsigned char fPokeyDivisor;
+	uint8_t fPokeyDivisor;
 	bool fEnableXF551Mode;
 	SIOWrapper::ESIOServerCommandLine fCableType;
 	RCPtr<CasHandler> fCasHandler;
@@ -185,7 +185,7 @@ inline unsigned int DeviceManager::GetHighSpeedBaudrate() const
 	return fHighSpeedBaudrate;
 }
 
-inline unsigned char DeviceManager::GetHighSpeedPokeyDivisor() const
+inline uint8_t DeviceManager::GetHighSpeedPokeyDivisor() const
 {
 	return fPokeyDivisor;
 }

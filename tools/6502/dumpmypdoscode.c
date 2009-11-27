@@ -19,11 +19,12 @@
 */
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 
 static char objfile[]="atarisio-mypdos.bin";
 static char bootfile[]="bootloader.bin";
 
-static void dump_buf(FILE* out, unsigned char* buf, int len)
+static void dump_buf(FILE* out, uint8_t* buf, int len)
 {
 	int i;
 	for (i=0;i<len;i++) {
@@ -39,8 +40,8 @@ int main(void)
 
 	FILE *in;
 	FILE *out;
-	unsigned char buf[16384];
-	unsigned char bootbuf[384];
+	uint8_t buf[16384];
+	uint8_t bootbuf[384];
 
 	int len, bootlen;
 
@@ -86,10 +87,10 @@ int main(void)
 		printf("cannot create mypicodoscode.c\n");
 		return 1;
 	}
-	fprintf(out,"const unsigned char MyPicoDosCode::fCode[] = {");
+	fprintf(out,"const uint8_t MyPicoDosCode::fCode[] = {");
 	dump_buf(out, buf, len);
 	fprintf(out,"\n};\n\n");
-	fprintf(out,"const unsigned char MyPicoDosCode::fBootCode[] = {");
+	fprintf(out,"const uint8_t MyPicoDosCode::fBootCode[] = {");
 	dump_buf(out, bootbuf, bootlen);
 	fprintf(out,"\n};\n\n");
 

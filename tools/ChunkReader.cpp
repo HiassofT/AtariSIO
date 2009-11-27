@@ -62,7 +62,7 @@ RCPtr<ChunkReader> ChunkReader::OpenChunk()
 
 	unsigned int chunklen;
 	char name[4];
-	unsigned char lenbuf[4];
+	uint8_t lenbuf[4];
 
 	SeekToCurrentPos();
 
@@ -91,7 +91,7 @@ RCPtr<ChunkReader> ChunkReader::OpenChunk()
 	return chunk;
 }
 
-bool ChunkReader::ReadByte(unsigned char& byte)
+bool ChunkReader::ReadByte(uint8_t& byte)
 {
 	SeekToCurrentPos();
 
@@ -108,7 +108,7 @@ bool ChunkReader::ReadWord(unsigned short& word)
 {
 	SeekToCurrentPos();
 	if (fChunkStart+fCurrentPosition+2 <= fChunkEnd) {
-		unsigned char buf[2];
+		uint8_t buf[2];
 		if (fFile->ReadBlock(buf, 2) == 2) {
 			fCurrentPosition+=2;
 			word = buf[0] | (buf[1] << 8);
@@ -122,7 +122,7 @@ bool ChunkReader::ReadDword(unsigned int &dword)
 {
 	SeekToCurrentPos();
 	if (fChunkStart+fCurrentPosition+4 <= fChunkEnd) {
-		unsigned char buf[4];
+		uint8_t buf[4];
 		if (fFile->ReadBlock(buf, 4) == 4) {
 			fCurrentPosition+=4;
 			dword =
@@ -178,7 +178,7 @@ bool ChunkReader::CalculateCRC32(unsigned int &checksum, unsigned int start_pos,
 
 	fFile->Seek(fChunkStart + start_pos);
 
-	unsigned char tmp_buf[1024];
+	uint8_t tmp_buf[1024];
 
 	while (total_len) {
 		if (total_len > 1024) {

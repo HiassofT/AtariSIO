@@ -260,7 +260,7 @@ void SIOTracer::TraceCommandOK()
 	}
 }
 
-void SIOTracer::TraceCommandError(int returncode, unsigned char FDC_status)
+void SIOTracer::TraceCommandError(int returncode, uint8_t FDC_status)
 {
 	if (fTraceGroupsCache & eTraceCommands) {
 		switch (returncode) {
@@ -316,7 +316,7 @@ void SIOTracer::TraceCommandError(int returncode, unsigned char FDC_status)
 }
 
 void SIOTracer::TraceDataBlock(
-	const unsigned char* block,
+	const uint8_t* block,
 	int len,
 	const char *prefix)
 {
@@ -367,7 +367,7 @@ static inline const char* is_xf551(bool xf551_flag)
 	return xf551_flag ? " XF551" : "";
 }
 
-void SIOTracer::TraceDecodedPercomBlock(unsigned int driveno, const unsigned char* block, bool get, bool XF551)
+void SIOTracer::TraceDecodedPercomBlock(unsigned int driveno, const uint8_t* block, bool get, bool XF551)
 {
 	ETraceGroup group = eTraceVerboseCommands;
 	if (fTraceGroupsCache & group) {
@@ -377,7 +377,7 @@ void SIOTracer::TraceDecodedPercomBlock(unsigned int driveno, const unsigned cha
 		unsigned int sectors = (block[2]<<8) + block[3];
 		unsigned int total = sides * tracks * sectors;
 		unsigned int seclen = (block[6]<<8) + block[7];
-		unsigned char dens = block[5];
+		uint8_t dens = block[5];
 
 		snprintf(fString, eMaxStringLength, "D%d: %s percom block%s : ",
 			driveno,

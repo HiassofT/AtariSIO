@@ -347,7 +347,7 @@ struct atarisio_dev {
 	struct timeval irq_timestamp;
 	
 	/* value of modem status register at the last interrupt call */
-	unsigned char last_msr; /* =0; */
+	uint8_t last_msr; /* =0; */
 
 	int enable_timestamp_recording; /* = 0; */
 	int got_send_irq_timestamp;
@@ -355,7 +355,7 @@ struct atarisio_dev {
 
 	/* receive buffer */
 	volatile struct rx_buf_struct {
-		unsigned char buf[IOBUF_LENGTH];
+		uint8_t buf[IOBUF_LENGTH];
 		unsigned int head;
 		unsigned int tail;
 		int wakeup_len;
@@ -363,7 +363,7 @@ struct atarisio_dev {
 
 	/* transmit buffer */
 	volatile struct tx_buf_struct {
-		unsigned char buf[IOBUF_LENGTH];
+		uint8_t buf[IOBUF_LENGTH];
 		unsigned int head;
 		unsigned int tail;
 	} tx_buf;
@@ -372,7 +372,7 @@ struct atarisio_dev {
 
 	/* command frame buffer */
 	volatile struct cmdframe_buf_struct {
-		unsigned char buf[5];
+		uint8_t buf[5];
 		unsigned int is_valid;
 		unsigned int receiving;
 		unsigned int pos;
@@ -418,8 +418,8 @@ struct atarisio_dev {
 	 * configuration for SIOSERVER mode
 	 */
 
-	unsigned char sioserver_command_line; /* = UART_MSR_RI; */
-	unsigned char sioserver_command_line_delta; /* = UART_MSR_TERI; */
+	uint8_t sioserver_command_line; /* = UART_MSR_RI; */
+	uint8_t sioserver_command_line_delta; /* = UART_MSR_TERI; */
 
 	/* 
 	 * configuration for 1050-2-PC mode
@@ -429,9 +429,9 @@ struct atarisio_dev {
 	 * The command line has to be set to LOW during the
 	 * transmission of a command frame and HI otherwise
 	 */
-	unsigned char command_line_mask; /* = ~UART_MCR_RTS; */
-	unsigned char command_line_low; /* = UART_MCR_RTS; */
-	unsigned char command_line_high; /* = 0; */
+	uint8_t command_line_mask; /* = ~UART_MCR_RTS; */
+	uint8_t command_line_low; /* = UART_MCR_RTS; */
+	uint8_t command_line_high; /* = 0; */
 
 	unsigned int default_baudrate; /* = ATARISIO_STANDARD_BAUDRATE; */
 	unsigned int highspeed_baudrate; /* = ATARISIO_STANDARD_BAUDRATE; */
@@ -440,8 +440,8 @@ struct atarisio_dev {
 	int add_highspeedpause; /* = 0; */
 	unsigned int tape_baudrate;
 
-	unsigned char standard_lcr; /* = UART_LCR_WLEN8; */
-	unsigned char slow_lcr; /* = UART_LCR_WLEN8 | UART_LCR_STOP | UART_LCR_PARITY | UART_LCR_SPAR; */
+	uint8_t standard_lcr; /* = UART_LCR_WLEN8; */
+	uint8_t slow_lcr; /* = UART_LCR_WLEN8 | UART_LCR_STOP | UART_LCR_PARITY | UART_LCR_SPAR; */
 
 	/* serial port state */
 	struct serial_struct orig_serial_struct;
@@ -474,7 +474,7 @@ static inline u8 serial_in(struct atarisio_dev* dev, unsigned int offset)
 	}
 }
 
-static void set_lcr(struct atarisio_dev* dev, unsigned char lcr)
+static void set_lcr(struct atarisio_dev* dev, uint8_t lcr)
 {
 	dev->serial_config.LCR = lcr;
 	serial_out(dev, UART_LCR, dev->serial_config.LCR);
@@ -891,7 +891,7 @@ static int set_baudrate(struct atarisio_dev* dev, unsigned int baudrate, int do_
 	return ret;
 }
 
-static inline unsigned char calculate_checksum(const unsigned char* circ_buf, int start, int len, int total_len)
+static inline uint8_t calculate_checksum(const uint8_t* circ_buf, int start, int len, int total_len)
 {
 	unsigned int chksum=0;
 	int i;
@@ -919,7 +919,7 @@ static inline void reset_fifos(struct atarisio_dev* dev)
 
 static inline void receive_chars(struct atarisio_dev* dev)
 {
-	unsigned char c,lsr;
+	uint8_t c,lsr;
 	int do_wakeup=0;
 	int first = 1;
 
@@ -988,7 +988,7 @@ static inline void send_chars(struct atarisio_dev* dev)
 {
 	int do_wakeup=0;
 	int count = 16; /* FIFO can hold 16 chars at maximum */
-	unsigned char lsr;
+	uint8_t lsr;
 
 	lsr = serial_in(dev, UART_LSR);
 	if (lsr & UART_LSR_OE) {
@@ -1043,7 +1043,7 @@ static inline void try_switchbaud(struct atarisio_dev* dev)
 	set_baudrate(dev, baud, 0);
 }
 
-static inline void check_modem_lines_before_receive(struct atarisio_dev* dev, unsigned char new_msr)
+static inline void check_modem_lines_before_receive(struct atarisio_dev* dev, uint8_t new_msr)
 {
 	if (dev->current_mode == MODE_SIOSERVER) {
 		if ( (new_msr & dev->sioserver_command_line) != (dev->last_msr & dev->sioserver_command_line)) {
@@ -1119,7 +1119,7 @@ static enum command_frame_quality check_command_frame_quality(struct atarisio_de
 
 	/* 5 characters without errors, validate the checksum */
 	if (dev->cmdframe_buf.ok_chars == 5 && dev->cmdframe_buf.error_chars == 0) {
-		unsigned char checksum = calculate_checksum((unsigned char*)dev->cmdframe_buf.buf, 0, 4, 5);
+		uint8_t checksum = calculate_checksum((uint8_t*)dev->cmdframe_buf.buf, 0, 4, 5);
 		if (dev->cmdframe_buf.buf[4] == checksum) {
 			IRQ_PRINTK(DEBUG_NOISY, "found command frame\n");
 			return command_frame_ok;
@@ -1175,7 +1175,7 @@ static inline int validate_command_frame(struct atarisio_dev* dev)
 	return 1;
 }
 
-static inline void check_modem_lines_after_receive(struct atarisio_dev* dev, unsigned char new_msr)
+static inline void check_modem_lines_after_receive(struct atarisio_dev* dev, uint8_t new_msr)
 {
 	int do_wakeup = 0;
 
@@ -1226,7 +1226,7 @@ static irqreturn_t atarisio_interrupt(int irq, void* dev_id)
 #endif
 {
 	struct atarisio_dev* dev = dev_id;
-	unsigned char iir,msr;
+	uint8_t iir,msr;
 	unsigned int handled = 0;
 
 	do_gettimeofday(&dev->irq_timestamp);
@@ -1468,7 +1468,7 @@ static int receive_single_character(struct atarisio_dev* dev, unsigned int addit
 	return ret;
 }
 
-static int copy_received_data_to_user(struct atarisio_dev* dev, unsigned int data_length, unsigned char* user_buffer)
+static int copy_received_data_to_user(struct atarisio_dev* dev, unsigned int data_length, uint8_t* user_buffer)
 {
 	unsigned int len, remain;
 
@@ -1483,14 +1483,14 @@ static int copy_received_data_to_user(struct atarisio_dev* dev, unsigned int dat
 		len = data_length;
 	}
 	if ( copy_to_user(user_buffer,
-			 (unsigned char*) (&(dev->rx_buf.buf[dev->rx_buf.tail])),
+			 (uint8_t*) (&(dev->rx_buf.buf[dev->rx_buf.tail])),
 			 len) ) {
 		return -EFAULT;
 	}
 	remain = data_length - len;
 	if (remain>0) {
 		if ( copy_to_user(user_buffer+len,
-				 (unsigned char*) dev->rx_buf.buf,
+				 (uint8_t*) dev->rx_buf.buf,
 				 remain) ) {
 			return -EFAULT;
 		}
@@ -1500,7 +1500,7 @@ static int copy_received_data_to_user(struct atarisio_dev* dev, unsigned int dat
 
 static int receive_block(struct atarisio_dev* dev,
 	unsigned int block_len,
-	unsigned char* user_buffer,
+	uint8_t* user_buffer,
 	unsigned int additional_timeout,
 	int handle_checksum)
 {
@@ -1509,7 +1509,7 @@ static int receive_block(struct atarisio_dev* dev,
 	int ret=0;
 	int want_len;
 	int no_received_chars;
-	unsigned char checksum;
+	uint8_t checksum;
 
 	if (block_len == 0) {
 		return -EINVAL;
@@ -1536,7 +1536,7 @@ static int receive_block(struct atarisio_dev* dev,
 		ret = copy_received_data_to_user(dev, block_len, user_buffer);
 
 		if (handle_checksum) {
-			checksum = calculate_checksum((unsigned char*)(dev->rx_buf.buf),
+			checksum = calculate_checksum((uint8_t*)(dev->rx_buf.buf),
 					dev->rx_buf.tail, block_len, IOBUF_LENGTH);
 
 			if (dev->rx_buf.buf[(dev->rx_buf.tail+block_len) % IOBUF_LENGTH ]
@@ -1560,7 +1560,7 @@ static int receive_block(struct atarisio_dev* dev,
 	return ret;
 }
 
-static int send_single_character(struct atarisio_dev* dev, unsigned char c)
+static int send_single_character(struct atarisio_dev* dev, uint8_t c)
 {
 	unsigned long flags;
 	int w;
@@ -1576,10 +1576,10 @@ static int send_single_character(struct atarisio_dev* dev, unsigned char c)
 	return w;
 }
 
-static int setup_send_frame(struct atarisio_dev* dev, unsigned int data_length, unsigned char* user_buffer, int add_checksum)
+static int setup_send_frame(struct atarisio_dev* dev, unsigned int data_length, uint8_t* user_buffer, int add_checksum)
 {
 	unsigned int len, remain;
-	unsigned char checksum;
+	uint8_t checksum;
 
 	if ((data_length == 0) || (data_length >= MAX_SIO_DATA_LENGTH)) {
 		return -EINVAL;
@@ -1591,14 +1591,14 @@ static int setup_send_frame(struct atarisio_dev* dev, unsigned int data_length, 
 	if (len > data_length) {
 		len = data_length;
 	}
-	if ( copy_from_user((unsigned char*) (&(dev->tx_buf.buf[dev->tx_buf.head])), 
+	if ( copy_from_user((uint8_t*) (&(dev->tx_buf.buf[dev->tx_buf.head])), 
 			user_buffer,
 			len) ) {
 		return -EFAULT;
 	}
 	remain = data_length - len;
 	if (remain>0) {
-		if ( copy_from_user((unsigned char*) dev->tx_buf.buf,
+		if ( copy_from_user((uint8_t*) dev->tx_buf.buf,
 				user_buffer+len,
 				remain) ) {
 			return -EFAULT;
@@ -1606,7 +1606,7 @@ static int setup_send_frame(struct atarisio_dev* dev, unsigned int data_length, 
 	}
 
 	if (add_checksum) {
-		checksum = calculate_checksum((unsigned char*)(dev->tx_buf.buf),
+		checksum = calculate_checksum((uint8_t*)(dev->tx_buf.buf),
 				dev->tx_buf.head, data_length, IOBUF_LENGTH);
 
 		dev->tx_buf.buf[(dev->tx_buf.head+data_length) % IOBUF_LENGTH] = checksum;
@@ -1620,7 +1620,7 @@ static int setup_send_frame(struct atarisio_dev* dev, unsigned int data_length, 
 
 static int send_block(struct atarisio_dev* dev,
         unsigned int block_len,
-        unsigned char* user_buffer,
+        uint8_t* user_buffer,
         int add_checksum)
 
 {
@@ -1685,9 +1685,9 @@ static int send_command_frame(struct atarisio_dev* dev, Ext_SIO_parameters* para
 	int i;
 	int w;
 	int c;
-	unsigned char highspeed_mode;
+	uint8_t highspeed_mode;
 
-	unsigned char cmd_frame[5];
+	uint8_t cmd_frame[5];
 
 	highspeed_mode = params->highspeed_mode;
 
@@ -2543,7 +2543,7 @@ static int atarisio_ioctl(struct inode* inode, struct file* filp,
 		if (!dev->enable_timestamp_recording) {
 			ret = -EINVAL;
 		} else {
-			if (copy_to_user((SIO_timestamps*)arg, (unsigned char*) &dev->timestamps, sizeof(SIO_timestamps))) {
+			if (copy_to_user((SIO_timestamps*)arg, (uint8_t*) &dev->timestamps, sizeof(SIO_timestamps))) {
 				ret = -EFAULT;
 			}
 		}

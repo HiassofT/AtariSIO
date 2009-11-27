@@ -136,7 +136,7 @@ public:
 			}
 		}
 
-		unsigned char GetFileStatus(unsigned int num) const
+		uint8_t GetFileStatus(unsigned int num) const
 		{
 			if (num < fFileCount) {
 				return fFileStatus[num];
@@ -175,7 +175,7 @@ public:
 		enum { eFileWidth = 20 };
 
 		bool FindFile(const char* rawname,
-			unsigned char& entryNum, unsigned char& status, unsigned int& startSec) const;
+			uint8_t& entryNum, uint8_t& status, unsigned int& startSec) const;
 
 	private:
 		friend class Dos2xUtils;
@@ -184,8 +184,8 @@ public:
 
 		char* fFiles[eMaxFiles];
 		char* fRawName[eMaxFiles];
-		unsigned char fFileStatus[eMaxFiles];
-		unsigned char fEntryNumber[eMaxFiles];
+		uint8_t fFileStatus[eMaxFiles];
+		uint8_t fEntryNumber[eMaxFiles];
 		unsigned int fStartingSector[eMaxFiles];
 		unsigned int fSectorLength[eMaxFiles];
 
@@ -213,7 +213,7 @@ private:
 		bool use16BitLinks,
 		unsigned int numVTOC);
 
-	bool AddDataBlock(const char* atariname, const unsigned char* datablock, unsigned int blocklen);
+	bool AddDataBlock(const char* atariname, const uint8_t* datablock, unsigned int blocklen);
 	unsigned int AddDirectory(const char* dirname, unsigned int& entryNum);
 	
 	bool AddEntry(const char* longname, char*& atariname, unsigned int& entryNumber);
@@ -221,7 +221,7 @@ private:
 
 	bool WriteBufferToImage(
 		unsigned int entrynum,
-		const unsigned char* buffer, unsigned int buffer_size,
+		const uint8_t* buffer, unsigned int buffer_size,
 		const unsigned int* sectors, unsigned int num_sectors,
 		bool& usedSectorAbove720);
 
@@ -249,7 +249,7 @@ private:
 	bool CheckNameUnique(unsigned int entryNum);
 
 	void IndicateDeleteEntry(unsigned int entryNum, const char* atariname);
-	void IndicateCloseFile(unsigned int entryNum, const char* atariname, unsigned int sector, unsigned char fileStat);
+	void IndicateCloseFile(unsigned int entryNum, const char* atariname, unsigned int sector, uint8_t fileStat);
 	void IndicateCreateDirectory(unsigned int entryNum, const char* atariname, unsigned int sector);
 
 	void MarkSectorsFree(unsigned int first_sector, unsigned int last_sector);

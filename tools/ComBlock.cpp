@@ -51,7 +51,7 @@ ComBlock::ComBlock(RCPtr<FileIO>& f)
 
 	fLen = endadr - fStartAddress + 1;
 
-	fData = new unsigned char[fLen];
+	fData = new uint8_t[fLen];
 
 	fFileOffset = f->Tell();
 
@@ -61,7 +61,7 @@ ComBlock::ComBlock(RCPtr<FileIO>& f)
 	}
 }
 
-ComBlock::ComBlock(const unsigned char* data, unsigned int len, unsigned int start_address)
+ComBlock::ComBlock(const uint8_t* data, unsigned int len, unsigned int start_address)
 	: fData(0), fFileOffset(0)
 {
 	if (!data) {
@@ -72,7 +72,7 @@ ComBlock::ComBlock(const unsigned char* data, unsigned int len, unsigned int sta
 	}
 	fStartAddress = start_address;
 	fLen = len;
-	fData = new unsigned char[fLen];
+	fData = new uint8_t[fLen];
 	memcpy(fData, data, fLen);
 }
 

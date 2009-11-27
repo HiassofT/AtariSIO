@@ -73,7 +73,7 @@ void hexdump(void* buf, int len)
 {
 	int i;
 	for (i=0;i<len;i++) {
-		printf("%02x ", ((unsigned char*)buf)[i]);
+		printf("%02x ", ((uint8_t*)buf)[i]);
 		if (i % 16 == 15) {
 			printf("\n");
 		}
@@ -83,7 +83,7 @@ void hexdump(void* buf, int len)
 	}
 }
 
-static void analyze_timing(unsigned char* buf)
+static void analyze_timing(uint8_t* buf)
 {
 	int sectors = buf[DiskDriveCode::eScanCount];
 	int trkt1 = buf[DiskDriveCode::eScanInitTime];
@@ -133,7 +133,7 @@ int main()
 	bool prosys = true;
 	int i, ret;
 
-	unsigned char buf[256];
+	uint8_t buf[256];
 
         SIOTracer* sioTracer = SIOTracer::GetInstance();
 	{

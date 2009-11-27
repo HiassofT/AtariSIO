@@ -61,41 +61,41 @@ public:
 	/*
 	 * disk drive methods
 	 */
-	int ReadSector(unsigned char driveNo, unsigned int sector,
-		unsigned char* buf, unsigned int length,
-		unsigned char highspeedMode = ATARISIO_EXTSIO_SPEED_NORMAL);
+	int ReadSector(uint8_t driveNo, unsigned int sector,
+		uint8_t* buf, unsigned int length,
+		uint8_t highspeedMode = ATARISIO_EXTSIO_SPEED_NORMAL);
 
-	int WriteSector(unsigned char driveNo, unsigned int sector,
-		unsigned char* buf, unsigned int length,
-		unsigned char highspeedMode = ATARISIO_EXTSIO_SPEED_NORMAL);
+	int WriteSector(uint8_t driveNo, unsigned int sector,
+		uint8_t* buf, unsigned int length,
+		uint8_t highspeedMode = ATARISIO_EXTSIO_SPEED_NORMAL);
 
-	int WriteAndVerifySector(unsigned char driveNo, unsigned int sector,
-		unsigned char* buf, unsigned int length,
-		unsigned char highspeedMode = ATARISIO_EXTSIO_SPEED_NORMAL);
+	int WriteAndVerifySector(uint8_t driveNo, unsigned int sector,
+		uint8_t* buf, unsigned int length,
+		uint8_t highspeedMode = ATARISIO_EXTSIO_SPEED_NORMAL);
 
-	int FormatDisk(unsigned char driveNo, unsigned char* buf, unsigned int length,
-		unsigned char highspeedMode = ATARISIO_EXTSIO_SPEED_NORMAL);
+	int FormatDisk(uint8_t driveNo, uint8_t* buf, unsigned int length,
+		uint8_t highspeedMode = ATARISIO_EXTSIO_SPEED_NORMAL);
 
-	int FormatEnhanced(unsigned char driveNo, unsigned char* buf,
-		unsigned char highspeedMode = ATARISIO_EXTSIO_SPEED_NORMAL);
+	int FormatEnhanced(uint8_t driveNo, uint8_t* buf,
+		uint8_t highspeedMode = ATARISIO_EXTSIO_SPEED_NORMAL);
 	/* buffer length is fixed to 128 bytes */
 
-	int GetStatus(unsigned char driveNo, unsigned char* buf,
-		unsigned char highspeedMode = ATARISIO_EXTSIO_SPEED_NORMAL);
+	int GetStatus(uint8_t driveNo, uint8_t* buf,
+		uint8_t highspeedMode = ATARISIO_EXTSIO_SPEED_NORMAL);
 	/* buffer length is fixed to 4 bytes */
 
-	int PercomGet(unsigned char driveNo, unsigned char* buf,
-		unsigned char highspeedMode = ATARISIO_EXTSIO_SPEED_NORMAL);
+	int PercomGet(uint8_t driveNo, uint8_t* buf,
+		uint8_t highspeedMode = ATARISIO_EXTSIO_SPEED_NORMAL);
 	/* buffer length is fixed to 12 bytes */
 
-	int PercomPut(unsigned char driveNo, unsigned char* buf,
-		unsigned char highspeedMode = ATARISIO_EXTSIO_SPEED_NORMAL);
+	int PercomPut(uint8_t driveNo, uint8_t* buf,
+		uint8_t highspeedMode = ATARISIO_EXTSIO_SPEED_NORMAL);
 	/* buffer length is fixed to 12 bytes */
 
-	int ImmediateCommand(unsigned char driveNo, unsigned char command,
-		unsigned char aux1, unsigned char aux2,
-		unsigned char timeout = 7,
-		unsigned char highspeedMode = ATARISIO_EXTSIO_SPEED_NORMAL);
+	int ImmediateCommand(uint8_t driveNo, uint8_t command,
+		uint8_t aux1, uint8_t aux2,
+		uint8_t timeout = 7,
+		uint8_t highspeedMode = ATARISIO_EXTSIO_SPEED_NORMAL);
 
 	/*
 	 * generic SIO method (old)
@@ -128,15 +128,15 @@ public:
 	int SendComplete();
 	int SendError();
 
-	int SendDataFrame(unsigned char* buf, unsigned int length);
-	int ReceiveDataFrame(unsigned char* buf, unsigned int length);
+	int SendDataFrame(uint8_t* buf, unsigned int length);
+	int ReceiveDataFrame(uint8_t* buf, unsigned int length);
 
-	int SendRawFrame(unsigned char* buf, unsigned int length);
-	int ReceiveRawFrame(unsigned char* buf, unsigned int length);
+	int SendRawFrame(uint8_t* buf, unsigned int length);
+	int ReceiveRawFrame(uint8_t* buf, unsigned int length);
 
 	int SendCommandACKXF551();
 	int SendCompleteXF551();
-	int SendDataFrameXF551(unsigned char* buf, unsigned int length);
+	int SendDataFrameXF551(uint8_t* buf, unsigned int length);
 
 	int SetBaudrate(unsigned int baudrate);
 	int SetHighSpeedBaudrate(unsigned int baudrate);
@@ -144,7 +144,7 @@ public:
 	int SetHighSpeedPause(unsigned int on);
 
 	int SetTapeBaudrate(unsigned int baudrate);
-	int SendTapeBlock(unsigned char* buf, unsigned int length);
+	int SendTapeBlock(uint8_t* buf, unsigned int length);
 
 	int GetBaudrate();
 	int GetExactBaudrate();

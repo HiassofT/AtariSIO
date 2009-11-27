@@ -173,7 +173,7 @@ static void print_linechange(int new_value)
 const unsigned int maxsize = 1024;
 //const unsigned int maxsize = 1;
 
-unsigned char buf[maxsize];
+uint8_t buf[maxsize];
 
 int main(int argc, char** argv)
 {

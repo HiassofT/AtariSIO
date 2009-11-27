@@ -21,10 +21,12 @@
    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
+#include <unistd.h>
+#include <stdint.h>
+
 #include "RefCounted.h"
 #include "RCPtr.h"
 
-#include <unistd.h>
 
 typedef enum { eNoDisk=0, e90kDisk=1, e130kDisk=2, e180kDisk=3, e360kDisk=4, eUserDefDisk=5} EDiskFormat;
 typedef enum { e128BytesPerSector=128, e256BytesPerSector=256} ESectorLength;
@@ -63,11 +65,11 @@ public:
 	inline void SetChanged(bool) const;
 
 	virtual bool ReadSector(unsigned int sector,
-		unsigned char* buffer,	
+		uint8_t* buffer,	
 		unsigned int buffer_length) const = 0;
 
 	virtual bool WriteSector(unsigned int sector,
-		const unsigned char* buffer,	
+		const uint8_t* buffer,	
 		unsigned int buffer_length) = 0;
 
 private:

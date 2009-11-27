@@ -39,7 +39,7 @@ private:
 	enum { eMemSize = 65536 };
 
 	bool fContainsData;
-	unsigned char fData[eMemSize];
+	uint8_t fData[eMemSize];
 	unsigned int fMinAddress;
 	unsigned int fMaxAddress;
 };

@@ -216,7 +216,7 @@ static unsigned long measure_latency(int blocksize, unsigned int count,  EOutput
 		return 0;
 	}
 
-	unsigned char buf[MAX_BLOCKSIZE];
+	uint8_t buf[MAX_BLOCKSIZE];
 	memset(buf, 0, MAX_BLOCKSIZE);
 
 	MyTimestamps ts;

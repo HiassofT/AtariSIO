@@ -21,17 +21,19 @@
    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
+#include <stdint.h>
+
 #include "RefCounted.h"
 #include "RCPtr.h"
 
 class CasBlock : public RefCounted {
 public:
-	CasBlock(unsigned int baudrate, unsigned int gap, unsigned int length, unsigned char* data, unsigned int partNumber = 1);
+	CasBlock(unsigned int baudrate, unsigned int gap, unsigned int length, uint8_t* data, unsigned int partNumber = 1);
 
 	unsigned int GetBaudRate() const;
 	unsigned int GetGap() const;
 	unsigned int GetLength() const;
-	const unsigned char* GetData() const;
+	const uint8_t* GetData() const;
 
 	void SetPartNumber(unsigned int part);
 	unsigned int GetPartNumber() const;
@@ -45,7 +47,7 @@ private:
 	unsigned int fBaudRate;
 	unsigned int fGap;
 	unsigned int fLength;
-	unsigned char* fData;
+	uint8_t* fData;
 
 	unsigned int fPartNumber;
 };
@@ -65,7 +67,7 @@ inline unsigned int CasBlock::GetLength() const
 	return fLength;
 }
 
-inline const unsigned char* CasBlock::GetData() const
+inline const uint8_t* CasBlock::GetData() const
 {
 	return fData;
 }

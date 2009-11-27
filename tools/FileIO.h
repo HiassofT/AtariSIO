@@ -23,6 +23,7 @@
 
 #include <stdio.h>
 #include <sys/types.h>
+#include <stdint.h>
 
 #ifdef USE_ZLIB
 #include <zlib.h>
@@ -48,8 +49,8 @@ public:
 	virtual bool Seek(unsigned int pos) = 0;
 	virtual unsigned int Tell() = 0;
 
-	bool ReadByte(unsigned char& byte);
-	bool WriteByte(const unsigned char& byte);
+	bool ReadByte(uint8_t& byte);
+	bool WriteByte(const uint8_t& byte);
 
 	/* read/write lo, hi byte */
 	bool ReadWord(unsigned int& word);

@@ -49,8 +49,8 @@ private:
 	Dos2xUtils** fDirectoryObserver;
 	unsigned int fNumberOfSectors;
 
-	unsigned char fOldSectorBuffer[256];
-	unsigned char fNewSectorBuffer[256];
+	uint8_t fOldSectorBuffer[256];
+	uint8_t fNewSectorBuffer[256];
 	unsigned int fBufferedSectorNumber;
 };
 

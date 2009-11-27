@@ -123,9 +123,9 @@ int SIOWrapper::SetSIOServerMode(ESIOServerCommandLine cmdLine)
 	return fLastResult;
 }
 
-int SIOWrapper::ReadSector(unsigned char driveNo, unsigned int sector, 
-		unsigned char* buf, unsigned int length,
-		unsigned char highspeedMode)
+int SIOWrapper::ReadSector(uint8_t driveNo, unsigned int sector, 
+		uint8_t* buf, unsigned int length,
+		uint8_t highspeedMode)
 {
 	if (driveNo<1 || driveNo > 8 || buf==0 || length==0 || sector > 65535) {
 		return -1;
@@ -145,9 +145,9 @@ int SIOWrapper::ReadSector(unsigned char driveNo, unsigned int sector,
 	return ExtSIO(params);
 }
 
-int SIOWrapper::WriteSector(unsigned char driveNo, unsigned int sector, 
-		unsigned char* buf, unsigned int length,
-		unsigned char highspeedMode)
+int SIOWrapper::WriteSector(uint8_t driveNo, unsigned int sector, 
+		uint8_t* buf, unsigned int length,
+		uint8_t highspeedMode)
 {
 	if (driveNo<1 || driveNo > 8 || buf==0 || length==0 || sector > 65535) {
 		return -1;
@@ -167,9 +167,9 @@ int SIOWrapper::WriteSector(unsigned char driveNo, unsigned int sector,
 	return ExtSIO(params);
 }
 
-int SIOWrapper::WriteAndVerifySector(unsigned char driveNo, unsigned int sector, 
-		unsigned char* buf, unsigned int length,
-		unsigned char highspeedMode)
+int SIOWrapper::WriteAndVerifySector(uint8_t driveNo, unsigned int sector, 
+		uint8_t* buf, unsigned int length,
+		uint8_t highspeedMode)
 {
 	if (driveNo<1 || driveNo > 8 || buf==0 || length==0 || sector > 65535) {
 		return -1;
@@ -189,8 +189,8 @@ int SIOWrapper::WriteAndVerifySector(unsigned char driveNo, unsigned int sector,
 	return ExtSIO(params);
 }
 
-int SIOWrapper::FormatDisk(unsigned char driveNo, unsigned char* buf, unsigned int length,
-		unsigned char highspeedMode)
+int SIOWrapper::FormatDisk(uint8_t driveNo, uint8_t* buf, unsigned int length,
+		uint8_t highspeedMode)
 {
 	if (driveNo<1 || driveNo > 8 || buf==0) {
 		return -1;
@@ -210,8 +210,8 @@ int SIOWrapper::FormatDisk(unsigned char driveNo, unsigned char* buf, unsigned i
 	return ExtSIO(params);
 }
 
-int SIOWrapper::FormatEnhanced(unsigned char driveNo, unsigned char* buf,
-		unsigned char highspeedMode)
+int SIOWrapper::FormatEnhanced(uint8_t driveNo, uint8_t* buf,
+		uint8_t highspeedMode)
 {
 	if (driveNo<1 || driveNo > 8 || buf==0) {
 		return -1;
@@ -231,8 +231,8 @@ int SIOWrapper::FormatEnhanced(unsigned char driveNo, unsigned char* buf,
 	return ExtSIO(params);
 }
 
-int SIOWrapper::GetStatus(unsigned char driveNo, unsigned char* buf,
-		unsigned char highspeedMode)
+int SIOWrapper::GetStatus(uint8_t driveNo, uint8_t* buf,
+		uint8_t highspeedMode)
 {
 	if (driveNo<1 || driveNo > 8 || buf==0) {
 		return -1;
@@ -252,8 +252,8 @@ int SIOWrapper::GetStatus(unsigned char driveNo, unsigned char* buf,
 	return ExtSIO(params);
 }
 
-int SIOWrapper::PercomGet(unsigned char driveNo, unsigned char* buf,
-		unsigned char highspeedMode)
+int SIOWrapper::PercomGet(uint8_t driveNo, uint8_t* buf,
+		uint8_t highspeedMode)
 {
 	if (driveNo<1 || driveNo > 8 || buf==0) {
 		return -1;
@@ -273,8 +273,8 @@ int SIOWrapper::PercomGet(unsigned char driveNo, unsigned char* buf,
 	return ExtSIO(params);
 }
 
-int SIOWrapper::PercomPut(unsigned char driveNo, unsigned char* buf,
-		unsigned char highspeedMode)
+int SIOWrapper::PercomPut(uint8_t driveNo, uint8_t* buf,
+		uint8_t highspeedMode)
 {
 	if (driveNo<1 || driveNo > 8 || buf==0) {
 		return -1;
@@ -293,9 +293,9 @@ int SIOWrapper::PercomPut(unsigned char driveNo, unsigned char* buf,
 	params.highspeed_mode = highspeedMode;
 	return ExtSIO(params);
 }
-int SIOWrapper::ImmediateCommand(unsigned char driveNo, unsigned char command,
-		unsigned char aux1, unsigned char aux2,
-		unsigned char timeout, unsigned char highspeedMode)
+int SIOWrapper::ImmediateCommand(uint8_t driveNo, uint8_t command,
+		uint8_t aux1, uint8_t aux2,
+		uint8_t timeout, uint8_t highspeedMode)
 {
 	if (driveNo<1 || driveNo > 8) {
 		return -1;
@@ -465,7 +465,7 @@ int SIOWrapper::SendError()
 	return fLastResult;
 }
 
-int SIOWrapper::SendDataFrame(unsigned char* buf, unsigned int length)
+int SIOWrapper::SendDataFrame(uint8_t* buf, unsigned int length)
 {
 	SIO_data_frame frame;
 
@@ -483,7 +483,7 @@ int SIOWrapper::SendDataFrame(unsigned char* buf, unsigned int length)
 	return fLastResult;
 }
 
-int SIOWrapper::ReceiveDataFrame(unsigned char* buf, unsigned int length)
+int SIOWrapper::ReceiveDataFrame(uint8_t* buf, unsigned int length)
 {
 	SIO_data_frame frame;
 
@@ -501,7 +501,7 @@ int SIOWrapper::ReceiveDataFrame(unsigned char* buf, unsigned int length)
 	return fLastResult;
 }
 
-int SIOWrapper::SendRawFrame(unsigned char* buf, unsigned int length)
+int SIOWrapper::SendRawFrame(uint8_t* buf, unsigned int length)
 {
 	SIO_data_frame frame;
 
@@ -519,7 +519,7 @@ int SIOWrapper::SendRawFrame(unsigned char* buf, unsigned int length)
 	return fLastResult;
 }
 
-int SIOWrapper::ReceiveRawFrame(unsigned char* buf, unsigned int length)
+int SIOWrapper::ReceiveRawFrame(uint8_t* buf, unsigned int length)
 {
 	SIO_data_frame frame;
 
@@ -564,7 +564,7 @@ int SIOWrapper::SendCompleteXF551()
 	return fLastResult;
 }
 
-int SIOWrapper::SendDataFrameXF551(unsigned char* buf, unsigned int length)
+int SIOWrapper::SendDataFrameXF551(uint8_t* buf, unsigned int length)
 {
 	SIO_data_frame frame;
 
@@ -686,7 +686,7 @@ int SIOWrapper::SetTapeBaudrate(unsigned int baudrate)
 	return fLastResult;
 }
 
-int SIOWrapper::SendTapeBlock(unsigned char* buf, unsigned int length)
+int SIOWrapper::SendTapeBlock(uint8_t* buf, unsigned int length)
 {
 	SIO_data_frame frame;
 

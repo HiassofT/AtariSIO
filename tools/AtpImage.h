@@ -67,11 +67,11 @@ public:
 	virtual unsigned int GetImageSize() const;
 
 	virtual bool ReadSector(unsigned int sector,
-		unsigned char* buffer,
+		uint8_t* buffer,
 		unsigned int buffer_length) const;
 
 	virtual bool WriteSector(unsigned int sector,
-		const unsigned char* buffer,
+		const uint8_t* buffer,
 		unsigned int buffer_length);
 
 	// dump internal information

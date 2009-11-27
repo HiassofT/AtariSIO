@@ -98,7 +98,7 @@ int main(int argc)
 	}
 
 	SIO_parameters params;
-	unsigned char buf[128];
+	uint8_t buf[128];
 
 	params.device_id = 0x31;
 	params.command = 'R';
@@ -144,9 +144,9 @@ int main(int argc)
 		//char skew[] = "ACEGIKMRFOQDHJLNPRRBR";
 		unsigned int slen1 = 9100;
 		unsigned int slen2 = 9900;
-		unsigned char buf0[128];
-		unsigned char buf255[128];
-		unsigned char tmpbuf[128];
+		uint8_t buf0[128];
+		uint8_t buf255[128];
+		uint8_t tmpbuf[128];
 		memset(buf0, 0, 128);
 		memset(buf255, 255, 128);
 
@@ -177,7 +177,7 @@ int main(int argc)
 		for (s=0;s<21;s++) {
 			int sidx = skew[s] - 64;
 			spos = (startpos + s*slen2) % Atari1050Model::eDiskRotationTime;
-			unsigned char* buf = buf0;
+			uint8_t* buf = buf0;
 			if (sidx == 18 && s >= 18) {
 				buf = buf255;
 			}

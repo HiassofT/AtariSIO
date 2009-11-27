@@ -187,7 +187,7 @@ int PrinterHandler::ProcessCommandFrame(SIO_command_frame& frame, const RCPtr<SI
 		}
 
 		unsigned int buflen = 4;
-		unsigned char buf[buflen];
+		uint8_t buf[buflen];
 		const char* description = "[ get printer status ]";
 
 		buf[0] = 0;
@@ -221,7 +221,7 @@ int PrinterHandler::ProcessCommandFrame(SIO_command_frame& frame, const RCPtr<SI
 
 		EPrinterStatus oldStat = fPrinterStatus;
 		unsigned int buflen = 40;
-		unsigned char buf[buflen];
+		uint8_t buf[buflen];
 
 		const char* description = "[ write printer data ]";
 
@@ -360,7 +360,7 @@ bool PrinterHandler::EnableHighSpeed(bool)
 	return false;
 }
 
-bool PrinterHandler::SetHighSpeedParameters(unsigned char, unsigned int)
+bool PrinterHandler::SetHighSpeedParameters(uint8_t, unsigned int)
 {
 	return false;
 }

@@ -45,7 +45,7 @@ static unsigned long* GetCRCTable()
 
 unsigned long CRC32::CalcCRC32(unsigned long oldCRC, void *buf, unsigned int len)
 {
-	unsigned char* myBuf = (unsigned char*) buf;
+	uint8_t* myBuf = (uint8_t*) buf;
 	unsigned long crc = oldCRC ^ 0xffffffff;
 	unsigned long* crctable = GetCRCTable();
 

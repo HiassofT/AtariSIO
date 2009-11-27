@@ -74,7 +74,7 @@ bool AtrMemoryImage::CreateImage(EDiskFormat format)
 		DPRINTF("GetImageSize = 0");
 		return false;
 	}
-	fData = new unsigned char[imgSize];
+	fData = new uint8_t[imgSize];
 
 	if (fData) {
 		memset (fData, 0, imgSize);
@@ -102,7 +102,7 @@ bool AtrMemoryImage::CreateImage(ESectorLength density, unsigned int sectors)
 		DPRINTF("GetImageSize = 0");
 		return false;
 	}
-	fData = new unsigned char[imgSize];
+	fData = new uint8_t[imgSize];
 
 	if (fData) {
 		memset (fData, 0, imgSize);
@@ -130,7 +130,7 @@ bool AtrMemoryImage::CreateImage(ESectorLength density, unsigned int sectorsPerT
 		DPRINTF("GetImageSize = 0");
 		return false;
 	}
-	fData = new unsigned char[imgSize];
+	fData = new uint8_t[imgSize];
 
 	if (fData) {
 		memset (fData, 0, imgSize);
@@ -290,7 +290,7 @@ bool AtrMemoryImage::WriteImageToFile(const char* filename) const
 
 bool AtrMemoryImage::ReadImageFromAtrFile(const char* filename, bool beQuiet)
 {
-	unsigned char hdr[16];
+	uint8_t hdr[16];
 	unsigned int imgSize, s;
 
 	RCPtr<FileIO> fileio;
@@ -330,7 +330,7 @@ bool AtrMemoryImage::ReadImageFromAtrFile(const char* filename, bool beQuiet)
 		}
 		goto failure;
 	}
-	fData = new unsigned char[imgSize];
+	fData = new uint8_t[imgSize];
 	memset(fData, 0, imgSize);
 
 	if (!fData) {
@@ -360,7 +360,7 @@ failure:
 
 bool AtrMemoryImage::WriteImageToAtrFile(const char* filename, bool useGz) const
 {
-	unsigned char hdr[16];
+	uint8_t hdr[16];
 	unsigned int imgSize;
 
 	RCPtr<FileIO> fileio;
@@ -460,7 +460,7 @@ bool AtrMemoryImage::ReadImageFromXfdFile(const char* filename, bool beQuiet)
 		}
 		goto failure;
 	}
-	fData = new unsigned char[imgSize];
+	fData = new uint8_t[imgSize];
 	memset(fData, 0, imgSize);
 
 	if (!fData) {
@@ -583,7 +583,7 @@ bool AtrMemoryImage::WriteImageToDcmFile(const char* filename, bool useGz) const
 	return ret;
 }
 
-unsigned char AtrMemoryImage::CalculateDiSectorChecksum(unsigned char* buf, unsigned int len) const
+uint8_t AtrMemoryImage::CalculateDiSectorChecksum(uint8_t* buf, unsigned int len) const
 {
 	unsigned int chksum = 0;
 	unsigned int i;
@@ -598,12 +598,12 @@ unsigned char AtrMemoryImage::CalculateDiSectorChecksum(unsigned char* buf, unsi
 
 bool AtrMemoryImage::ReadImageFromDiFile(const char* filename, bool beQuiet)
 {
-	unsigned char buf[256];
-	unsigned char* map;
-	unsigned char unknown;
+	uint8_t buf[256];
+	uint8_t* map;
+	uint8_t unknown;
 	unsigned int sectorsPerTrack;
-        unsigned char tracksPerSide;
-	unsigned char sides;
+        uint8_t tracksPerSide;
+	uint8_t sides;
 	unsigned int sectorLength;
 	unsigned int totalSectors;
 	ESectorLength density;
@@ -722,7 +722,7 @@ bool AtrMemoryImage::ReadImageFromDiFile(const char* filename, bool beQuiet)
 	}
 
 	// read sector (checksum) map
-       	map = new unsigned char[totalSectors];
+       	map = new uint8_t[totalSectors];
 
 	if (fileio->ReadBlock(map, totalSectors) != totalSectors) {
 		delete [] map;
@@ -730,7 +730,7 @@ bool AtrMemoryImage::ReadImageFromDiFile(const char* filename, bool beQuiet)
 	}
 
 	for (sector=1; sector <= totalSectors; sector++) {
-		unsigned char checksum = map[sector-1];
+		uint8_t checksum = map[sector-1];
 
 		if (checksum) {
 			unsigned int len = GetSectorLength(sector);
@@ -777,13 +777,13 @@ failure:
 bool AtrMemoryImage::WriteImageToDiFile(const char* filename, bool useGz) const
 {
 	unsigned int sectorsPerTrack;
-        unsigned char tracksPerSide;
-	unsigned char sides;
+        uint8_t tracksPerSide;
+	uint8_t sides;
 	unsigned int sectorLength;
 	unsigned int totalSectors;
 	unsigned int sector;
-	unsigned char* map;
-	unsigned char buf[256];
+	uint8_t* map;
+	uint8_t buf[256];
 
 	RCPtr<FileIO> fileio;
 
@@ -823,7 +823,7 @@ bool AtrMemoryImage::WriteImageToDiFile(const char* filename, bool useGz) const
 		return false;
 	}
 
-	map = new unsigned char [totalSectors];
+	map = new uint8_t [totalSectors];
 
 	// build sector map
 	for (sector=1; sector<=totalSectors; sector++) {
@@ -882,7 +882,7 @@ failure:
 	return false;
 }
 
-bool AtrMemoryImage::ReadSector(unsigned int sector,unsigned char* buffer,unsigned int buffer_length) const
+bool AtrMemoryImage::ReadSector(unsigned int sector,uint8_t* buffer,unsigned int buffer_length) const
 {
 	bool ret=true;
 	int len, offset;
@@ -916,7 +916,7 @@ bool AtrMemoryImage::ReadSector(unsigned int sector,unsigned char* buffer,unsign
 	return ret;
 }
 
-bool AtrMemoryImage::WriteSector(unsigned int sector,const unsigned char* buffer,unsigned int buffer_length)
+bool AtrMemoryImage::WriteSector(unsigned int sector,const uint8_t* buffer,unsigned int buffer_length)
 {
 	int len, offset;
 

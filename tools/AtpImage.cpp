@@ -457,7 +457,7 @@ bool AtpImage::InitBlankSD()
 	FreeData();
 	fNumberOfTracks = 40;
 	AllocData();
-	unsigned char buf[128];
+	uint8_t buf[128];
 	memset(buf,0,128);
 	for (unsigned int track=0;track<40;track++) {
 		for (unsigned int sector=1;sector<=18;sector++) {
@@ -476,7 +476,7 @@ bool AtpImage::InitBlankED()
 	FreeData();
 	fNumberOfTracks = 40;
 	AllocData();
-	unsigned char buf[128];
+	uint8_t buf[128];
 	memset(buf,0,128);
 	for (unsigned int track=0;track<40;track++) {
 		for (unsigned int sector=1;sector<=26;sector++) {
@@ -520,7 +520,7 @@ bool AtpImage::IsAtpImage() const
 	return true;
 }
 
-bool AtpImage::ReadSector(unsigned int sector, unsigned char* buffer, unsigned int buffer_length) const
+bool AtpImage::ReadSector(unsigned int sector, uint8_t* buffer, unsigned int buffer_length) const
 {
 	if (sector < 1) {
 		return false;
@@ -558,7 +558,7 @@ bool AtpImage::ReadSector(unsigned int sector, unsigned char* buffer, unsigned i
 	return sec->GetData(buffer, buffer_length);
 }
 
-bool AtpImage::WriteSector(unsigned int sector, const unsigned char* buffer, unsigned int buffer_length)
+bool AtpImage::WriteSector(unsigned int sector, const uint8_t* buffer, unsigned int buffer_length)
 {
 	if (sector < 1) {
 		return false;

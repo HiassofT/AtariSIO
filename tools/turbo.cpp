@@ -72,7 +72,7 @@ static void hexdump(void* buf, int len)
 {
 	int i;
 	for (i=0;i<len;i++) {
-		printf("%02x ", ((unsigned char*)buf)[i]);
+		printf("%02x ", ((uint8_t*)buf)[i]);
 		if (i % 16 == 15) {
 			printf("\n");
 		}
@@ -122,7 +122,7 @@ int main(int argc, char** argv)
 	}
 
 	SIO_parameters params;
-	unsigned char buf[256];
+	uint8_t buf[256];
 
 	params.device_id = 0x31;
 	params.timeout = 7;

@@ -33,18 +33,18 @@
 unsigned int serial_base = 0;
 unsigned int baud_base = 0;
 
-unsigned char serial_in(unsigned int offset)
+uint8_t serial_in(unsigned int offset)
 {
 	return inb_p(serial_base + offset);
 }
 
-void serial_out(unsigned int offset, unsigned char val)
+void serial_out(unsigned int offset, uint8_t val)
 {
 	outb(val, serial_base + offset);
 }
 
-unsigned char old_lsr = 0;
-unsigned char old_msr = 0;
+uint8_t old_lsr = 0;
+uint8_t old_msr = 0;
 
 void print_timestamp()
 {
@@ -53,7 +53,7 @@ void print_timestamp()
 	printf("%ld.%06ld: ", tv.tv_sec, tv.tv_usec);
 }
 
-void print_bin(unsigned char c)
+void print_bin(uint8_t c)
 {
 	int i;
 	char buf[9];
@@ -70,8 +70,8 @@ void print_bin(unsigned char c)
 
 void print_lsr()
 {
-	unsigned char lsr = serial_in(UART_LSR);
-	unsigned char msr = serial_in(UART_MSR);
+	uint8_t lsr = serial_in(UART_LSR);
+	uint8_t msr = serial_in(UART_MSR);
 	if ( (lsr != old_lsr) || (msr != old_msr) ) {
 		print_timestamp();
 		printf("LSR: ");
@@ -142,12 +142,12 @@ void rxonly_test(unsigned int seconds)
 	unsigned int i = 0;
 	unsigned int j;
 
-	unsigned char* msr_list = new unsigned char[MAXRX];
+	uint8_t* msr_list = new uint8_t[MAXRX];
 	unsigned long* ts_list = new unsigned long[MAXRX];
 
 	uint64_t start_time, current_time;
 
-	unsigned char msr, old_msr;
+	uint8_t msr, old_msr;
 
 	sleep(1);
 	set_realtime_scheduling();
@@ -196,7 +196,7 @@ void do_test(bool rxonly)
 	return;
 	*/
 
-	unsigned char c;
+	uint8_t c;
 	unsigned int divisor = baud_base / 19200;
 	
 	serial_out(UART_LCR, UART_LCR_WLEN8 | UART_LCR_DLAB);

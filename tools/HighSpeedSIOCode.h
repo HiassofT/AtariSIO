@@ -23,6 +23,7 @@
 */
 
 #include <sys/types.h>
+#include <stdint.h>
 
 class HighSpeedSIOCode {
 public:
@@ -30,7 +31,7 @@ public:
 	static HighSpeedSIOCode* GetInstance();
 
 	unsigned int GetCodeSize() const;
-	void RelocateCode(unsigned char* buf, unsigned short address) const;
+	void RelocateCode(uint8_t* buf, unsigned short address) const;
 
 protected:
 
@@ -44,7 +45,7 @@ private:
 
 #include "6502/atarisio-highsio.h"
 
-	static unsigned char fSIOCode[eSIOCodeLength];
+	static uint8_t fSIOCode[eSIOCodeLength];
 	static unsigned int fRelocatorTable[eRelocatorLength];
 };
 

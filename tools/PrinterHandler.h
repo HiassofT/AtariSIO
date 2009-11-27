@@ -43,7 +43,7 @@ public:
 	virtual RCPtr<DiskImage> GetDiskImage();
 	virtual RCPtr<const DiskImage> GetConstDiskImage() const;
 	virtual bool EnableHighSpeed(bool);
-	virtual bool SetHighSpeedParameters(unsigned char pokeyDivisor, unsigned int baudrate);
+	virtual bool SetHighSpeedParameters(uint8_t pokeyDivisor, unsigned int baudrate);
 	virtual bool EnableXF551Mode(bool on);
 
 	void SetEOLConversion(EEOLConversion conv);

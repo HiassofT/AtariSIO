@@ -29,7 +29,7 @@ ChunkWriter::ChunkWriter(const char* chunkName)
 	int i,len;
 
 	fAllocatedSize = 16;
-	fData =(unsigned char*) malloc(fAllocatedSize);
+	fData =(uint8_t*) malloc(fAllocatedSize);
 
 	len = strlen(chunkName);
 	if (len > 4) {
@@ -64,7 +64,7 @@ bool ChunkWriter::CloseChunk()
 		fData[7] = ( (fSize-8) >>24 ) & 0xff;
 		if (fSize != fAllocatedSize) {
 			fAllocatedSize = fSize;
-			fData = (unsigned char*) realloc(fData, fAllocatedSize);
+			fData = (uint8_t*) realloc(fData, fAllocatedSize);
 		}
 		fIsOpen = false;
 		return true;
@@ -73,7 +73,7 @@ bool ChunkWriter::CloseChunk()
 	}
 }
 
-bool ChunkWriter::AppendByte(unsigned char byte)
+bool ChunkWriter::AppendByte(uint8_t byte)
 {
 	if (fIsOpen) {
 		PrepareForSize(fSize+1);

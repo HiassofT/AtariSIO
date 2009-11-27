@@ -134,7 +134,7 @@ int main(int argc, char** argv)
 	}
 
 	SIO_parameters params;
-	unsigned char buf[128];
+	uint8_t buf[128];
 
 	params.device_id = 0x31;
 	params.command = 'R';

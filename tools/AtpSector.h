@@ -33,10 +33,10 @@ public:
 	AtpSector(
 		unsigned int id,
 		unsigned int data_len,
-		const unsigned char* data,
+		const uint8_t* data,
 		unsigned int pos,
 		unsigned int time_len,
-		unsigned char status=255);
+		uint8_t status=255);
 
 	virtual ~AtpSector();
 
@@ -50,21 +50,21 @@ public:
 	inline unsigned int GetTimeLength() const;
 
 	// get error status of sector
-	inline unsigned char GetSectorStatus() const;
+	inline uint8_t GetSectorStatus() const;
 
 	// set error status of sector
-	inline void SetSectorStatus(unsigned char status);
+	inline void SetSectorStatus(uint8_t status);
 
 	// get lenght of data block
 	inline unsigned int GetDataLength() const;
 
 	// get data block of sector
-	bool GetData(unsigned char* dest, unsigned int len) const;
+	bool GetData(uint8_t* dest, unsigned int len) const;
 
-	inline const unsigned char* GetDataPtr() const;
+	inline const uint8_t* GetDataPtr() const;
 
 	// set data block of sector
-	bool SetData(const unsigned char* src, unsigned int len);
+	bool SetData(const uint8_t* src, unsigned int len);
 	
 	void Dump(std::ostream& os, unsigned int indentlevel=0) const;
 
@@ -82,10 +82,10 @@ private:
 private:
 	unsigned int fID;
 	unsigned int fDataLength;
-	unsigned char* fSectorData;
+	uint8_t* fSectorData;
 	unsigned int fPosition;
 	unsigned int fTimeLength;
-	unsigned char fSectorStatus;
+	uint8_t fSectorStatus;
 };
 
 inline unsigned int AtpSector::GetPosition() const
@@ -98,12 +98,12 @@ inline unsigned int AtpSector::GetID() const
 	return fID;
 }
 
-inline unsigned char AtpSector::GetSectorStatus() const
+inline uint8_t AtpSector::GetSectorStatus() const
 {
 	return fSectorStatus;
 }
 
-inline void AtpSector::SetSectorStatus(unsigned char status)
+inline void AtpSector::SetSectorStatus(uint8_t status)
 {
 	fSectorStatus = status;
 }
@@ -118,7 +118,7 @@ inline unsigned int AtpSector::GetTimeLength() const
 	return fTimeLength;
 }
 
-inline const unsigned char* AtpSector::GetDataPtr() const
+inline const uint8_t* AtpSector::GetDataPtr() const
 {
 	return fSectorData;
 }
