@@ -63,13 +63,6 @@ ZLIB_LDFLAGS=-lz
 
 
 ########################################################################
-# ATP support:
-# if you don't want ATP support, comment out the following line
-########################################################################
-
-ENABLE_ATP=1
-
-########################################################################
 # all in one:
 # link all programs together into a single executable (like busybox)
 ########################################################################
@@ -101,6 +94,14 @@ KERNEL_CC ?= $(CC)
 #KERNEL_CC = gcc
 #KERNEL_CC = gcc-2.95
 #KERNEL_CC = kgcc
+
+########################################################################
+# ATP support:
+# if you want ATP support, uncomment out the following line
+########################################################################
+
+#ENABLE_ATP=1
+
 
 ########################################################################
 # don't change anything below here

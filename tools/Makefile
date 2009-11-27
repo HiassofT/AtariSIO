@@ -19,8 +19,8 @@ ifdef ALL_IN_ONE
 EXECUTABLES = atarisio
 CXXFLAGS += -DALL_IN_ONE
 else
-EXECUTABLES = atariserver atarixfer adir dir2atr measure-system-latency casinfo ataricom \
-	atariserver-nocurses
+EXECUTABLES = atariserver atarixfer adir dir2atr measure-system-latency casinfo ataricom
+#	atariserver-nocurses
 #	ataridd smag24 
 #	speedy
 #	turbo
