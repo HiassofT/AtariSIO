@@ -342,7 +342,7 @@ bool AtrMemoryImage::ReadImageFromAtrFile(const char* filename, bool beQuiet)
 
 	if ( (s=fileio->ReadBlock(fData, imgSize)) != imgSize) {
 		if (!beQuiet) {
-			AWARN("truncated ATR file: only got %zd of %zd bytes", s, imgSize);
+			AWARN("truncated ATR file: only got %d of %d bytes", (int)s, (int)imgSize);
 		}
 	}
 
@@ -440,7 +440,7 @@ bool AtrMemoryImage::ReadImageFromXfdFile(const char* filename, bool beQuiet)
 
 	if ( (imgSize & 0x7f) || imgSize < 384 ) {
 		if (!beQuiet) {
-			AERROR("illegal image size %zd", imgSize);
+			AERROR("illegal image size %d", (int)imgSize);
 		}
 		goto failure;
 	}
@@ -472,7 +472,7 @@ bool AtrMemoryImage::ReadImageFromXfdFile(const char* filename, bool beQuiet)
 
 	if ( (s=fileio->ReadBlock(fData, imgSize)) != imgSize) {
 		if (!beQuiet) {
-			AWARN("truncated XFD file: only got %zd of %zd bytes", s, imgSize);
+			AWARN("truncated XFD file: only got %d of %d bytes", (int)s, (int)imgSize);
 		}
 	}
 
@@ -902,11 +902,11 @@ bool AtrMemoryImage::ReadSector(uint16_t sector,uint8_t* buffer,size_t buffer_le
 	}
 
 	if (buffer_length < len) {
-		DPRINTF("buffer length < sector length [ %zd < %d ]",buffer_length, len);
+		DPRINTF("buffer length < sector length [ %d < %d ]",(int)buffer_length, len);
 		ret = false;
 		len = buffer_length;
 	} else if (buffer_length > len) {
-		DPRINTF("buffer length > sector length [ %zd > %d ]",buffer_length, len);
+		DPRINTF("buffer length > sector length [ %d > %d ]",(int)buffer_length, len);
 		ret = false;
 	}
 
@@ -933,7 +933,7 @@ bool AtrMemoryImage::WriteSector(uint16_t sector, const uint8_t* buffer, size_t 
 	len=GetSectorLength(sector);
 
 	if (buffer_length != len) {
-		DPRINTF("buffer length = len [ %zd != %d ]", buffer_length, len);
+		DPRINTF("buffer length = len [ %d != %d ]", (int)buffer_length, len);
 		return false;
 	}
 
