@@ -72,7 +72,7 @@ RCPtr<ChunkReader> ChunkReader::OpenChunk()
 		return RCPtr<ChunkReader>();
 	}
 
-	if (fChunkStart+fCurrentPosition+8+chunklen > fChunkEnd) {
+	if (fChunkStart+fCurrentPosition+8+(off_t)chunklen > fChunkEnd) {
 		return RCPtr<ChunkReader>();
 	}
 
