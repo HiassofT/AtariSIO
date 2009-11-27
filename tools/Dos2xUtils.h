@@ -100,7 +100,7 @@ public:
 	static unsigned int GetBootFileLength(EBootType type);
 	bool AddBootFile(EBootType type);
 
-	static unsigned int EstimateDiskSize(const char* directory, ESectorLength seclen, 
+	static uint16_t EstimateDiskSize(const char* directory, ESectorLength seclen, 
 		EPicoNameType piconametype = eNoPicoName, EBootType bootType = eBootDefault);
 
 	unsigned int GetNumberOfFreeSectors();

@@ -32,21 +32,21 @@ public:
 
 	// DiskImage methods
 	virtual bool CreateImage(EDiskFormat format);
-	virtual bool CreateImage(ESectorLength density, unsigned int sectors);
-	virtual bool CreateImage(ESectorLength density, unsigned int sectorsPerTrack, unsigned int tracks, unsigned int sides);
+	virtual bool CreateImage(ESectorLength density, uint16_t sectors);
+	virtual bool CreateImage(ESectorLength density, uint16_t sectorsPerTrack, uint8_t tracks, uint8_t sides);
 
 	void FreeImageData();
 
 	virtual bool ReadImageFromFile(const char* filename, bool beQuiet = false);
 	virtual bool WriteImageToFile(const char* filename) const;
 
-	bool ReadSector(unsigned int sector,
+	bool ReadSector(uint16_t sector,
 		       uint8_t* buffer,
-		       unsigned int buffer_length) const;
+		       size_t buffer_length) const;
 
-	bool WriteSector(unsigned int sector,
+	bool WriteSector(uint16_t sector,
 		       const uint8_t* buffer,
-		       unsigned int buffer_length);
+		       size_t buffer_length);
 
 	virtual bool IsAtrMemoryImage() const;
 	virtual void SetWriteProtect(bool on);
@@ -83,9 +83,9 @@ private:
 	bool ReadImageFromDiFile(const char* filename, bool beQuiet);
 	bool WriteImageToDiFile(const char* filename, const bool useGz) const;
 
-	uint8_t CalculateDiSectorChecksum(uint8_t* buf, unsigned int len) const;
+	uint8_t CalculateDiSectorChecksum(uint8_t* buf, size_t len) const;
 
-	bool SetSectorInUse(unsigned int sector, bool inUse);
+	bool SetSectorInUse(uint16_t sector, bool inUse);
 
 	typedef AtrImage super;
 

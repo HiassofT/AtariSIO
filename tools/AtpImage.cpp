@@ -56,7 +56,7 @@ void AtpImage::FreeData()
 	fNumberOfTracks = 0;
 }
 
-bool AtpImage::SetDensity(Atari1050Model::EDiskDensity dens, unsigned int trackno)
+bool AtpImage::SetDensity(Atari1050Model::EDiskDensity dens, uint8_t trackno)
 {
 	if (trackno < fNumberOfTracks) {
 		fTracks[trackno].SetDensity(dens);
@@ -75,7 +75,7 @@ bool AtpImage::SetDensity(Atari1050Model::EDiskDensity dens)
 	return true;
 }
 
-Atari1050Model::EDiskDensity AtpImage::GetDensity(unsigned int trackno) const
+Atari1050Model::EDiskDensity AtpImage::GetDensity(uint8_t trackno) const
 {
 	if (trackno < fNumberOfTracks) {
 		return fTracks[trackno].GetDensity();
@@ -84,7 +84,7 @@ Atari1050Model::EDiskDensity AtpImage::GetDensity(unsigned int trackno) const
 	}
 }
 
-void AtpImage::SetNumberOfTracks(unsigned int tracks)
+void AtpImage::SetNumberOfTracks(uint8_t tracks)
 {
 	FreeData();
 	fNumberOfTracks = tracks;
@@ -92,7 +92,7 @@ void AtpImage::SetNumberOfTracks(unsigned int tracks)
 	SetChanged(true);
 }
 
-bool AtpImage::AddSector(unsigned int trackno, const RCPtr<AtpSector>& sector)
+bool AtpImage::AddSector(uint8_t trackno, const RCPtr<AtpSector>& sector)
 {
 	if (trackno < fNumberOfTracks) {
 		fTracks[trackno].AddSector(sector);
@@ -103,10 +103,10 @@ bool AtpImage::AddSector(unsigned int trackno, const RCPtr<AtpSector>& sector)
 	SetChanged(true);
 }
 
-bool AtpImage::GetSector(unsigned int trackno,
-		unsigned int sectorID,
+bool AtpImage::GetSector(uint8_t trackno,
+		uint8_t sectorID,
 		RCPtr<AtpSector>& sector,
-		unsigned int current_time) const
+		uint32_t current_time) const
 {
 	if (trackno < fNumberOfTracks) {
 		return fTracks[trackno].GetSector(sectorID, sector, current_time);
@@ -492,7 +492,7 @@ bool AtpImage::InitBlankED()
 
 // currently only returns 90k or 130k (not the real allocated size),
 // depending on the format of the first track
-unsigned int AtpImage::GetImageSize() const
+size_t AtpImage::GetImageSize() const
 {
 	if (fNumberOfTracks > 0 && 
 	    fTracks[0].GetDensity() == Atari1050Model::eDensityMFM) {
@@ -502,7 +502,7 @@ unsigned int AtpImage::GetImageSize() const
 	}
 }
 
-unsigned int AtpImage::GetNumberOfSectors() const
+uint16_t AtpImage::GetNumberOfSectors() const
 {
 	if (fNumberOfTracks > 0) {
 	    if (fTracks[0].GetDensity() == Atari1050Model::eDensityMFM) {
@@ -520,7 +520,7 @@ bool AtpImage::IsAtpImage() const
 	return true;
 }
 
-bool AtpImage::ReadSector(unsigned int sector, uint8_t* buffer, unsigned int buffer_length) const
+bool AtpImage::ReadSector(uint16_t sector, uint8_t* buffer, size_t buffer_length) const
 {
 	if (sector < 1) {
 		return false;
@@ -558,7 +558,7 @@ bool AtpImage::ReadSector(unsigned int sector, uint8_t* buffer, unsigned int buf
 	return sec->GetData(buffer, buffer_length);
 }
 
-bool AtpImage::WriteSector(unsigned int sector, const uint8_t* buffer, unsigned int buffer_length)
+bool AtpImage::WriteSector(uint16_t sector, const uint8_t* buffer, size_t buffer_length)
 {
 	if (sector < 1) {
 		return false;

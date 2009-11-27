@@ -60,7 +60,7 @@ void AtrMemoryImage::FreeImageData()
 
 bool AtrMemoryImage::CreateImage(EDiskFormat format)
 {
-	unsigned int imgSize;
+	size_t imgSize;
 	FreeImageData();
 	SetChanged(true);
 	if (!SetFormat(format)) {
@@ -86,9 +86,9 @@ bool AtrMemoryImage::CreateImage(EDiskFormat format)
 	}
 }
 
-bool AtrMemoryImage::CreateImage(ESectorLength density, unsigned int sectors)
+bool AtrMemoryImage::CreateImage(ESectorLength density, uint16_t sectors)
 {
-	unsigned int imgSize;
+	size_t imgSize;
 	FreeImageData();
 	SetChanged(true);
 	if (!SetFormat(density, sectors)) {
@@ -114,9 +114,9 @@ bool AtrMemoryImage::CreateImage(ESectorLength density, unsigned int sectors)
 	}
 }
 
-bool AtrMemoryImage::CreateImage(ESectorLength density, unsigned int sectorsPerTrack, unsigned int tracks, unsigned int sides)
+bool AtrMemoryImage::CreateImage(ESectorLength density, uint16_t sectorsPerTrack, uint8_t tracks, uint8_t sides)
 {
-	unsigned int imgSize;
+	size_t imgSize;
 	FreeImageData();
 	SetChanged(true);
 	if (!SetFormat(density, sectorsPerTrack, tracks, sides)) {
@@ -195,7 +195,7 @@ bool AtrMemoryImage::ReadImageFromFile(const char* filename, bool beQuiet)
 			strncat(p, ".atr", PATH_MAX);
 			p[PATH_MAX-1] = 0;
 			SetFilename(p);
-			unsigned int sectors = Dos2xUtils::EstimateDiskSize(filename, e128BytesPerSector, Dos2xUtils::ePicoName);
+			uint16_t sectors = Dos2xUtils::EstimateDiskSize(filename, e128BytesPerSector, Dos2xUtils::ePicoName);
 			Dos2xUtils::EDosFormat dosformat = Dos2xUtils::eDos2x;
 			if (sectors <= 1040) {
 				// create standard ED image
@@ -291,7 +291,7 @@ bool AtrMemoryImage::WriteImageToFile(const char* filename) const
 bool AtrMemoryImage::ReadImageFromAtrFile(const char* filename, bool beQuiet)
 {
 	uint8_t hdr[16];
-	unsigned int imgSize, s;
+	size_t imgSize, s;
 
 	RCPtr<FileIO> fileio;
 
@@ -342,7 +342,7 @@ bool AtrMemoryImage::ReadImageFromAtrFile(const char* filename, bool beQuiet)
 
 	if ( (s=fileio->ReadBlock(fData, imgSize)) != imgSize) {
 		if (!beQuiet) {
-			AWARN("truncated ATR file: only got %u of %u bytes", s, imgSize);
+			AWARN("truncated ATR file: only got %zd of %zd bytes", s, imgSize);
 		}
 	}
 
@@ -361,7 +361,7 @@ failure:
 bool AtrMemoryImage::WriteImageToAtrFile(const char* filename, bool useGz) const
 {
 	uint8_t hdr[16];
-	unsigned int imgSize;
+	size_t imgSize;
 
 	RCPtr<FileIO> fileio;
 
@@ -415,8 +415,8 @@ failure:
 
 bool AtrMemoryImage::ReadImageFromXfdFile(const char* filename, bool beQuiet)
 {
-	unsigned int imgSize, s;
-	int numSecs;
+	size_t imgSize, s;
+	uint32_t numSecs;
 	ESectorLength seclen;
 
 	RCPtr<FileIO> fileio;
@@ -440,7 +440,7 @@ bool AtrMemoryImage::ReadImageFromXfdFile(const char* filename, bool beQuiet)
 
 	if ( (imgSize & 0x7f) || imgSize < 384 ) {
 		if (!beQuiet) {
-			AERROR("illegal image size %u", imgSize);
+			AERROR("illegal image size %zd", imgSize);
 		}
 		goto failure;
 	}
@@ -472,7 +472,7 @@ bool AtrMemoryImage::ReadImageFromXfdFile(const char* filename, bool beQuiet)
 
 	if ( (s=fileio->ReadBlock(fData, imgSize)) != imgSize) {
 		if (!beQuiet) {
-			AWARN("truncated XFD file: only got %u of %u bytes", s, imgSize);
+			AWARN("truncated XFD file: only got %zd of %zd bytes", s, imgSize);
 		}
 	}
 
@@ -490,7 +490,7 @@ failure:
 
 bool AtrMemoryImage::WriteImageToXfdFile(const char* filename, bool useGz) const
 {
-	unsigned int imgSize;
+	size_t imgSize;
 	RCPtr<FileIO> fileio;
 
 	if (! fData) {
@@ -546,7 +546,7 @@ bool AtrMemoryImage::ReadImageFromDcmFile(const char* filename, bool beQuiet)
 
 	FreeImageData();
 
-	int ret;
+	bool ret;
 
 	if ((ret=dcmcodec->Load(filename, beQuiet))) {
 		SetChanged(false);
@@ -583,10 +583,10 @@ bool AtrMemoryImage::WriteImageToDcmFile(const char* filename, bool useGz) const
 	return ret;
 }
 
-uint8_t AtrMemoryImage::CalculateDiSectorChecksum(uint8_t* buf, unsigned int len) const
+uint8_t AtrMemoryImage::CalculateDiSectorChecksum(uint8_t* buf, size_t len) const
 {
-	unsigned int chksum = 0;
-	unsigned int i;
+	uint16_t chksum = 0;
+	size_t i;
 	for (i=0;i<len;i++) {
 		chksum += buf[i];
 		if (chksum >= 256) {
@@ -605,10 +605,10 @@ bool AtrMemoryImage::ReadImageFromDiFile(const char* filename, bool beQuiet)
         uint8_t tracksPerSide;
 	uint8_t sides;
 	uint16_t sectorLength;
-	unsigned int totalSectors;
+	uint32_t totalSectors;
 	ESectorLength density;
 
-	unsigned int sector;
+	uint32_t sector;
 
 	RCPtr<FileIO> fileio;
 
@@ -733,7 +733,7 @@ bool AtrMemoryImage::ReadImageFromDiFile(const char* filename, bool beQuiet)
 		uint8_t checksum = map[sector-1];
 
 		if (checksum) {
-			unsigned int len = GetSectorLength(sector);
+			uint16_t len = GetSectorLength(sector);
 			if (fileio->ReadBlock(buf, len) != len) {
 				delete [] map;
 				goto failure_eof;
@@ -776,12 +776,12 @@ failure:
 
 bool AtrMemoryImage::WriteImageToDiFile(const char* filename, bool useGz) const
 {
-	unsigned int sectorsPerTrack;
+	uint16_t sectorsPerTrack;
         uint8_t tracksPerSide;
 	uint8_t sides;
-	unsigned int sectorLength;
-	unsigned int totalSectors;
-	unsigned int sector;
+	uint16_t sectorLength;
+	uint32_t totalSectors;
+	uint32_t sector;
 	uint8_t* map;
 	uint8_t buf[256];
 
@@ -793,11 +793,12 @@ bool AtrMemoryImage::WriteImageToDiFile(const char* filename, bool useGz) const
 	}
 
 	if ( GetSectorsPerTrack() < 1
-	  || GetSectorsPerTrack() > 65535
+	  //|| GetSectorsPerTrack() > 65535
 	  || GetTracksPerSide() < 1
-	  || GetTracksPerSide() > 255
+	  //|| GetTracksPerSide() > 255
 	  || GetSides() < 1
-	  || GetSides() > 255) {
+	  //|| GetSides() > 255
+	) {
 		AERROR("image format incomatible with DI format!");
 		return false;
 	}
@@ -827,7 +828,7 @@ bool AtrMemoryImage::WriteImageToDiFile(const char* filename, bool useGz) const
 
 	// build sector map
 	for (sector=1; sector<=totalSectors; sector++) {
-		unsigned int len = GetSectorLength(sector);
+		uint16_t len = GetSectorLength(sector);
 		if (!ReadSector(sector, buf, len)) {
 			DPRINTF("unable to read sector %d from memory image!",sector);
 			goto failure;
@@ -856,7 +857,7 @@ bool AtrMemoryImage::WriteImageToDiFile(const char* filename, bool useGz) const
 	// write non-zero sectors
 	for (sector=1; sector<=totalSectors; sector++) {
 		if (map[sector-1]) {
-			unsigned int len = GetSectorLength(sector);
+			uint16_t len = GetSectorLength(sector);
 			if (!ReadSector(sector, buf, len)) {
 				DPRINTF("unable to read sector %d from memory image!",sector);
 				goto failure;
@@ -882,32 +883,30 @@ failure:
 	return false;
 }
 
-bool AtrMemoryImage::ReadSector(unsigned int sector,uint8_t* buffer,unsigned int buffer_length) const
+bool AtrMemoryImage::ReadSector(uint16_t sector,uint8_t* buffer,size_t buffer_length) const
 {
 	bool ret=true;
-	int len, offset;
+	uint16_t len;
+	ssize_t offset;
 
 	if ((offset=CalculateOffset(sector)) < 0 ) {
 		DPRINTF("illegal sector in ReadSector: %d", sector);
 		return false;
 	}
 
-	if ((len=GetSectorLength(sector)) < 0) {
-		DPRINTF("GetSectorLength(%d) failed",sector);
-		return false;
-	}
+	len=GetSectorLength(sector);
 
 	if (!buffer_length) {
 		DPRINTF("buffer length = 0");
 		return false;
 	}
 
-	if (buffer_length < (unsigned int) len) {
-		DPRINTF("buffer length < sector length [ %d < %d ]",buffer_length, (unsigned int) len);
+	if (buffer_length < len) {
+		DPRINTF("buffer length < sector length [ %zd < %d ]",buffer_length, len);
 		ret = false;
 		len = buffer_length;
-	} else if (buffer_length > (unsigned int)len) {
-		DPRINTF("buffer length > sector length [ %d > %d ]",buffer_length, (unsigned int) len);
+	} else if (buffer_length > len) {
+		DPRINTF("buffer length > sector length [ %zd > %d ]",buffer_length, len);
 		ret = false;
 	}
 
@@ -916,9 +915,10 @@ bool AtrMemoryImage::ReadSector(unsigned int sector,uint8_t* buffer,unsigned int
 	return ret;
 }
 
-bool AtrMemoryImage::WriteSector(unsigned int sector,const uint8_t* buffer,unsigned int buffer_length)
+bool AtrMemoryImage::WriteSector(uint16_t sector, const uint8_t* buffer, size_t buffer_length)
 {
-	int len, offset;
+	uint16_t len;
+	ssize_t offset;
 
 	if (IsWriteProtected()) {
 		DPRINTF("attempting to write sector to write protected image");
@@ -930,13 +930,10 @@ bool AtrMemoryImage::WriteSector(unsigned int sector,const uint8_t* buffer,unsig
 		return false;
 	}
 
-	if ((len=GetSectorLength(sector)) < 0) {
-		DPRINTF("GetSectorLength(%d) failed",sector);
-		return false;
-	}
+	len=GetSectorLength(sector);
 
-	if (buffer_length != (unsigned int) len) {
-		DPRINTF("buffer length = len [ %d != %d ]", buffer_length, (unsigned int) len);
+	if (buffer_length != len) {
+		DPRINTF("buffer length = len [ %zd != %d ]", buffer_length, len);
 		return false;
 	}
 
@@ -961,7 +958,7 @@ void AtrMemoryImage::SetWriteProtect(bool on)
 
 AtrMemoryImage::EImageType AtrMemoryImage::DetermineImageTypeFromFilename(const char* filename) const
 {
-	int len = strlen(filename);
+	size_t len = strlen(filename);
 
 	if (len < 3) {
 		return eUnknownImageType;

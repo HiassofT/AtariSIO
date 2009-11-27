@@ -35,18 +35,18 @@ public:
 	bool SetDensity(Atari1050Model::EDiskDensity dens);
 
 	// set density of given track
-	bool SetDensity(Atari1050Model::EDiskDensity dens, unsigned int trackno);
+	bool SetDensity(Atari1050Model::EDiskDensity dens, uint8_t trackno);
 
 	// get density of a track
-	Atari1050Model::EDiskDensity GetDensity(unsigned int trackno = 0) const;
+	Atari1050Model::EDiskDensity GetDensity(uint8_t trackno = 0) const;
 
 	// delete previous data and allocate 'tracks' empty tracks.
-	void SetNumberOfTracks(unsigned int tracks);
+	void SetNumberOfTracks(uint8_t tracks);
 
 	// add an AtpSector to the specified track.
 	// internally the sectors are sorted by their (absolute)
 	// position value
-	bool AddSector(unsigned int trackno, const RCPtr<AtpSector>& sector);
+	bool AddSector(uint8_t trackno, const RCPtr<AtpSector>& sector);
 
 	// try to find a sector with specified ID value starting
 	// from (and including!) the current position on the
@@ -55,24 +55,24 @@ public:
 	// is set.
 	// On failure (when no sector with the given ID exists
 	// in this track), false is returned.
-	bool GetSector(unsigned int trackno,
-			unsigned int sectorID,
+	bool GetSector(uint8_t trackno,
+			uint8_t sectorID,
 			RCPtr<AtpSector>& sector,
-			unsigned int current_time = 0) const;
+			uint32_t current_time = 0) const;
 
 	// DiskImage methods
 
 	virtual inline ESectorLength GetSectorLength() const;
-	virtual unsigned int GetNumberOfSectors() const;
-	virtual unsigned int GetImageSize() const;
+	virtual uint16_t GetNumberOfSectors() const;
+	virtual size_t GetImageSize() const;
 
-	virtual bool ReadSector(unsigned int sector,
+	virtual bool ReadSector(uint16_t sector,
 		uint8_t* buffer,
-		unsigned int buffer_length) const;
+		size_t buffer_length) const;
 
-	virtual bool WriteSector(unsigned int sector,
+	virtual bool WriteSector(uint16_t sector,
 		const uint8_t* buffer,
-		unsigned int buffer_length);
+		size_t buffer_length);
 
 	// dump internal information
 	void Dump(std::ostream& os, unsigned int indentlevel=0);
@@ -96,7 +96,7 @@ private:
 
 private:
 	AtpTrack* fTracks;
-	unsigned int fNumberOfTracks;
+	uint8_t fNumberOfTracks;
 
 };
 

@@ -1820,7 +1820,7 @@ static unsigned int GetNumVTOC(unsigned int sectors, ESectorLength seclen)
 	return numVTOC;
 }
 
-unsigned int Dos2xUtils::EstimateDiskSize(const char* directory, ESectorLength seclen,
+uint16_t Dos2xUtils::EstimateDiskSize(const char* directory, ESectorLength seclen,
 	Dos2xUtils::EPicoNameType piconametype, EBootType bootType)
 {
 	unsigned int numSectors = 0;

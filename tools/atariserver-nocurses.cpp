@@ -208,7 +208,7 @@ static void print_status(const RCPtr<DeviceManager>& manager)
 				case e256BytesPerSector: printf("D | "); break;
 				default: printf("? | "); break;
 				}
-				printf("%5dk | ", (diskImage->GetImageSize()+512) / 1024);
+				printf("%5dk | ", (int) (diskImage->GetImageSize()+512) / 1024);
 			} else {
 					printf("? |     ?k | ");
 			}
