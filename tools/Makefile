@@ -19,8 +19,8 @@ ifdef ALL_IN_ONE
 EXECUTABLES = atarisio
 CXXFLAGS += -DALL_IN_ONE
 else
-EXECUTABLES = atariserver atarixfer adir dir2atr measure-system-latency casinfo ataricom
-#	atariserver-nocurses
+EXECUTABLES = atariserver atarixfer adir dir2atr measure-system-latency casinfo ataricom \
+	atariserver-nocurses
 #	ataridd smag24 
 #	speedy
 #	turbo
@@ -31,6 +31,9 @@ EXECUTABLES += atr2atp atpdump
 endif
 
 endif
+
+CFLAGS += $(ZLIB_CFLAGS) $(NCURSES_CFLAGS)
+CXXFLAGS += $(ZLIB_CFLAGS) $(NCURSES_CFLAGS)
 
 COMMON_OBJS = DiskImage.o FileIO.o SIOTracer.o FileTracer.o Error.o
 
@@ -69,7 +72,9 @@ ATARISERVER_OBJS = atariserver.o CursesFrontend.o StringInput.o \
 	Dos2xUtils.o VirtualImageObserver.o \
 	CasHandler.o
 
-ATARISERVER_LIBS = $(COMMON_LIBS) -lpanel -lncurses
+COMMON_LIBS = $(ZLIB_LDFLAGS) $(NCURSES_LDFLAGS)
+
+ATARISERVER_LIBS = $(COMMON_LIBS) -lpanel
 
 ATARISERVER_NOCURSES_OBJS = atariserver-nocurses.o \
 	$(COMMON_OBJS) $(ATRIMAGE_OBJS) \
@@ -79,9 +84,10 @@ ATARISERVER_NOCURSES_OBJS = atariserver-nocurses.o \
 	PrinterHandler.o Coprocess.o MiscUtils.o \
 	HighSpeedSIOCode.o MyPicoDosCode.o \
 	AtrSearchPath.o SearchPath.o Directory.o \
-	Dos2xUtils.o VirtualImageObserver.o
+	Dos2xUtils.o VirtualImageObserver.o \
+	CasHandler.o
 
-ATARISERVER_NOCURSES_LIBS = $(COMMON_LIBS) -lreadline -lncurses
+ATARISERVER_NOCURSES_LIBS = $(COMMON_LIBS) -lreadline
 
 ATR2ATP_OBJS = atr2atp.o AtpUtils.o \
 	$(COMMON_OBJS) $(ATRIMAGE_OBJS) $(ATPIMAGE_OBJS) \

@@ -44,13 +44,23 @@ INST_DIR = /usr/local
 #INST_DIR = /opt/hias
 
 ########################################################################
+# set compile and link options for using the ncurses library
+# the wrapper script uses "ncurses5-config" if available
+########################################################################
+
+NCURSES_CFLAGS=$(shell ./getcurses.sh --cflags)
+NCURSES_LDFLAGS=$(shell ./getcurses.sh --libs)
+
+
+########################################################################
 # if you don't have zlib installed on your system, please comment out
 # the following two lines. With zlib enabled you will be able to
 # directly load and save gzip-compressed image files (eg file.atr.gz)
 ########################################################################
 
-ZLIB_CXX_FLAGS=-DUSE_ZLIB
-ZLIB_LD_FLAGS=-lz
+ZLIB_CFLAGS=-DUSE_ZLIB
+ZLIB_LDFLAGS=-lz
+
 
 ########################################################################
 # ATP support:
@@ -67,6 +77,19 @@ ENABLE_ATP=1
 #ALL_IN_ONE=1
 
 ########################################################################
+# gcc version for compiling the user space apps
+# Usually you don't need to change this
+########################################################################
+
+CC ?= gcc
+CXX ?= g++
+#CC = gcc-3.3
+#CXX = g++-3.3
+#CC = /usr/local/gcc-3.2.2/bin/gcc
+#CXX = /usr/local/gcc-3.2.2/bin/g++
+
+
+########################################################################
 # gcc version to use for compiling the kernel module
 # The (major) version number must match the version that was used
 # when compiling the linux kernel, otherwise your system may crash!
@@ -74,21 +97,10 @@ ENABLE_ATP=1
 # just do a "cat /proc/version"
 ########################################################################
 
-KERNEL_CC = gcc
+KERNEL_CC ?= $(CC)
+#KERNEL_CC = gcc
 #KERNEL_CC = gcc-2.95
 #KERNEL_CC = kgcc
-
-########################################################################
-# gcc version for compiling the user space apps
-# Usually you don't need to change this
-########################################################################
-
-CC = gcc
-CXX = g++
-#CC = gcc-3.3
-#CXX = g++-3.3
-#CC = /usr/local/gcc-3.2.2/bin/gcc
-#CXX = /usr/local/gcc-3.2.2/bin/g++
 
 ########################################################################
 # don't change anything below here
@@ -96,23 +108,22 @@ CXX = g++
 
 MODFLAGS = -Wstrict-prototypes -Wall -O2 -DMODULE -D__KERNEL__ -I$(KERNEL_INCLUDES)
 
-CXXFLAGS = -g -W -Wall -DATARISIO_DEBUG $(ZLIB_CXX_FLAGS)
 CFLAGS = -g -W -Wall -DATARISIO_DEBUG 
-#CXXFLAGS = -O3 -W -Wall $(ZLIB_CXX_FLAGS)
 #CFLAGS = -O3 -W -Wall
+CXXFLAGS = $(CFLAGS)
 
 LDFLAGS = -g
 #LDFLAGS = -g -static
 
-COMMON_LIBS = $(ZLIB_LD_FLAGS)
-
 export KERNEL_CC MODFLAGS KDIR MDIR USE_KBUILD_26
 export CC CXX CFLAGS CXXFLAGS LDFLAGS
-export COMMON_LIBS
 export INST_DIR
 export ENABLE_ATP ALL_IN_ONE
+export ZLIB_CFLAGS ZLIB_LDFLAGS
+export NCURSES_CFLAGS NCURSES_LDFLAGS
 
 all:
+	@echo "CC = $(CC) CXX=$(CXX) KERNEL_CC=$(KERNEL_CC)"
 	$(MAKE) -C driver
 	$(MAKE) -C tools
 

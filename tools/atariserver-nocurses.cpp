@@ -311,7 +311,7 @@ static void print_error()
 	printf(" - ERROR!\n");
 }
 
-static DeviceManager::EDriveNumber input_drive_number(char* all_prompt)
+static DeviceManager::EDriveNumber input_drive_number(const char* all_prompt)
 {
 	static char * driveChars = 0;
 	static char * driveCharsPlusAll = 0;
@@ -348,7 +348,7 @@ static DeviceManager::EDriveNumber input_drive_number(char* all_prompt)
 	}
 }
 
-static void print_drive_number_prompt(const char* prompt, char* custom)
+static void print_drive_number_prompt(const char* prompt, const char* custom)
 {
 	printf("%s [ %d-%d", prompt,DeviceManager::eMinDriveNumber, DeviceManager::eMaxDriveNumber);
 	if (custom) {
@@ -358,7 +358,7 @@ static void print_drive_number_prompt(const char* prompt, char* custom)
 	fflush(stdout);
 }
 
-static DeviceManager::EDriveNumber input_used_drive_number(const RCPtr<DeviceManager>& manager, char *prompt, char* all_prompt)
+static DeviceManager::EDriveNumber input_used_drive_number(const RCPtr<DeviceManager>& manager, const char *prompt, const char* all_prompt)
 {
 	print_drive_number_prompt(prompt, all_prompt);
 
@@ -376,7 +376,7 @@ static DeviceManager::EDriveNumber input_used_drive_number(const RCPtr<DeviceMan
 	}
 }
 
-static DeviceManager::EDriveNumber input_unused_drive_number(const RCPtr<DeviceManager>& manager, char *prompt, char* all_prompt)
+static DeviceManager::EDriveNumber input_unused_drive_number(const RCPtr<DeviceManager>& manager, const char *prompt, const char* all_prompt)
 {
 	print_drive_number_prompt(prompt, all_prompt);
 
@@ -394,7 +394,7 @@ static DeviceManager::EDriveNumber input_unused_drive_number(const RCPtr<DeviceM
 	}
 }
 
-static bool input_yes_no(char *prompt)
+static bool input_yes_no(const char *prompt)
 {
 	printf("%s [Y/N] > ", prompt);
 	fflush(stdout);
