@@ -90,6 +90,58 @@ bool FileIO::WriteBigEndianWord(const uint16_t& word)
 	return true;
 }
 
+bool FileIO::ReadDWord(uint32_t& word)
+{
+	uint8_t buf[4];
+
+	if (ReadBlock(buf,4) != 4) {
+		return false;
+	}
+	word = buf[0] | (buf[1] << 8) | (buf[2] << 16) | (buf[3] << 24);
+	return true;
+}
+
+bool FileIO::WriteDWord(const uint32_t& word)
+{
+	uint8_t buf[4];
+
+	buf[0] = word & 0xff;
+	buf[1] = (word >> 8) & 0xff;
+	buf[2] = (word >> 16) & 0xff;
+	buf[3] = (word >> 24) & 0xff;
+
+	if (WriteBlock(buf,4) != 4) {
+		return false;
+	}
+	return true;
+}
+
+bool FileIO::ReadBigEndianDWord(uint32_t& word)
+{
+	uint8_t buf[4];
+
+	if (ReadBlock(buf,4) != 4) {
+		return false;
+	}
+	word = (buf[0] << 24) | (buf[1] << 16) | (buf[2] << 8) | buf[3];
+	return true;
+}
+
+bool FileIO::WriteBigEndianDWord(const uint32_t& word)
+{
+	uint8_t buf[4];
+
+	buf[0] = (word >> 24) & 0xff;
+	buf[1] = (word >> 16) & 0xff;
+	buf[2] = (word >> 8) & 0xff;
+	buf[3] = word & 0xff;
+
+	if (WriteBlock(buf,4) != 4) {
+		return false;
+	}
+	return true;
+}
+
 bool FileIO::Unlink(const char* filename)
 {
 	return unlink(filename) == 0;

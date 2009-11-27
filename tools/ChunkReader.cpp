@@ -24,7 +24,7 @@
 #include "AtariDebug.h"
 #include "Crc32.h"
 
-ChunkReader::ChunkReader(RCPtr<FileIO>& f, unsigned int start, unsigned int end, const char* name)
+ChunkReader::ChunkReader(RCPtr<FileIO>& f, off_t start, off_t end, const char* name)
 	: fFile(f),
 	  fChunkStart(start),
 	  fChunkEnd(end),
@@ -48,8 +48,8 @@ ChunkReader::~ChunkReader()
 
 RCPtr<ChunkReader> ChunkReader::OpenChunkFile(RCPtr<FileIO>& f)
 {
-	unsigned int currentPos = f->Tell();
-	unsigned int endPos = f->GetFileLength();
+	off_t currentPos = f->Tell();
+	off_t endPos = f->GetFileLength();
 
 	return new ChunkReader(f, currentPos, endPos);
 }
@@ -60,22 +60,17 @@ RCPtr<ChunkReader> ChunkReader::OpenChunk()
 		return RCPtr<ChunkReader>();
 	}
 
-	unsigned int chunklen;
+	uint32_t chunklen;
 	char name[4];
-	uint8_t lenbuf[4];
 
 	SeekToCurrentPos();
 
 	if (fFile->ReadBlock(name, 4) != 4) {
 		return RCPtr<ChunkReader>();
 	}
-	if (fFile->ReadBlock(lenbuf, 4) != 4) {
+	if (!fFile->ReadDWord(chunklen)) {
 		return RCPtr<ChunkReader>();
 	}
-	chunklen = lenbuf[0]
-		| ( lenbuf[1] << 8)
-		| ( lenbuf[2] << 16)
-		| ( lenbuf[3] << 24);
 
 	if (fChunkStart+fCurrentPosition+8+chunklen > fChunkEnd) {
 		return RCPtr<ChunkReader>();
@@ -104,42 +99,34 @@ bool ChunkReader::ReadByte(uint8_t& byte)
 	return false;
 }
 
-bool ChunkReader::ReadWord(unsigned short& word)
+bool ChunkReader::ReadWord(uint16_t& word)
 {
 	SeekToCurrentPos();
 	if (fChunkStart+fCurrentPosition+2 <= fChunkEnd) {
-		uint8_t buf[2];
-		if (fFile->ReadBlock(buf, 2) == 2) {
+		if (fFile->ReadWord(word)) {
 			fCurrentPosition+=2;
-			word = buf[0] | (buf[1] << 8);
 			return true;
 		}
 	}
 	return false;
 }
 
-bool ChunkReader::ReadDword(unsigned int &dword)
+bool ChunkReader::ReadDword(uint32_t &dword)
 {
 	SeekToCurrentPos();
 	if (fChunkStart+fCurrentPosition+4 <= fChunkEnd) {
-		uint8_t buf[4];
-		if (fFile->ReadBlock(buf, 4) == 4) {
+		if (fFile->ReadDWord(dword)) {
 			fCurrentPosition+=4;
-			dword =
-				  buf[0]
-				| (buf[1] << 8)
-				| (buf[2] << 16)
-				| (buf[3] << 24);
 			return true;
 		}
 	}
 	return false;
 }
 
-bool ChunkReader::ReadBlock(void* buf, unsigned int len)
+bool ChunkReader::ReadBlock(void* buf, size_t len)
 {
 	SeekToCurrentPos();
-	if (fChunkStart+fCurrentPosition+len <= fChunkEnd) {
+	if (fChunkStart+fCurrentPosition+(off_t)len <= fChunkEnd) {
 		if (fFile->ReadBlock(buf, len) == len) {
 			fCurrentPosition+=len;
 			return true;
@@ -148,9 +135,9 @@ bool ChunkReader::ReadBlock(void* buf, unsigned int len)
 	return false;
 }
 
-unsigned int ChunkReader::CalculateCRC32() const
+uint32_t ChunkReader::CalculateCRC32() const
 {
-	unsigned int crc;
+	uint32_t crc;
 
 	if (!CalculateCRC32(crc, 0, fChunkEnd-fChunkStart)) {
 		DPRINTF("internal error calculating CRC32!");
@@ -159,7 +146,7 @@ unsigned int ChunkReader::CalculateCRC32() const
 	return crc;
 }
 
-bool ChunkReader::CalculateCRC32(unsigned int &checksum, unsigned int start_pos, unsigned int end_pos) const
+bool ChunkReader::CalculateCRC32(uint32_t& checksum, off_t start_pos, off_t end_pos) const
 {
 	if (start_pos > end_pos) {
 		return false;
@@ -171,10 +158,10 @@ bool ChunkReader::CalculateCRC32(unsigned int &checksum, unsigned int start_pos,
 		return false;
 	}
 
-	unsigned long crc = CRC32::CalcCRC32(0, NULL, 0);
+	uint32_t crc = CRC32::CalcCRC32(0, NULL, 0);
 
-	unsigned int total_len = end_pos - start_pos;
-	unsigned int len;
+	size_t total_len = end_pos - start_pos;
+	size_t len;
 
 	fFile->Seek(fChunkStart + start_pos);
 

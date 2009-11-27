@@ -40,11 +40,11 @@ public:
 	// append byte (8 bit)
 	bool AppendByte(uint8_t byte);
 	// append word (16 bit)
-	bool AppendWord(unsigned short word);
+	bool AppendWord(uint16_t word);
 	// append dword (32 bit)
-	bool AppendDword(unsigned int dword);
+	bool AppendDword(uint32_t dword);
 
-	bool AppendBlock(const void* data, unsigned int len);
+	bool AppendBlock(const void* data, size_t len);
 	bool AppendChunk(const RCPtr<ChunkWriter>& chunk);
 
 	// set the length field of the chunk and free any
@@ -54,21 +54,21 @@ public:
 	bool CloseChunk();
 
 	// calculates checksum of the data part of this chunk
-	unsigned int CalculateCRC32() const;
+	uint32_t CalculateCRC32() const;
 
 	bool WriteToFile(RCPtr<FileIO>& f) const;
 
 private:
-	inline void PrepareForSize(unsigned int size);
+	inline void PrepareForSize(size_t size);
 
 	bool fIsOpen;
-	unsigned int fAllocatedSize;
-	unsigned int fSize;
+	size_t fAllocatedSize;
+	size_t fSize;
 
 	uint8_t* fData;
 };
 
-inline void ChunkWriter::PrepareForSize(unsigned int size)
+inline void ChunkWriter::PrepareForSize(size_t size)
 {
 	if (size > fAllocatedSize) {
 		fAllocatedSize = (size) * 2;

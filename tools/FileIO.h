@@ -60,6 +60,14 @@ public:
 	bool ReadBigEndianWord(uint16_t& word);
 	bool WriteBigEndianWord(const uint16_t& word);
 
+	/* read/write lo, mid1, mid2, hi byte */
+	bool ReadDWord(uint32_t& word);
+	bool WriteDWord(const uint32_t& word);
+
+	/* read/write hi, mid2, mid1, lo byte */
+	bool ReadBigEndianDWord(uint32_t& word);
+	bool WriteBigEndianDWord(const uint32_t& word);
+
 	virtual bool Unlink(const char* filename);
 
 	virtual bool IsOpen() const = 0;

@@ -26,7 +26,7 @@
 ChunkWriter::ChunkWriter(const char* chunkName)
 	: fIsOpen(true)
 {
-	int i,len;
+	size_t i,len;
 
 	fAllocatedSize = 16;
 	fData =(uint8_t*) malloc(fAllocatedSize);
@@ -84,7 +84,7 @@ bool ChunkWriter::AppendByte(uint8_t byte)
 	}
 }
 
-bool ChunkWriter::AppendWord(unsigned short word)
+bool ChunkWriter::AppendWord(uint16_t word)
 {
 	if (fIsOpen) {
 		PrepareForSize(fSize+2);
@@ -96,7 +96,7 @@ bool ChunkWriter::AppendWord(unsigned short word)
 	}
 }
 
-bool ChunkWriter::AppendDword(unsigned int dword)
+bool ChunkWriter::AppendDword(uint32_t dword)
 {
 	if (fIsOpen) {
 		PrepareForSize(fSize+4);
@@ -110,7 +110,7 @@ bool ChunkWriter::AppendDword(unsigned int dword)
 	}
 }
 
-bool ChunkWriter::AppendBlock(const void* data, unsigned int len)
+bool ChunkWriter::AppendBlock(const void* data, size_t len)
 {
 	if (fIsOpen) {
 		PrepareForSize(fSize+len);
@@ -134,9 +134,9 @@ bool ChunkWriter::AppendChunk(const RCPtr<ChunkWriter>& chunk)
 	}
 }
 
-unsigned int ChunkWriter::CalculateCRC32() const
+uint32_t ChunkWriter::CalculateCRC32() const
 {
-	unsigned long crc = CRC32::CalcCRC32(0L, NULL, 0);
+	uint32_t crc = CRC32::CalcCRC32(0L, NULL, 0);
 	crc = CRC32::CalcCRC32(crc, fData+8, fSize-8);
 	return crc;
 }

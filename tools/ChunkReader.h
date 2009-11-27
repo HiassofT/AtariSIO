@@ -37,21 +37,21 @@ public:
 	RCPtr<ChunkReader> OpenChunk();
 
 	inline const char* GetChunkName() const;
-	inline unsigned int GetChunkLength() const;
-	inline unsigned int GetCurrentPosition() const;
+	inline off_t GetChunkLength() const;
+	inline off_t GetCurrentPosition() const;
 
 	bool ReadByte(uint8_t& byte);
-	bool ReadWord(unsigned short& word);
-	bool ReadDword(unsigned int &dword);
-	bool ReadBlock(void* buf, unsigned int len);
+	bool ReadWord(uint16_t& word);
+	bool ReadDword(uint32_t &dword);
+	bool ReadBlock(void* buf, size_t len);
 
-	unsigned int CalculateCRC32() const;
-	bool CalculateCRC32(unsigned int &checksum, unsigned int start_pos, unsigned int end_pos) const;
+	uint32_t CalculateCRC32() const;
+	bool CalculateCRC32(uint32_t &checksum, off_t start_pos, off_t end_pos) const;
 
 private:
 	ChunkReader(RCPtr<FileIO>& f,
-		unsigned int start,
-		unsigned int end,
+		off_t start,
+		off_t end,
 		const char* name=0);
 
 	virtual ~ChunkReader();
@@ -61,9 +61,9 @@ private:
 private:
 	RCPtr<FileIO> fFile;
 
-	unsigned int fChunkStart; // absolute file position (included)
-	unsigned int fChunkEnd; // absolute file position (not included)
-	unsigned int fCurrentPosition; // relative position within this chunk
+	off_t fChunkStart; // absolute file position (included)
+	off_t fChunkEnd; // absolute file position (not included)
+	off_t fCurrentPosition; // relative position within this chunk
 
 	char *fName;
 };
@@ -73,12 +73,12 @@ inline const char* ChunkReader::GetChunkName() const
 	return fName;
 }
 
-inline unsigned int ChunkReader::GetChunkLength() const
+inline off_t ChunkReader::GetChunkLength() const
 {
 	return fChunkEnd-fChunkStart;
 }
 
-inline unsigned int ChunkReader::GetCurrentPosition() const
+inline off_t ChunkReader::GetCurrentPosition() const
 {
 	return fCurrentPosition;
 }
