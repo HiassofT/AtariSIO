@@ -123,7 +123,6 @@ export ZLIB_CFLAGS ZLIB_LDFLAGS
 export NCURSES_CFLAGS NCURSES_LDFLAGS
 
 all:
-	@echo "CC = $(CC) CXX=$(CXX) KERNEL_CC=$(KERNEL_CC)"
 	$(MAKE) -C driver
 	$(MAKE) -C tools
 
