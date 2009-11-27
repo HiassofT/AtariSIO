@@ -130,11 +130,11 @@ bool OpenSerial(const char* device)
 
 static void print_timestamp()
 {
-	static unsigned long long start_time;
-	static unsigned long long last_timestamp;
+	static uint64_t start_time;
+	static uint64_t last_timestamp;
 	static bool first=true;
 
-	unsigned long long current_timestamp = GetCurrentTime();
+	uint64_t current_timestamp = GetCurrentTime();
 	if (first) {
 		start_time = current_timestamp;
 		last_timestamp = current_timestamp;

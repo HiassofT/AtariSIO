@@ -59,7 +59,7 @@ private:
 
 	// return time to spin up motor (returns zero if motor is
 	// already running)
-	unsigned int SpinUpMotor(const unsigned long long& currentTime);
+	unsigned int SpinUpMotor(const uint64_t& currentTime);
 
 	RCPtr<AtpImage> fImage;
 
@@ -67,7 +67,7 @@ private:
 	unsigned int fCurrentTrack;
 
 	unsigned char fLastFDCStatus;
-	unsigned long long fLastDiskAccessTimestamp;
+	uint64_t fLastDiskAccessTimestamp;
 
 	SIOTracer* fTracer;
 };

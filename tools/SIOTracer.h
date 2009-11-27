@@ -22,6 +22,7 @@
 */
 
 #include <stdio.h>
+#include <stdint.h>
 
 #ifndef WINVER
 #include <sys/types.h>

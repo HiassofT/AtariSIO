@@ -22,6 +22,9 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <sys/types.h>
+#include <stdint.h>
+#define __STDC_FORMAT_MACROS
+#include <inttypes.h>
 #include <string.h>
 #include <signal.h>
 #include <getopt.h>
@@ -175,7 +178,7 @@ static void avg_ts_divide(unsigned int count)
 
 static void print_ts(MyTimestamps& ts)
 {
-	printf("%6lld %6lld %6lld %6lld %6lld %6lld %6lld %6lld",
+	printf("%6" PRIu64 " %6" PRIu64 " %6" PRIu64 " %6" PRIu64 " %6" PRIu64 " %6" PRIu64 " %6" PRIu64 " %6" PRIu64,
 		ts.sio.system_entering,
 		ts.sio.transmission_start,
 		ts.sio.transmission_send_irq,
@@ -308,13 +311,13 @@ static unsigned long measure_latency(int blocksize, unsigned int count,  EOutput
 	switch (outputMode) {
 	case eOutputGnuplot:
 		//printf("%d %lld", blocksize, realEndTime);
-		printf("%d %lld", blocksize, realTransmissionTime);
+		printf("%d %" PRIu64, blocksize, realTransmissionTime);
 		break;
 	case eOutputFull:
 		printf("\navg. xmit time:");
 	case eOutputSummary:
-		printf(" %7lld usec", realTransmissionTime);
-		//printf(" %7lld usec", realEndTime);
+		printf(" %7" PRIu64 " usec", realTransmissionTime);
+		//printf(" %7" PRIu64 " usec", realEndTime);
 		break;
 	default: break;
 	}
@@ -326,7 +329,7 @@ static unsigned long measure_latency(int blocksize, unsigned int count,  EOutput
 		switch (outputMode) {
 		case eOutputSummary:
 		case eOutputFull:
-			printf (" (calculated: %7lld  error: %4ld usec / %7.3f%%)", calculatedEndTime, timeDiff, error);
+			printf (" (calculated: %7" PRIu64 "  error: %4ld usec / %7.3f%%)", calculatedEndTime, timeDiff, error);
 			break;
 		default: break;
 		}

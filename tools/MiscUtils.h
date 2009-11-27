@@ -22,6 +22,7 @@
 */
 
 #include <stdio.h>
+#include <stdint.h>
 #include "DiskImage.h"
 #include "Dos2xUtils.h"
 #ifndef WINVER
@@ -36,7 +37,7 @@ namespace MiscUtils {
 	bool set_realtime_scheduling(int priority);
 	bool drop_realtime_scheduling();
 
-	typedef unsigned long long TimestampType;
+	typedef uint64_t TimestampType;
 
 	inline TimestampType TimevalToTimestamp(struct timeval& tv)
 	{

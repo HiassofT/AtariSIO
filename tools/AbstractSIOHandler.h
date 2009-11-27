@@ -23,6 +23,7 @@
 */
 
 #include <sys/types.h>
+#include <stdint.h>
 #include "../driver/atarisio.h"
 #include "SIOWrapper.h"
 #include "DiskImage.h"

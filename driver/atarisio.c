@@ -381,8 +381,8 @@ struct atarisio_dev {
 		unsigned int error_chars; /* received chars with (i.e. framing) errors */
 		unsigned int break_chars; /* received breaks */
 
-		unsigned long long start_reception_time; /* in usec */
-		unsigned long long end_reception_time; /* in usec */
+		uint64_t start_reception_time; /* in usec */
+		uint64_t end_reception_time; /* in usec */
 
 		unsigned int serial_number;
 		unsigned int missed_count;
@@ -544,15 +544,15 @@ static int detect_16c950(struct atarisio_dev* dev)
 }
 
 
-static inline unsigned long long timeval_to_usec(struct timeval* tv)
+static inline uint64_t timeval_to_usec(struct timeval* tv)
 {
-	return (unsigned long long)tv->tv_sec*1000000 + tv->tv_usec;
+	return (uint64_t)tv->tv_sec*1000000 + tv->tv_usec;
 }
 
 /*
  * timing / timestamp functions
  */
-static inline unsigned long long get_timestamp(void)
+static inline uint64_t get_timestamp(void)
 {
 	struct timeval tv;
 	do_gettimeofday(&tv);
@@ -2071,7 +2071,7 @@ static int perform_send_tape_block(struct atarisio_dev* dev, unsigned long arg)
 static int check_command_frame_time(struct atarisio_dev* dev, int do_lock)
 {
 	unsigned long flags = 0;
-	unsigned long long current_time;
+	uint64_t current_time;
 	int ret = 0;
 	unsigned int do_delay = 0;
 

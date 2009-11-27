@@ -510,7 +510,7 @@ unsigned int AtpSIOHandler::SeekToTrack(unsigned int track)
 	return time;
 }
 
-unsigned int AtpSIOHandler::SpinUpMotor(const unsigned long long& currentTime)
+unsigned int AtpSIOHandler::SpinUpMotor(const uint64_t& currentTime)
 {
 	if (currentTime < fLastDiskAccessTimestamp +
 		Atari1050Model::eMotorOffDelay) {

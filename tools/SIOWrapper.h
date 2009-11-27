@@ -22,6 +22,7 @@
 */
 
 #include <sys/types.h>
+#include <stdint.h>
 #include <sys/ioctl.h>
 #include <errno.h>
 

@@ -114,9 +114,9 @@ void single_test(unsigned int chars)
 
 #define MAXRX 1000
 
-inline unsigned long long tv_to_ts(struct timeval& tv)
+inline uint64_t tv_to_ts(struct timeval& tv)
 {
-	return (unsigned long long)tv.tv_sec * 1000000 + tv.tv_usec;
+	return (uint64_t)tv.tv_sec * 1000000 + tv.tv_usec;
 }
 
 static void set_realtime_scheduling()
@@ -145,7 +145,7 @@ void rxonly_test(unsigned int seconds)
 	unsigned char* msr_list = new unsigned char[MAXRX];
 	unsigned long* ts_list = new unsigned long[MAXRX];
 
-	unsigned long long start_time, current_time;
+	uint64_t start_time, current_time;
 
 	unsigned char msr, old_msr;
 

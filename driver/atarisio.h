@@ -100,7 +100,7 @@ typedef struct SIO_command_frame_struct {
 	unsigned char command;
 	unsigned char aux1;
 	unsigned char aux2;
-	unsigned long long reception_timestamp;
+	uint64_t reception_timestamp;
 	unsigned int  missed_count;
 } SIO_command_frame;
 
@@ -277,13 +277,13 @@ typedef struct SIO_data_frame_struct {
    timestamp structure for measuring system latency.
 */
 typedef struct SIO_timestamp_struct {
-	unsigned long long system_entering; /* set inside the ioctl() */
-	unsigned long long transmission_start; /* only set on send operations */
-	unsigned long long transmission_send_irq; /* timestamp of first send-char interrupt */
-	unsigned long long transmission_end; /* set in interrupt, only on send operations */
-	unsigned long long transmission_wakeup; /* set in kernel driver after sleeping */
-	unsigned long long uart_finished; /* set when uart has finished transmitting all bits */
-	unsigned long long system_leaving; /* set before leaving the ioctl() */
+	uint64_t system_entering; /* set inside the ioctl() */
+	uint64_t transmission_start; /* only set on send operations */
+	uint64_t transmission_send_irq; /* timestamp of first send-char interrupt */
+	uint64_t transmission_end; /* set in interrupt, only on send operations */
+	uint64_t transmission_wakeup; /* set in kernel driver after sleeping */
+	uint64_t uart_finished; /* set when uart has finished transmitting all bits */
+	uint64_t system_leaving; /* set before leaving the ioctl() */
 } SIO_timestamps;
 
 /*
