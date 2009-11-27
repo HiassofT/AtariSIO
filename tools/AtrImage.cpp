@@ -147,7 +147,7 @@ bool AtrImage::SetFormat(ESectorLength density, uint32_t numberOfSectors)
 		
 bool AtrImage::SetFormat(ESectorLength density, uint16_t sectors, uint8_t tracks, uint8_t sides)
 {
-	uint32_t secs = sectors * tracks * sides;
+	unsigned int secs = sectors * tracks * sides;
 	if (secs == 0 || secs >= 65536) {
 		Init();
 		return false;
@@ -171,7 +171,7 @@ bool AtrImage::SetFormat(ESectorLength density, uint16_t sectors, uint8_t tracks
 bool AtrImage::SetFormatFromATRHeader(const uint8_t* hdr)
 {
 	ESectorLength density;
-	uint32_t numberOfSectors;
+	unsigned int numberOfSectors;
 	uint16_t sectSize;
 	size_t imgSize;
 

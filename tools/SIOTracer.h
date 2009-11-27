@@ -90,35 +90,35 @@ public:
 
 	void TraceDataBlock(
 		const uint8_t* block,
-		int len,
+		size_t len,
 		const char *prefix = 0);
 
 	void TraceDecodedPercomBlock(
-		unsigned int driveno,
+		uint8_t driveno,
 		const uint8_t* block /* 12 bytes long */,
 		bool getBlock,
 		bool XF551 = false);
 
-	void TraceGetStatus(unsigned int driveno, bool XF551 = false);
-	void TraceReadSector(unsigned int driveno, unsigned int sector, bool XF551 = false);
-	void TraceWriteSector(unsigned int driveno, unsigned int sector, bool XF551 = false);
-	void TraceWriteSectorVerify(unsigned int driveno, unsigned int sector, bool XF551 = false);
-	void TraceFormatDisk(unsigned int driveno, bool XF551 = false);
-	void TraceFormatEnhanced(unsigned int driveno, bool XF551 = false);
-	void TraceGetSpeedByte(unsigned int driveno);
-	void TraceGetSioCode(unsigned int driveno);
-	void TraceGetSioCodeLength(unsigned int driveno);
+	void TraceGetStatus(uint8_t driveno, bool XF551 = false);
+	void TraceReadSector(uint8_t driveno, uint16_t sector, bool XF551 = false);
+	void TraceWriteSector(uint8_t driveno, uint16_t sector, bool XF551 = false);
+	void TraceWriteSectorVerify(uint8_t driveno, uint16_t sector, bool XF551 = false);
+	void TraceFormatDisk(uint8_t driveno, bool XF551 = false);
+	void TraceFormatEnhanced(uint8_t driveno, bool XF551 = false);
+	void TraceGetSpeedByte(uint8_t driveno);
+	void TraceGetSioCode(uint8_t driveno);
+	void TraceGetSioCodeLength(uint8_t driveno);
 
-	void TraceReadMyPicoDos(unsigned int driveno, unsigned int sector);
+	void TraceReadMyPicoDos(uint8_t driveno, uint16_t sector);
 
 	void TraceGetPrinterStatus();
 	void TraceWritePrinter();
 
 	void TraceRemoteControlCommand();
 	void TraceRemoteControlStatus();
-	void TraceReadRemoteControlResult(unsigned int sector);
+	void TraceReadRemoteControlResult(uint16_t sector);
 
-	void TraceApeSpecial(unsigned int driveno, const char* description = 0);
+	void TraceApeSpecial(uint8_t driveno, const char* description = 0);
 	void TraceRemoteControlGetTime();
 
 	void TraceAtpDelay(unsigned int delay);
@@ -132,8 +132,8 @@ public:
 	void TraceDebugString(const char* format, ... )
 		__attribute__ ((format (printf, 2, 3))) ;
 
-	void IndicateDriveChanged(int drive);
-	void IndicateDriveFormatted(int drive);
+	void IndicateDriveChanged(uint8_t drive);
+	void IndicateDriveFormatted(uint8_t drive);
 	void IndicateCwdChanged();
 	void IndicatePrinterChanged();
 
@@ -212,12 +212,12 @@ inline void LOG_SIO_RECEIVE_DATA_FAILED()
 	SIOTracer::GetInstance()->TraceInfoString(SIOTracer::eInfoWarning, "receive data frame failed");
 }
 
-inline void LOG_SIO_READ_ILLEGAL_SECTOR(unsigned int sec)
+inline void LOG_SIO_READ_ILLEGAL_SECTOR(uint16_t sec)
 {
 	SIOTracer::GetInstance()->TraceInfoString(SIOTracer::eInfoWarning, "illegal sector in read: %d", sec);
 }
 
-inline void LOG_SIO_WRITE_ILLEGAL_SECTOR(unsigned int sec)
+inline void LOG_SIO_WRITE_ILLEGAL_SECTOR(uint16_t sec)
 {
 	SIOTracer::GetInstance()->TraceInfoString(SIOTracer::eInfoWarning, "illegal sector in write: %d", sec);
 }

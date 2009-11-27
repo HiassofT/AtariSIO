@@ -132,7 +132,7 @@ int AtrSIOHandler::ProcessCommandFrame(SIO_command_frame& frame, const RCPtr<SIO
 			break;
 		}
 
-		uint16_t buflen = 4;
+		size_t buflen = 4;
 		uint8_t buf[buflen];
 
 		const char* description = 0;
@@ -226,7 +226,7 @@ int AtrSIOHandler::ProcessCommandFrame(SIO_command_frame& frame, const RCPtr<SIO
 			break;
 		}
 
-		uint16_t buflen = fImageConfig.GetSectorLength(sec);
+		size_t buflen = fImageConfig.GetSectorLength(sec);
 		uint8_t buf[buflen];
 
 		const char* description = 0;
@@ -314,7 +314,7 @@ int AtrSIOHandler::ProcessCommandFrame(SIO_command_frame& frame, const RCPtr<SIO
 			break;
 		}
 
-		uint16_t buflen = fImageConfig.GetSectorLength(sec);
+		size_t buflen = fImageConfig.GetSectorLength(sec);
 		uint8_t buf[buflen];
 
 		const char* description = 0;
@@ -429,7 +429,7 @@ int AtrSIOHandler::ProcessCommandFrame(SIO_command_frame& frame, const RCPtr<SIO
 			break;
 		}
 
-		uint16_t buflen = 12;
+		size_t buflen = 12;
 		uint8_t buf[buflen];
 
 		const char* description = 0;
@@ -512,7 +512,7 @@ int AtrSIOHandler::ProcessCommandFrame(SIO_command_frame& frame, const RCPtr<SIO
 			break;
 		}
 
-		uint16_t buflen = 12;
+		size_t buflen = 12;
 		uint8_t buf[buflen];
 
 		const char* description = 0;
@@ -668,7 +668,7 @@ int AtrSIOHandler::ProcessCommandFrame(SIO_command_frame& frame, const RCPtr<SIO
 			break;
 		}
 
-		uint16_t buflen = fFormatConfig.fSectorLength;
+		size_t buflen = fFormatConfig.fSectorLength;
 		uint8_t buf[buflen];
 
 		const char* description = 0;
@@ -762,7 +762,7 @@ int AtrSIOHandler::ProcessCommandFrame(SIO_command_frame& frame, const RCPtr<SIO
 			break;
 		}
 
-		uint16_t buflen = 128;
+		size_t buflen = 128;
 		uint8_t buf[buflen];
 
 		const char* description = 0;
@@ -836,7 +836,7 @@ int AtrSIOHandler::ProcessCommandFrame(SIO_command_frame& frame, const RCPtr<SIO
 
 		if (fEnableHighSpeed) {
 
-			uint16_t buflen = 1;
+			size_t buflen = 1;
 			uint8_t buf[buflen];
 			const char* description = "[ get speed byte ]";
 
@@ -882,7 +882,7 @@ int AtrSIOHandler::ProcessCommandFrame(SIO_command_frame& frame, const RCPtr<SIO
 
 		if (fEnableHighSpeed) {
 
-			uint16_t buflen = 2;
+			size_t buflen = 2;
 			uint8_t buf[buflen];
 			const char * description = "[ get SIO length ]";
 
@@ -892,7 +892,7 @@ int AtrSIOHandler::ProcessCommandFrame(SIO_command_frame& frame, const RCPtr<SIO
 				break;
 			}
 	
-			uint16_t codelen = HighSpeedSIOCode::GetInstance()->GetCodeSize();
+			size_t codelen = HighSpeedSIOCode::GetInstance()->GetCodeSize();
 
 			buf[0] = codelen & 0xff;
 			buf[1] = codelen >> 8;
@@ -926,7 +926,7 @@ int AtrSIOHandler::ProcessCommandFrame(SIO_command_frame& frame, const RCPtr<SIO
 
 		if (fEnableHighSpeed) {
 
-			uint16_t buflen = HighSpeedSIOCode::GetInstance()->GetCodeSize();
+			size_t buflen = HighSpeedSIOCode::GetInstance()->GetCodeSize();
 			uint8_t buf[buflen];
 			const char* description = "[ get SIO code ]";
 
@@ -1017,7 +1017,7 @@ int AtrSIOHandler::ProcessCommandFrame(SIO_command_frame& frame, const RCPtr<SIO
 			break;
 		}
 
-		uint16_t buflen = 128;
+		size_t buflen = 128;
 		uint8_t buf[buflen];
 		const char* description = "[ read MyPicoDos ]";
 		MyPicoDosCode* mypdos = MyPicoDosCode::GetInstance();
@@ -1064,7 +1064,7 @@ int AtrSIOHandler::ProcessCommandFrame(SIO_command_frame& frame, const RCPtr<SIO
 			}
 			// ape time
 
-			uint16_t buflen = 6;
+			size_t buflen = 6;
 			uint8_t buf[buflen];
 			const char* shortdesc = "get time";
 			const char* description = "[ get APE time ]";
@@ -1104,7 +1104,7 @@ int AtrSIOHandler::ProcessCommandFrame(SIO_command_frame& frame, const RCPtr<SIO
 		}
 
 		case 0xf0: { // get image filename
-			uint16_t buflen = 256;
+			size_t buflen = 256;
 			uint8_t buf[buflen];
 			const char* shortdesc = "get image name";
 			const char* description = "[ get APE image name ]";
@@ -1143,7 +1143,7 @@ int AtrSIOHandler::ProcessCommandFrame(SIO_command_frame& frame, const RCPtr<SIO
 			break;
 		}
 		case 0xf1: { // get version
-			uint16_t buflen = 256;
+			size_t buflen = 256;
 			uint8_t buf[buflen];
 			const char* shortdesc = "get version";
 			const char* description = "[ get APE version ]";
@@ -1219,7 +1219,7 @@ int AtrSIOHandler::ProcessCommandFrame(SIO_command_frame& frame, const RCPtr<SIO
 				break;
 			}
 
-			uint16_t buflen = 3;
+			size_t buflen = 3;
 			uint8_t buf[buflen];
 			const char* description = "[ add command ]";
 

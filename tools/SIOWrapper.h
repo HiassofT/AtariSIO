@@ -61,19 +61,19 @@ public:
 	/*
 	 * disk drive methods
 	 */
-	int ReadSector(uint8_t driveNo, unsigned int sector,
-		uint8_t* buf, unsigned int length,
+	int ReadSector(uint8_t driveNo, uint16_t sector,
+		uint8_t* buf, size_t length,
 		uint8_t highspeedMode = ATARISIO_EXTSIO_SPEED_NORMAL);
 
-	int WriteSector(uint8_t driveNo, unsigned int sector,
-		uint8_t* buf, unsigned int length,
+	int WriteSector(uint8_t driveNo, uint16_t sector,
+		uint8_t* buf, size_t length,
 		uint8_t highspeedMode = ATARISIO_EXTSIO_SPEED_NORMAL);
 
-	int WriteAndVerifySector(uint8_t driveNo, unsigned int sector,
-		uint8_t* buf, unsigned int length,
+	int WriteAndVerifySector(uint8_t driveNo, uint16_t sector,
+		uint8_t* buf, size_t length,
 		uint8_t highspeedMode = ATARISIO_EXTSIO_SPEED_NORMAL);
 
-	int FormatDisk(uint8_t driveNo, uint8_t* buf, unsigned int length,
+	int FormatDisk(uint8_t driveNo, uint8_t* buf, size_t length,
 		uint8_t highspeedMode = ATARISIO_EXTSIO_SPEED_NORMAL);
 
 	int FormatEnhanced(uint8_t driveNo, uint8_t* buf,
@@ -128,15 +128,15 @@ public:
 	int SendComplete();
 	int SendError();
 
-	int SendDataFrame(uint8_t* buf, unsigned int length);
-	int ReceiveDataFrame(uint8_t* buf, unsigned int length);
+	int SendDataFrame(uint8_t* buf, size_t length);
+	int ReceiveDataFrame(uint8_t* buf, size_t length);
 
-	int SendRawFrame(uint8_t* buf, unsigned int length);
-	int ReceiveRawFrame(uint8_t* buf, unsigned int length);
+	int SendRawFrame(uint8_t* buf, size_t length);
+	int ReceiveRawFrame(uint8_t* buf, size_t length);
 
 	int SendCommandACKXF551();
 	int SendCompleteXF551();
-	int SendDataFrameXF551(uint8_t* buf, unsigned int length);
+	int SendDataFrameXF551(uint8_t* buf, size_t length);
 
 	int SetBaudrate(unsigned int baudrate);
 	int SetHighSpeedBaudrate(unsigned int baudrate);
@@ -144,7 +144,7 @@ public:
 	int SetHighSpeedPause(unsigned int on);
 
 	int SetTapeBaudrate(unsigned int baudrate);
-	int SendTapeBlock(uint8_t* buf, unsigned int length);
+	int SendTapeBlock(uint8_t* buf, size_t length);
 
 	int GetBaudrate();
 	int GetExactBaudrate();

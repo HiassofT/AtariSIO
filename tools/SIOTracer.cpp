@@ -317,7 +317,7 @@ void SIOTracer::TraceCommandError(int returncode, uint8_t FDC_status)
 
 void SIOTracer::TraceDataBlock(
 	const uint8_t* block,
-	int len,
+	size_t len,
 	const char *prefix)
 {
 	if (fTraceGroupsCache & eTraceDataBlocks) {
@@ -326,11 +326,11 @@ void SIOTracer::TraceDataBlock(
 			snprintf(fString, eMaxStringLength, "%s ", prefix);
 			IterTraceString(eTraceDataBlocks, fString);
 		}
-		snprintf(fString, eMaxStringLength, "data block length = %d bytes", len);
+		snprintf(fString, eMaxStringLength, "data block length = %d bytes", (int)len);
 		IterTraceString(eTraceDataBlocks, fString);
 		IterEndTraceLine(eTraceDataBlocks);
 
-		int i,j;
+		size_t i,j;
 		for (j=0;j<len;j += 16) {
 			IterStartTraceLine(eTraceDataBlocks);
 			for (i=0;i<16;i++) {
@@ -367,14 +367,14 @@ static inline const char* is_xf551(bool xf551_flag)
 	return xf551_flag ? " XF551" : "";
 }
 
-void SIOTracer::TraceDecodedPercomBlock(unsigned int driveno, const uint8_t* block, bool get, bool XF551)
+void SIOTracer::TraceDecodedPercomBlock(uint8_t driveno, const uint8_t* block, bool get, bool XF551)
 {
 	ETraceGroup group = eTraceVerboseCommands;
 	if (fTraceGroupsCache & group) {
 		IterStartTraceLine(group);
 		unsigned int sides = block[4] + 1;
 		unsigned int tracks = block[0];
-		unsigned int sectors = (block[2]<<8) + block[3];
+		uint16_t sectors = (block[2]<<8) + block[3];
 		unsigned int total = sides * tracks * sectors;
 		unsigned int seclen = (block[6]<<8) + block[7];
 		uint8_t dens = block[5];
@@ -416,57 +416,57 @@ void SIOTracer::TraceDecodedPercomBlock(unsigned int driveno, const uint8_t* blo
 	}
 }
 
-void SIOTracer::TraceGetStatus(unsigned int driveno, bool XF551)
+void SIOTracer::TraceGetStatus(uint8_t driveno, bool XF551)
 {
 	TraceString(eTraceVerboseCommands, "D%d: get status%s", driveno, is_xf551(XF551));
 }
 
-void SIOTracer::TraceReadSector(unsigned int driveno, unsigned int sector, bool XF551)
+void SIOTracer::TraceReadSector(uint8_t driveno, uint16_t sector, bool XF551)
 {
 	TraceString(eTraceVerboseCommands, "D%d: read sector%s %d", driveno, is_xf551(XF551), sector);
 }
 
-void SIOTracer::TraceWriteSector(unsigned int driveno, unsigned int sector, bool XF551)
+void SIOTracer::TraceWriteSector(uint8_t driveno, uint16_t sector, bool XF551)
 {
 	TraceString(eTraceVerboseCommands, "D%d: write sector%s %d", driveno, is_xf551(XF551), sector);
 }
 
-void SIOTracer::TraceWriteSectorVerify(unsigned int driveno, unsigned int sector, bool XF551)
+void SIOTracer::TraceWriteSectorVerify(uint8_t driveno, uint16_t sector, bool XF551)
 {
 	TraceString(eTraceVerboseCommands, "D%d: write (and verify)%s sector %d", driveno, is_xf551(XF551), sector);
 }
 
-void SIOTracer::TraceFormatDisk(unsigned int driveno, bool XF551)
+void SIOTracer::TraceFormatDisk(uint8_t driveno, bool XF551)
 {
 	TraceString(eTraceVerboseCommands, "D%d: format disk%s", driveno, is_xf551(XF551));
 }
 
-void SIOTracer::TraceFormatEnhanced(unsigned int driveno, bool XF551)
+void SIOTracer::TraceFormatEnhanced(uint8_t driveno, bool XF551)
 {
 	TraceString(eTraceVerboseCommands, "D%d: format enhanced density%s", driveno, is_xf551(XF551));
 }
 
-void SIOTracer::TraceGetSpeedByte(unsigned int driveno)
+void SIOTracer::TraceGetSpeedByte(uint8_t driveno)
 {
 	TraceString(eTraceVerboseCommands, "D%d: get speed byte", driveno);
 }
 
-void SIOTracer::TraceApeSpecial(unsigned int driveno, const char* description)
+void SIOTracer::TraceApeSpecial(uint8_t driveno, const char* description)
 {
 	TraceString(eTraceVerboseCommands, "D%d: APE %s", driveno, description ? description : "[unknown]");
 }
 
-void SIOTracer::TraceGetSioCode(unsigned int driveno)
+void SIOTracer::TraceGetSioCode(uint8_t driveno)
 {
 	TraceString(eTraceVerboseCommands, "D%d: get SIO code", driveno);
 }
 
-void SIOTracer::TraceGetSioCodeLength(unsigned int driveno)
+void SIOTracer::TraceGetSioCodeLength(uint8_t driveno)
 {
 	TraceString(eTraceVerboseCommands, "D%d: get SIO code length", driveno);
 }
 
-void SIOTracer::TraceReadMyPicoDos(unsigned int driveno, unsigned int sector)
+void SIOTracer::TraceReadMyPicoDos(uint8_t driveno, uint16_t sector)
 {
 	TraceString(eTraceVerboseCommands, "D%d: read MyPicoDos sector %d", driveno, sector);
 }
@@ -491,7 +491,7 @@ void SIOTracer::TraceRemoteControlStatus()
 	TraceString(eTraceVerboseCommands, "remote control status");
 }
 
-void SIOTracer::TraceReadRemoteControlResult(unsigned int sector)
+void SIOTracer::TraceReadRemoteControlResult(uint16_t sector)
 {
 	TraceString(eTraceVerboseCommands, "read remote control result %d", sector);
 }
@@ -577,7 +577,7 @@ void SIOTracer::TraceInfoString(EInfo infoType, const char* format, ...)
 	}
 }
 
-void SIOTracer::IndicateDriveChanged(int drive)
+void SIOTracer::IndicateDriveChanged(uint8_t drive)
 {
 	if (fTraceGroupsCache & eTraceImageStatus) {
 		RCPtr<TracerEntry> e = fTracerList;
@@ -591,7 +591,7 @@ void SIOTracer::IndicateDriveChanged(int drive)
 	}
 }
 
-void SIOTracer::IndicateDriveFormatted(int drive)
+void SIOTracer::IndicateDriveFormatted(uint8_t drive)
 {
 	if (fTraceGroupsCache & eTraceImageStatus) {
 		RCPtr<TracerEntry> e = fTracerList;

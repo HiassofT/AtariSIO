@@ -605,10 +605,10 @@ bool AtrMemoryImage::ReadImageFromDiFile(const char* filename, bool beQuiet)
         uint8_t tracksPerSide;
 	uint8_t sides;
 	uint16_t sectorLength;
-	uint32_t totalSectors;
+	unsigned int totalSectors;
 	ESectorLength density;
 
-	uint32_t sector;
+	unsigned int sector;
 
 	RCPtr<FileIO> fileio;
 
@@ -780,8 +780,8 @@ bool AtrMemoryImage::WriteImageToDiFile(const char* filename, bool useGz) const
         uint8_t tracksPerSide;
 	uint8_t sides;
 	uint16_t sectorLength;
-	uint32_t totalSectors;
-	uint32_t sector;
+	unsigned int totalSectors;
+	unsigned int sector;
 	uint8_t* map;
 	uint8_t buf[256];
 
