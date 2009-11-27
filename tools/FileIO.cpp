@@ -18,8 +18,6 @@
    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-#include <unistd.h>
-
 #include "FileIO.h"
 #include "AtariDebug.h"
 
@@ -167,10 +165,10 @@ off_t StdFileIO::GetFileLength()
 		Assert(false);
 		return 0;
 	}
-	off_t current_pos = ftello(fFile);
-	fseeko(fFile, 0, SEEK_END);
-	off_t len = ftello(fFile);
-	fseeko(fFile, current_pos, SEEK_SET);
+	off_t current_pos = ftell(fFile);
+	fseek(fFile, 0, SEEK_END);
+	off_t len = ftell(fFile);
+	fseek(fFile, current_pos, SEEK_SET);
 	return len;
 }
 
@@ -180,7 +178,7 @@ off_t StdFileIO::Tell()
 		Assert(false);
 		return 0;
 	}
-	return ftello(fFile);
+	return ftell(fFile);
 }
 
 bool StdFileIO::Seek(off_t pos)
@@ -189,7 +187,7 @@ bool StdFileIO::Seek(off_t pos)
 		Assert(false);
 		return false;
 	}
-	if (fseeko(fFile, pos, SEEK_SET) != 0) {
+	if (fseek(fFile, pos, SEEK_SET) != 0) {
 		return false;
 	}
 	return true;
