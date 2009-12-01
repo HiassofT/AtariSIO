@@ -34,24 +34,24 @@ public:
 	void SetRootDirectoryObserver(RCPtr<Dos2xUtils> root);
 	RCPtr<const Dos2xUtils> GetRootDirectoryObserver() const;
 
-	void IndicateBeforeSectorWrite(uint16_t sector);
-	void IndicateAfterSectorWrite(uint16_t sector);
+	void IndicateBeforeSectorWrite(unsigned int sector);
+	void IndicateAfterSectorWrite(unsigned int sector);
 
 private:
 	friend class Dos2xUtils;
-	void SetDirectoryObserver(uint16_t dirsec, Dos2xUtils* utils);
-	void RemoveDirectoryObserver(uint16_t dirsec, Dos2xUtils* utils);
+	void SetDirectoryObserver(unsigned int dirsec, Dos2xUtils* utils);
+	void RemoveDirectoryObserver(unsigned int dirsec, Dos2xUtils* utils);
 
 	AtrImage* fImage;
 
 	RCPtr<Dos2xUtils> fRootDirObserver;
 
 	Dos2xUtils** fDirectoryObserver;
-	uint16_t fNumberOfSectors;
+	unsigned int fNumberOfSectors;
 
 	uint8_t fOldSectorBuffer[256];
 	uint8_t fNewSectorBuffer[256];
-	uint16_t fBufferedSectorNumber;
+	unsigned int fBufferedSectorNumber;
 };
 
 #endif

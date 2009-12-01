@@ -42,8 +42,8 @@ public:
 
 	virtual bool Close() = 0;
 
-	virtual size_t ReadBlock(void* buf, size_t len) = 0;
-	virtual size_t WriteBlock(const void* buf, size_t len) = 0;
+	virtual unsigned int ReadBlock(void* buf, unsigned int len) = 0;
+	virtual unsigned int WriteBlock(const void* buf, unsigned int len) = 0;
 
 	virtual off_t GetFileLength() = 0;
 	virtual bool Seek(off_t pos) = 0;
@@ -87,8 +87,8 @@ public:
 
 	virtual bool Close();
 
-	virtual size_t ReadBlock(void* buf, size_t len);
-	virtual size_t WriteBlock(const void* buf, size_t len);
+	virtual unsigned int ReadBlock(void* buf, unsigned int len);
+	virtual unsigned int WriteBlock(const void* buf, unsigned int len);
 
 	virtual off_t GetFileLength();
 	virtual bool Seek(off_t pos);
@@ -115,8 +115,8 @@ public:
 
 	virtual bool Close();
 
-	virtual size_t ReadBlock(void* buf, size_t len);
-	virtual size_t WriteBlock(const void* buf, size_t len);
+	virtual unsigned int ReadBlock(void* buf, unsigned int len);
+	virtual unsigned int WriteBlock(const void* buf, unsigned int len);
 
 	virtual off_t GetFileLength();
 	virtual bool Seek(off_t pos);

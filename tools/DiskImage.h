@@ -47,7 +47,7 @@ public:
 	inline bool IsWriteProtected() const;
 
 	virtual ESectorLength GetSectorLength() const = 0;
-	virtual uint16_t GetNumberOfSectors() const = 0;
+	virtual unsigned int GetNumberOfSectors() const = 0;
 	virtual size_t GetImageSize() const = 0;
 
 	virtual bool ReadImageFromFile(const char* filename, bool beQuiet = false) = 0;
@@ -64,13 +64,13 @@ public:
 
 	inline void SetChanged(bool) const;
 
-	virtual bool ReadSector(uint16_t sector,
+	virtual bool ReadSector(unsigned int sector,
 		uint8_t* buffer,	
-		size_t buffer_length) const = 0;
+		unsigned int buffer_length) const = 0;
 
-	virtual bool WriteSector(uint16_t sector,
+	virtual bool WriteSector(unsigned int sector,
 		const uint8_t* buffer,	
-		size_t buffer_length) = 0;
+		unsigned int buffer_length) = 0;
 
 private:
 

@@ -360,7 +360,7 @@ bool PrinterHandler::EnableHighSpeed(bool)
 	return false;
 }
 
-bool PrinterHandler::SetHighSpeedParameters(uint8_t, unsigned int)
+bool PrinterHandler::SetHighSpeedParameters(unsigned int, unsigned int)
 {
 	return false;
 }

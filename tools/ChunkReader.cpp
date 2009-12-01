@@ -123,7 +123,7 @@ bool ChunkReader::ReadDword(uint32_t &dword)
 	return false;
 }
 
-bool ChunkReader::ReadBlock(void* buf, size_t len)
+bool ChunkReader::ReadBlock(void* buf, unsigned int len)
 {
 	SeekToCurrentPos();
 	if (fChunkStart+fCurrentPosition+(off_t)len <= fChunkEnd) {

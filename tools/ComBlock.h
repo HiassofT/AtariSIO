@@ -35,16 +35,16 @@ public:
 	ComBlock(RCPtr<FileIO>& f);
 
 	// create COM block from data
-	ComBlock(const uint8_t* data, uint32_t len, uint16_t start_address);
+	ComBlock(const uint8_t* data, unsigned int len, unsigned int start_address);
 
 	virtual ~ComBlock();
 
-	uint16_t GetStartAddress() const;
-	uint16_t GetEndAddress() const;
-	uint32_t GetLength() const;
+	unsigned int GetStartAddress() const;
+	unsigned int GetEndAddress() const;
+	unsigned int GetLength() const;
 	off_t GetFileOffset() const;
 
-	bool ContainsAddress(uint16_t) const;
+	bool ContainsAddress(unsigned int) const;
 
 	// write with COM header and, optionally, including the $FF, $FF start header
 	bool WriteToFile(RCPtr<FileIO>& f, bool include_ffff = false) const;
@@ -52,7 +52,7 @@ public:
 	// write without COM header
 	bool WriteRawToFile(RCPtr<FileIO>& f) const;
 
-	uint8_t GetByte(uint16_t address) const;
+	uint8_t GetByte(unsigned int address) const;
 
 	const uint8_t* GetRawData() const;
 
@@ -63,22 +63,22 @@ private:
 	void ClearData();
 
 	uint16_t fStartAddress;
-	uint32_t fLen;
+	unsigned int fLen;
 	uint8_t* fData;
 	off_t fFileOffset;
 };
 
-inline uint16_t ComBlock::GetStartAddress() const
+inline unsigned int ComBlock::GetStartAddress() const
 {
 	return fStartAddress;
 }
 
-inline uint16_t ComBlock::GetEndAddress() const
+inline unsigned int ComBlock::GetEndAddress() const
 {
 	return fStartAddress + fLen - 1;
 }
 
-inline uint32_t ComBlock::GetLength() const
+inline unsigned int ComBlock::GetLength() const
 {
 	return fLen;
 }
@@ -88,12 +88,12 @@ inline off_t ComBlock::GetFileOffset() const
 	return fFileOffset;
 }
 
-inline bool ComBlock::ContainsAddress(uint16_t adr) const
+inline bool ComBlock::ContainsAddress(unsigned int adr) const
 {
 	return ((fStartAddress <= adr) && (fStartAddress + fLen - 1 >= adr));
 }
 
-inline uint8_t ComBlock::GetByte(uint16_t adr) const
+inline uint8_t ComBlock::GetByte(unsigned int adr) const
 {
 	Assert(ContainsAddress(adr));
 	return fData[adr - fStartAddress];

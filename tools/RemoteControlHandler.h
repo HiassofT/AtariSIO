@@ -43,11 +43,8 @@ public:
 	virtual RCPtr<DiskImage> GetDiskImage();
 	virtual RCPtr<const DiskImage> GetConstDiskImage() const;
 	virtual bool EnableHighSpeed(bool);
-	virtual bool SetHighSpeedParameters(uint8_t pokeyDivisor, unsigned int baudrate);
+	virtual bool SetHighSpeedParameters(unsigned int pokeyDivisor, unsigned int baudrate);
 	virtual bool EnableXF551Mode(bool on);
-
-	inline bool ValidDriveNo(const char);
-	inline DeviceManager::EDriveNumber GetDriveNo(const char);
 
 	enum ERemoteCommandStatus {
 		eRemoteCommandOK = 1,
@@ -57,6 +54,9 @@ public:
 	void AddResultString(const char* string);
 
 private:
+	inline bool ValidDriveNo(const char);
+	inline DeviceManager::EDriveNumber GetDriveNo(const char);
+
 	void ResetResult();
 	bool ProcessMultipleCommands(const char* buf, int buflen, const RCPtr<SIOWrapper>& wrapper);
 	bool ProcessCommand(const char*, const RCPtr<SIOWrapper>& wrapper);

@@ -43,7 +43,7 @@ public:
 	bool ReadByte(uint8_t& byte);
 	bool ReadWord(uint16_t& word);
 	bool ReadDword(uint32_t &dword);
-	bool ReadBlock(void* buf, size_t len);
+	bool ReadBlock(void* buf, unsigned int len);
 
 	uint32_t CalculateCRC32() const;
 	bool CalculateCRC32(uint32_t &checksum, off_t start_pos, off_t end_pos) const;

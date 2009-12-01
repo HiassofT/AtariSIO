@@ -58,21 +58,21 @@ public:
 	bool GetSector(uint8_t trackno,
 			uint8_t sectorID,
 			RCPtr<AtpSector>& sector,
-			uint32_t current_time = 0) const;
+			unsigned int current_time = 0) const;
 
 	// DiskImage methods
 
 	virtual inline ESectorLength GetSectorLength() const;
-	virtual uint16_t GetNumberOfSectors() const;
+	virtual unsigned int GetNumberOfSectors() const;
 	virtual size_t GetImageSize() const;
 
-	virtual bool ReadSector(uint16_t sector,
+	virtual bool ReadSector(unsigned int sector,
 		uint8_t* buffer,
-		size_t buffer_length) const;
+		unsigned int buffer_length) const;
 
-	virtual bool WriteSector(uint16_t sector,
+	virtual bool WriteSector(unsigned int sector,
 		const uint8_t* buffer,
-		size_t buffer_length);
+		unsigned int buffer_length);
 
 	// dump internal information
 	void Dump(std::ostream& os, unsigned int indentlevel=0);

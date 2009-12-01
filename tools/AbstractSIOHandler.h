@@ -54,7 +54,7 @@ public:
 	// something defined in ECommandStatus or other = internal error
 
 	virtual bool EnableHighSpeed(bool on) = 0;
-	virtual bool SetHighSpeedParameters(uint8_t pokeyDivisor, unsigned int baudrate) = 0;
+	virtual bool SetHighSpeedParameters(unsigned int pokeyDivisor, unsigned int baudrate) = 0;
 
 	virtual bool EnableXF551Mode(bool on) = 0;
 

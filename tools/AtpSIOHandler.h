@@ -26,6 +26,7 @@
 #include "AbstractSIOHandler.h"
 #include "AtpImage.h"
 #include "SIOTracer.h"
+#include "MiscUtils.h"
 
 class AtpSIOHandler : public AbstractSIOHandler {
 public:
@@ -38,7 +39,7 @@ public:
 	virtual int ProcessCommandFrame(SIO_command_frame& frame, const RCPtr<SIOWrapper>& wrapper);
 
 	virtual bool EnableHighSpeed(bool on);
-	virtual bool SetHighSpeedParameters(uint8_t pokeyDivisor, unsigned int baudrate);
+	virtual bool SetHighSpeedParameters(unsigned int pokeyDivisor, unsigned int baudrate);
 	virtual bool EnableXF551Mode(bool on);
 	virtual bool IsAtpSIOHandler() const;
 
@@ -59,7 +60,7 @@ private:
 
 	// return time to spin up motor (returns zero if motor is
 	// already running)
-	unsigned int SpinUpMotor(const uint64_t& currentTime);
+	unsigned int SpinUpMotor(const MiscUtils::TimestampType& currentTime);
 
 	RCPtr<AtpImage> fImage;
 
@@ -67,7 +68,7 @@ private:
 	unsigned int fCurrentTrack;
 
 	uint8_t fLastFDCStatus;
-	uint64_t fLastDiskAccessTimestamp;
+	MiscUtils::TimestampType fLastDiskAccessTimestamp;
 
 	SIOTracer* fTracer;
 };

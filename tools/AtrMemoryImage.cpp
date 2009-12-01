@@ -86,7 +86,7 @@ bool AtrMemoryImage::CreateImage(EDiskFormat format)
 	}
 }
 
-bool AtrMemoryImage::CreateImage(ESectorLength density, uint16_t sectors)
+bool AtrMemoryImage::CreateImage(ESectorLength density, unsigned int sectors)
 {
 	size_t imgSize;
 	FreeImageData();
@@ -114,7 +114,7 @@ bool AtrMemoryImage::CreateImage(ESectorLength density, uint16_t sectors)
 	}
 }
 
-bool AtrMemoryImage::CreateImage(ESectorLength density, uint16_t sectorsPerTrack, uint8_t tracks, uint8_t sides)
+bool AtrMemoryImage::CreateImage(ESectorLength density, unsigned int sectorsPerTrack, unsigned int tracks, unsigned int sides)
 {
 	size_t imgSize;
 	FreeImageData();
@@ -195,7 +195,7 @@ bool AtrMemoryImage::ReadImageFromFile(const char* filename, bool beQuiet)
 			strncat(p, ".atr", PATH_MAX);
 			p[PATH_MAX-1] = 0;
 			SetFilename(p);
-			uint16_t sectors = Dos2xUtils::EstimateDiskSize(filename, e128BytesPerSector, Dos2xUtils::ePicoName);
+			unsigned int sectors = Dos2xUtils::EstimateDiskSize(filename, e128BytesPerSector, Dos2xUtils::ePicoName);
 			Dos2xUtils::EDosFormat dosformat = Dos2xUtils::eDos2x;
 			if (sectors <= 1040) {
 				// create standard ED image
@@ -583,10 +583,10 @@ bool AtrMemoryImage::WriteImageToDcmFile(const char* filename, bool useGz) const
 	return ret;
 }
 
-uint8_t AtrMemoryImage::CalculateDiSectorChecksum(uint8_t* buf, size_t len) const
+uint8_t AtrMemoryImage::CalculateDiSectorChecksum(uint8_t* buf, unsigned int len) const
 {
 	uint16_t chksum = 0;
-	size_t i;
+	unsigned int i;
 	for (i=0;i<len;i++) {
 		chksum += buf[i];
 		if (chksum >= 256) {
@@ -733,7 +733,7 @@ bool AtrMemoryImage::ReadImageFromDiFile(const char* filename, bool beQuiet)
 		uint8_t checksum = map[sector-1];
 
 		if (checksum) {
-			uint16_t len = GetSectorLength(sector);
+			unsigned int len = GetSectorLength(sector);
 			if (fileio->ReadBlock(buf, len) != len) {
 				delete [] map;
 				goto failure_eof;
@@ -857,7 +857,7 @@ bool AtrMemoryImage::WriteImageToDiFile(const char* filename, bool useGz) const
 	// write non-zero sectors
 	for (sector=1; sector<=totalSectors; sector++) {
 		if (map[sector-1]) {
-			uint16_t len = GetSectorLength(sector);
+			unsigned int len = GetSectorLength(sector);
 			if (!ReadSector(sector, buf, len)) {
 				DPRINTF("unable to read sector %d from memory image!",sector);
 				goto failure;
@@ -883,10 +883,10 @@ failure:
 	return false;
 }
 
-bool AtrMemoryImage::ReadSector(uint16_t sector,uint8_t* buffer,size_t buffer_length) const
+bool AtrMemoryImage::ReadSector(unsigned int sector,uint8_t* buffer,unsigned int buffer_length) const
 {
 	bool ret=true;
-	uint16_t len;
+	unsigned int len;
 	ssize_t offset;
 
 	if ((offset=CalculateOffset(sector)) < 0 ) {
@@ -902,11 +902,11 @@ bool AtrMemoryImage::ReadSector(uint16_t sector,uint8_t* buffer,size_t buffer_le
 	}
 
 	if (buffer_length < len) {
-		DPRINTF("buffer length < sector length [ %d < %d ]",(int)buffer_length, len);
+		DPRINTF("buffer length < sector length [ %d < %d ]",buffer_length, len);
 		ret = false;
 		len = buffer_length;
 	} else if (buffer_length > len) {
-		DPRINTF("buffer length > sector length [ %d > %d ]",(int)buffer_length, len);
+		DPRINTF("buffer length > sector length [ %d > %d ]",buffer_length, len);
 		ret = false;
 	}
 
@@ -915,9 +915,9 @@ bool AtrMemoryImage::ReadSector(uint16_t sector,uint8_t* buffer,size_t buffer_le
 	return ret;
 }
 
-bool AtrMemoryImage::WriteSector(uint16_t sector, const uint8_t* buffer, size_t buffer_length)
+bool AtrMemoryImage::WriteSector(unsigned int sector, const uint8_t* buffer, unsigned int buffer_length)
 {
-	uint16_t len;
+	unsigned int len;
 	ssize_t offset;
 
 	if (IsWriteProtected()) {
@@ -933,7 +933,7 @@ bool AtrMemoryImage::WriteSector(uint16_t sector, const uint8_t* buffer, size_t 
 	len=GetSectorLength(sector);
 
 	if (buffer_length != len) {
-		DPRINTF("buffer length = len [ %d != %d ]", (int)buffer_length, len);
+		DPRINTF("buffer length = len [ %d != %d ]", buffer_length, len);
 		return false;
 	}
 

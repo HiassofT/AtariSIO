@@ -39,18 +39,18 @@ public:
 	void DetermineDiskFormatFromLayout();
 	void CalculateImageSize();
 
-	uint16_t GetSectorLength(uint16_t sector) const;
+	unsigned int GetSectorLength(unsigned int sector) const;
 
 	EDiskFormat fDiskFormat;
 
 	ESectorLength fSectorLength;
 
-	uint16_t fSectorsPerTrack;
-	uint8_t fTracksPerSide;
-	uint8_t fSides;
+	unsigned int fSectorsPerTrack;
+	unsigned int fTracksPerSide;
+	unsigned int fSides;
 
-	uint16_t fNumberOfSectors;
-	uint32_t fImageSize;
+	unsigned int fNumberOfSectors;
+	size_t fImageSize;
 };
 
 class AtrImage : public DiskImage {
@@ -61,30 +61,30 @@ public:
 	virtual ~AtrImage();
 
 	virtual ESectorLength GetSectorLength() const { return fImageConfig.fSectorLength; }
-	virtual uint16_t GetSectorLength(uint16_t sectorNumber) const { return fImageConfig.GetSectorLength(sectorNumber); }
-	virtual uint16_t GetNumberOfSectors() const { return fImageConfig.fNumberOfSectors; }
+	virtual unsigned int GetSectorLength(unsigned int sectorNumber) const { return fImageConfig.GetSectorLength(sectorNumber); }
+	virtual unsigned int GetNumberOfSectors() const { return fImageConfig.fNumberOfSectors; }
 
 	const AtrImageConfig& GetImageConfig() { return fImageConfig; }
 
 	EDiskFormat GetDiskFormat() const { return fImageConfig.fDiskFormat; }
 
-	uint16_t GetSectorsPerTrack() const { return fImageConfig.fSectorsPerTrack; }
-	uint8_t GetTracksPerSide() const { return fImageConfig.fTracksPerSide; }
-	uint8_t GetSides() const { return fImageConfig.fSides; }
+	unsigned int GetSectorsPerTrack() const { return fImageConfig.fSectorsPerTrack; }
+	unsigned int GetTracksPerSide() const { return fImageConfig.fTracksPerSide; }
+	unsigned int GetSides() const { return fImageConfig.fSides; }
 
 	virtual size_t GetImageSize() const { return fImageConfig.fImageSize; }
 
-	virtual bool ReadSector(uint16_t sector,
+	virtual bool ReadSector(unsigned int sector,
 		       uint8_t* buffer,
-		       size_t buffer_length) const;
+		       unsigned int buffer_length) const;
 
-	virtual bool WriteSector(uint16_t sector,
+	virtual bool WriteSector(unsigned int sector,
 		       const uint8_t* buffer,
-		       size_t buffer_length);
+		       unsigned int buffer_length);
 
 	virtual bool CreateImage(EDiskFormat format) = 0;
-	virtual bool CreateImage(ESectorLength density, uint16_t sectors) = 0;
-	virtual bool CreateImage(ESectorLength density, uint16_t sectorsPerTrack, uint8_t tracks, uint8_t sides) = 0;
+	virtual bool CreateImage(ESectorLength density, unsigned int sectors) = 0;
+	virtual bool CreateImage(ESectorLength density, unsigned int sectorsPerTrack, unsigned int tracks, unsigned int sides) = 0;
 
 	virtual bool IsAtrImage() const;
 	virtual bool IsAtrMemoryImage() const;
@@ -95,13 +95,13 @@ public:
 protected:
 	bool SetFormat(EDiskFormat format);
 	// note: only 1..65535 sectors are allowed
-	bool SetFormat(ESectorLength density, uint32_t numberOfSectors);
-	bool SetFormat(ESectorLength density, uint16_t sectors, uint8_t tracks, uint8_t sides);
+	bool SetFormat(ESectorLength density, unsigned int numberOfSectors);
+	bool SetFormat(ESectorLength density, unsigned int sectors, unsigned int tracks, unsigned int sides);
 
 	bool SetFormatFromATRHeader(const uint8_t* header);
 	bool CreateATRHeaderFromFormat(uint8_t* header) const;
 
-	ssize_t CalculateOffset(uint16_t sector) const;
+	ssize_t CalculateOffset(unsigned int sector) const;
 	// -1 = error
 
 private:
@@ -111,7 +111,7 @@ private:
 	AtrImageConfig fImageConfig;
 };
 
-inline ssize_t AtrImage::CalculateOffset(uint16_t sector) const
+inline ssize_t AtrImage::CalculateOffset(unsigned int sector) const
 {
 	if ( (sector == 0) || (sector > fImageConfig.fNumberOfSectors) ) {
 		return -1;
@@ -181,7 +181,7 @@ inline bool AtrImageConfig::operator!=(const AtrImageConfig& other) const
 inline AtrImageConfig::~AtrImageConfig()
 { }
 
-inline uint16_t AtrImageConfig::GetSectorLength(uint16_t sector) const
+inline unsigned int AtrImageConfig::GetSectorLength(unsigned int sector) const
 {
 	if (sector == 0 || sector > fNumberOfSectors) {
 		return 0;

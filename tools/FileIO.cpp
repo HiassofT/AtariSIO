@@ -195,7 +195,7 @@ bool StdFileIO::Close()
 }
 
 
-size_t StdFileIO::ReadBlock(void* buf, size_t len)
+unsigned int StdFileIO::ReadBlock(void* buf, unsigned int len)
 {
 	if (!IsOpen()) {
 		Assert(false);
@@ -204,7 +204,7 @@ size_t StdFileIO::ReadBlock(void* buf, size_t len)
 	return fread(buf, 1, len, fFile);
 }
 
-size_t StdFileIO::WriteBlock(const void* buf, size_t len)
+unsigned int StdFileIO::WriteBlock(const void* buf, unsigned int len)
 {
 	if (!IsOpen()) {
 		Assert(false);
@@ -302,7 +302,7 @@ bool GZFileIO::Close()
 }
 
 
-size_t GZFileIO::ReadBlock(void* buf, size_t len)
+unsigned int GZFileIO::ReadBlock(void* buf, unsigned int len)
 {
 	if (!IsOpen()) {
 		Assert(false);
@@ -311,7 +311,7 @@ size_t GZFileIO::ReadBlock(void* buf, size_t len)
 	return gzread(fFile, buf, len);
 }
 
-size_t GZFileIO::WriteBlock(const void* buf, size_t len)
+unsigned int GZFileIO::WriteBlock(const void* buf, unsigned int len)
 {
 	if (!IsOpen()) {
 		Assert(false);

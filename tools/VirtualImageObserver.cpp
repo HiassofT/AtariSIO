@@ -52,7 +52,7 @@ VirtualImageObserver::~VirtualImageObserver()
 	delete[] fDirectoryObserver;
 }
 
-void VirtualImageObserver::SetDirectoryObserver(uint16_t dirsec, Dos2xUtils* utils)
+void VirtualImageObserver::SetDirectoryObserver(unsigned int dirsec, Dos2xUtils* utils)
 {
 	Assert((dirsec > 0) && (dirsec + 7 <= fNumberOfSectors));
 	unsigned int i;
@@ -64,7 +64,7 @@ void VirtualImageObserver::SetDirectoryObserver(uint16_t dirsec, Dos2xUtils* uti
 	}
 }
 
-void VirtualImageObserver::RemoveDirectoryObserver(uint16_t dirsec, Dos2xUtils* utils)
+void VirtualImageObserver::RemoveDirectoryObserver(unsigned int dirsec, Dos2xUtils* utils)
 {
 	Assert((dirsec > 0) && (dirsec + 7 <= fNumberOfSectors));
 	unsigned int i;
@@ -86,7 +86,7 @@ RCPtr<const Dos2xUtils> VirtualImageObserver::GetRootDirectoryObserver() const
 	return fRootDirObserver;
 }
 
-void VirtualImageObserver::IndicateBeforeSectorWrite(uint16_t sector)
+void VirtualImageObserver::IndicateBeforeSectorWrite(unsigned int sector)
 {
 	if (sector < 1 || sector > fNumberOfSectors) {
 		DPRINTF("illegal sector number in IndicateBeforeSectorWrite: %d\n", sector);
@@ -98,7 +98,7 @@ void VirtualImageObserver::IndicateBeforeSectorWrite(uint16_t sector)
 	}
 }
 
-void VirtualImageObserver::IndicateAfterSectorWrite(uint16_t sector)
+void VirtualImageObserver::IndicateAfterSectorWrite(unsigned int sector)
 {
 	if (sector < 1 || sector > fNumberOfSectors) {
 		DPRINTF("illegal sector number in IndicateAfterSectorWrite: %d\n", sector);

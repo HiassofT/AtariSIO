@@ -44,7 +44,7 @@ public:
 	// append dword (32 bit)
 	bool AppendDword(uint32_t dword);
 
-	bool AppendBlock(const void* data, size_t len);
+	bool AppendBlock(const void* data, unsigned int len);
 	bool AppendChunk(const RCPtr<ChunkWriter>& chunk);
 
 	// set the length field of the chunk and free any

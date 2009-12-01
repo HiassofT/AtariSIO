@@ -510,7 +510,7 @@ unsigned int AtpSIOHandler::SeekToTrack(unsigned int track)
 	return time;
 }
 
-unsigned int AtpSIOHandler::SpinUpMotor(const uint64_t& currentTime)
+unsigned int AtpSIOHandler::SpinUpMotor(const MiscUtils::TimestampType& currentTime)
 {
 	if (currentTime < fLastDiskAccessTimestamp +
 		Atari1050Model::eMotorOffDelay) {
@@ -530,7 +530,7 @@ bool AtpSIOHandler::EnableXF551Mode(bool)
 	return false;
 }
 
-bool AtpSIOHandler::SetHighSpeedParameters(uint8_t, unsigned int)
+bool AtpSIOHandler::SetHighSpeedParameters(unsigned int, unsigned int)
 {
 	return false;
 }

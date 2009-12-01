@@ -26,7 +26,7 @@
 ChunkWriter::ChunkWriter(const char* chunkName)
 	: fIsOpen(true)
 {
-	size_t i,len;
+	unsigned int i,len;
 
 	fAllocatedSize = 16;
 	fData =(uint8_t*) malloc(fAllocatedSize);
@@ -110,7 +110,7 @@ bool ChunkWriter::AppendDword(uint32_t dword)
 	}
 }
 
-bool ChunkWriter::AppendBlock(const void* data, size_t len)
+bool ChunkWriter::AppendBlock(const void* data, unsigned int len)
 {
 	if (fIsOpen) {
 		PrepareForSize(fSize+len);

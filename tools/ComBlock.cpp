@@ -61,7 +61,7 @@ ComBlock::ComBlock(RCPtr<FileIO>& f)
 	}
 }
 
-ComBlock::ComBlock(const uint8_t* data, uint32_t len, uint16_t start_address)
+ComBlock::ComBlock(const uint8_t* data, unsigned int len, unsigned int start_address)
 	: fData(0), fFileOffset(0)
 {
 	if (!data) {

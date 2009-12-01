@@ -75,7 +75,7 @@ bool DataContainer::AppendString(const char* string)
 	return AppendBlock(string, strlen(string));
 }
 
-bool DataContainer::GetDataBlock(void* data, off_t start, off_t len)
+bool DataContainer::GetDataBlock(void* data, size_t start, size_t len)
 {
 	if ((start >= fSize) || (start+len > fSize)) {
 		return false;

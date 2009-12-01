@@ -929,7 +929,7 @@ bool DeviceManager::SetHighSpeedMode(EHighSpeedMode mode)
 	return true;
 }
 
-bool DeviceManager::SetHighSpeedParameters(uint8_t pokeyDivisor, unsigned int baudrate)
+bool DeviceManager::SetHighSpeedParameters(unsigned int pokeyDivisor, unsigned int baudrate)
 {
 	if (pokeyDivisor >= 64) {
 		AERROR("illegal high speed pokey divisor %d", pokeyDivisor);

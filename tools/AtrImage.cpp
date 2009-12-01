@@ -145,7 +145,7 @@ bool AtrImage::SetFormat(ESectorLength density, uint32_t numberOfSectors)
 	return true;
 }
 		
-bool AtrImage::SetFormat(ESectorLength density, uint16_t sectors, uint8_t tracks, uint8_t sides)
+bool AtrImage::SetFormat(ESectorLength density, unsigned int sectors, unsigned int tracks, unsigned int sides)
 {
 	unsigned int secs = sectors * tracks * sides;
 	if (secs == 0 || secs >= 65536) {
@@ -172,7 +172,7 @@ bool AtrImage::SetFormatFromATRHeader(const uint8_t* hdr)
 {
 	ESectorLength density;
 	unsigned int numberOfSectors;
-	uint16_t sectSize;
+	unsigned int sectSize;
 	size_t imgSize;
 
 	if ( (hdr[0] != 0x96) || (hdr[1] != 0x02) ) {
@@ -280,15 +280,14 @@ bool AtrImage::WriteImageToFile(const char*) const
 	return false;
 }
 
-bool AtrImage::ReadSector(uint16_t /*sector*/, uint8_t* /*buffer*/, size_t /*buffer_length*/) const
+bool AtrImage::ReadSector(unsigned int /*sector*/, uint8_t* /*buffer*/, unsigned int /*buffer_length*/) const
 {
 	DPRINTF("implement ReadSector in subclass!");
 	return false;
 }
 
-bool AtrImage::WriteSector(uint16_t /*sector*/, const uint8_t* /*buffer*/, size_t /*buffer_length*/)
+bool AtrImage::WriteSector(unsigned int /*sector*/, const uint8_t* /*buffer*/, unsigned int /*buffer_length*/)
 {
 	DPRINTF("implement WriteSector in subclass!");
 	return false;
 }
-

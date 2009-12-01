@@ -106,7 +106,7 @@ bool AtpImage::AddSector(uint8_t trackno, const RCPtr<AtpSector>& sector)
 bool AtpImage::GetSector(uint8_t trackno,
 		uint8_t sectorID,
 		RCPtr<AtpSector>& sector,
-		uint32_t current_time) const
+		unsigned int current_time) const
 {
 	if (trackno < fNumberOfTracks) {
 		return fTracks[trackno].GetSector(sectorID, sector, current_time);
@@ -502,7 +502,7 @@ size_t AtpImage::GetImageSize() const
 	}
 }
 
-uint16_t AtpImage::GetNumberOfSectors() const
+unsigned int AtpImage::GetNumberOfSectors() const
 {
 	if (fNumberOfTracks > 0) {
 	    if (fTracks[0].GetDensity() == Atari1050Model::eDensityMFM) {
@@ -520,7 +520,7 @@ bool AtpImage::IsAtpImage() const
 	return true;
 }
 
-bool AtpImage::ReadSector(uint16_t sector, uint8_t* buffer, size_t buffer_length) const
+bool AtpImage::ReadSector(unsigned int sector, uint8_t* buffer, unsigned int buffer_length) const
 {
 	if (sector < 1) {
 		return false;
@@ -558,7 +558,7 @@ bool AtpImage::ReadSector(uint16_t sector, uint8_t* buffer, size_t buffer_length
 	return sec->GetData(buffer, buffer_length);
 }
 
-bool AtpImage::WriteSector(uint16_t sector, const uint8_t* buffer, size_t buffer_length)
+bool AtpImage::WriteSector(unsigned int sector, const uint8_t* buffer, unsigned int buffer_length)
 {
 	if (sector < 1) {
 		return false;

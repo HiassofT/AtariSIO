@@ -126,7 +126,7 @@ static pokey_divisor_entry divisor_table[] = {
 	{ -1, -1 }
 };
 
-bool MiscUtils::PokeyDivisorToBaudrate(uint8_t divisor, unsigned int& baudrate, bool enable_calculated_speed)
+bool MiscUtils::PokeyDivisorToBaudrate(unsigned int divisor, unsigned int& baudrate, bool enable_calculated_speed)
 {
 	int i = 0;
 	while (divisor_table[i].divisor >= 0) {
