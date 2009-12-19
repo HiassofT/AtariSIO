@@ -16,6 +16,15 @@ The new kernel driver supports multiple interfaces (4 per default)
 which are now named /dev/atarisio0 ... /dev/atarisio3 instead of
 just /dev/atarisio.
 
+If you are using kernel 2.6, edit the atarisio-modprobe.conf file
+and copy it to /etc/modprobe.d/atarisio.conf. The default config
+enables atarisio on your first serial port (/dev/ttyS0) with
+all features. If you have udev installed, also add 'atarisio-udev.rules'
+to your udev configuration so that permissions are set automatically.
+Refer to the udev documentation, usually the udev rules can be found
+in /etc/udev/rules.d and the file should be named '95-atarisio.rules'
+(or something like this).
+
 If you are using kernel 2.4 together with devfs, you need to update
 your modules.conf or /etc/modutils/atarisio file with the current
 version shipped with this release.
@@ -66,6 +75,10 @@ module configuration templates (atarisio-ttySx).
    Furthermore, you'll need a fully 16550 compatible serial port.
    If you have a serial port on your mainboard, it most certainly
    will work, but eg. a USB-to-serial converter doesn't work.
+   Since 2009 16C950 serial cards are supported, too, and work
+   even better than 16550 cards (for example you can use up to 126kbit
+   in atariserver and access highspeed capable disk drives at
+   full speed with atarixfer).
 
    Then, you need a SIO2PC interface and/or a 1050-2-PC interface
    cable to connect your Atari (1050) to your PC. I won't describe
