@@ -122,25 +122,33 @@ bool ComBlock::WriteRawToFile(RCPtr<FileIO>& f) const
 	return true;
 }
 
-std::string ComBlock::GetDescription() const
+std::string ComBlock::GetDescription(bool offsetInDecimal) const
 {
 	std::ostringstream s;
 
 	s << std::hex
-		<< std::setw(4) << std::setfill('0')
-		<< fStartAddress
-		<< '-'
-		<< std::setw(4)
-		<< (fStartAddress + fLen - 1)
-		<< std::dec << std::setfill(' ')
-		<< " (bytes: " 
-		<< std::setw(5)
-		<< fLen
+	  << std::setw(4) << std::setfill('0')
+	  << fStartAddress
+	  << '-'
+	  << std::setw(4)
+	  << (fStartAddress + fLen - 1)
+	  << " (bytes: " 
 	;
+	if (offsetInDecimal) {
+		s << std::dec;
+	} else {
+		s << std::hex;
+	}
+
+	s << std::setfill(' ')
+          << std::setw(5)
+          << fLen
+	;
+
 	if (fFileOffset > 0) {
 		s << ", offset: "
-			<< std::setw(6)
-			<< fFileOffset
+		  << std::setw(6)
+		  << fFileOffset
 		;
 	}
 	s << ")";

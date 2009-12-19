@@ -30,6 +30,8 @@
 #include "Error.h"
 #include "Version.h"
 
+static bool offsetsInDecimal = true;
+
 static long parse_int(const char* str)
 {
 	int base = 10;
@@ -115,7 +117,7 @@ static bool write_block(RCPtr<ComBlock>& block, RCPtr<FileIO>& f,
 	} else {
 		std::cout << "      ";
 	}
-	std::cout << block->GetDescription() << std::endl ;
+	std::cout << block->GetDescription(offsetsInDecimal) << std::endl ;
 
 	bool ok;
 	if (raw) {
@@ -370,6 +372,9 @@ int main(int argc, char** argv)
 					split_count++;
 				}
 				break;
+			case 'X': // print file offset in hex
+				offsetsInDecimal = false;
+				break;
 			default:
 				goto usage;
 			}
@@ -475,7 +480,7 @@ int main(int argc, char** argv)
 					std::cout << "block "
 						<< std::setw(4) << iblk
 						<< ": "
-						<< block->GetDescription()
+						<< block->GetDescription(offsetsInDecimal)
 						<< std::endl;
 					if (block->ContainsAddress(0x2e0) && block->ContainsAddress(0x2e1)) {
 						unsigned int adr = block->GetByte(0x2e0) + (block->GetByte(0x2e1) << 8);
@@ -563,7 +568,7 @@ int main(int argc, char** argv)
 						if (merge_block) {
 							std::cout << "     merging block "
 								<< std::setw(4) << iblk
-								<< " " << block->GetDescription()
+								<< " " << block->GetDescription(offsetsInDecimal)
 								<< std::endl
 							;
 							memory->WriteComBlockToMemory(block);
@@ -579,7 +584,7 @@ int main(int argc, char** argv)
 
 								std::cout << "   splitting block "
 									<< std::setw(4) << iblk
-									<< " " << block->GetDescription()
+									<< " " << block->GetDescription(offsetsInDecimal)
 									<< std::endl
 								;
 
@@ -647,7 +652,7 @@ int main(int argc, char** argv)
 					} else {
 						std::cout << "        skip block "
 							<< std::setw(4) << iblk
-							<< " " << block->GetDescription()
+							<< " " << block->GetDescription(offsetsInDecimal)
 							<< std::endl
 						;
 					}
@@ -726,6 +731,7 @@ usage:
 		<<   "  -m start-end    merge specified blocks" << std::endl
 		<<   "  -s block,adr... split block at given addresses" << std::endl
 		<<   "  -n              write raw data blocks (no COM headers)" << std::endl
+		<<   "  -X              show block length and file offset in hex" << std::endl
 	;
 
 	return 1;
