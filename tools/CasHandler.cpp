@@ -26,12 +26,15 @@
 #include <list>
 #include <signal.h>
 
+#define MAX_KERNEL_BLOCK_SIZE 32
+
 CasHandler::CasHandler(const RCPtr<CasImage>& image, RCPtr<SIOWrapper>& siowrapper)
 	: fCasImage(image),
 	  fSIOWrapper(siowrapper),
 	  fCurrentBaudRate(0),
 	  fCurrentBlockNumber(0),
 	  fState(eInternalStatePaused),
+	  fUnpauseState(eInternalStateWaiting),
 	  fPartsIdx(0)
 {
 	Assert(fCasImage.IsNotNull());
@@ -62,10 +65,15 @@ CasHandler::CasHandler(const RCPtr<CasImage>& image, RCPtr<SIOWrapper>& siowrapp
 		}
 		Assert(part + 1 == fCasImage->GetNumberOfParts());
 	}
+	SetupNewBlock();
 }
 
 CasHandler::~CasHandler()
 {
+	if (fState == eInternalStatePlaying) {
+		AWARN("~CasHandler: still in playing state");
+		fSIOWrapper->EndTapeBlock();
+	}
 	if (fPartsIdx) {
 		delete[] fPartsIdx;
 	}
@@ -77,6 +85,7 @@ CasHandler::EState CasHandler::GetState() const
 	case eInternalStatePaused:
 		return eStatePaused;
 	case eInternalStateWaiting:
+	case eInternalStateStartPlaying:
 	case eInternalStatePlaying:
 		return eStatePlaying;
 	case eInternalStateDone:
@@ -89,27 +98,37 @@ CasHandler::EState CasHandler::GetState() const
 
 unsigned int CasHandler::GetCurrentPartNumber() const
 {
-	return fCasImage->GetBlock(fCurrentBlockNumber)->GetPartNumber();
+	return fCurrentCasBlock->GetPartNumber();
 }
 
 unsigned int CasHandler::GetCurrentBlockBaudRate() const
 {
-	return fCasImage->GetBlock(fCurrentBlockNumber)->GetBaudRate();
+	return fCurrentCasBlock->GetBaudRate();
 }
 
 unsigned int CasHandler::GetCurrentBlockGap() const
 {
-	return fCasImage->GetBlock(fCurrentBlockNumber)->GetGap();
+	return fCurrentCasBlock->GetGap();
 }
 
 unsigned int CasHandler::GetCurrentBlockLength() const
 {
-	return fCasImage->GetBlock(fCurrentBlockNumber)->GetLength();
+	return fCurrentCasBlock->GetLength();
 }
+
+void CasHandler::SetupNewBlock()
+{
+	fCurrentCasBlock = fCasImage->GetBlock(fCurrentBlockNumber);
+	fCurrentBytePos = 0;
+	fBlockStartTime = MiscUtils::GetCurrentTime() + GetCurrentBlockGap() * 1000;
+	fSIOWrapper->SetTapeBaudrate(GetCurrentBlockBaudRate() * fTapeSpeedPercent / 100);
+}
+
 
 bool CasHandler::SeekStart()
 {
 	fCurrentBlockNumber = 0;
+	SetupNewBlock();
 	fTracer->IndicateCasBlockChanged();
 	return true;
 }
@@ -117,6 +136,7 @@ bool CasHandler::SeekStart()
 bool CasHandler::SeekEnd()
 {
 	fCurrentBlockNumber = GetNumberOfBlocks() - 1;
+	SetupNewBlock();
 	fTracer->IndicateCasBlockChanged();
 	return true;
 }
@@ -131,13 +151,14 @@ bool CasHandler::SeekNextBlock(unsigned int skip)
 
 	if (fCurrentBlockNumber+1 < GetNumberOfBlocks()) {
 		if (fCurrentBlockNumber + skip >= fCasImage->GetNumberOfBlocks()) {
-			return SeekEnd();
+			ok = SeekEnd();
 		} else {
 			fCurrentBlockNumber += skip;
 		}
 	} else {
 		ok = false;
 	}
+	SetupNewBlock();
 	if (ok) {
 		fTracer->IndicateCasBlockChanged();
 	}
@@ -154,13 +175,14 @@ bool CasHandler::SeekPrevBlock(unsigned int skip)
 
 	if (fCurrentBlockNumber > 0) {
 		if (skip > fCurrentBlockNumber) {
-			return SeekStart();
+			ok = SeekStart();
 		} else {
 			fCurrentBlockNumber -= skip;
 		}
 	} else {
 		ok = false;
 	}
+	SetupNewBlock();
 	if (ok) {
 		fTracer->IndicateCasBlockChanged();
 	}
@@ -181,6 +203,7 @@ bool CasHandler::SeekPrevPart()
 	} else {
 		fCurrentBlockNumber = fPartsIdx[part];
 	}
+	SetupNewBlock();
 	if (ok) {
 		fTracer->IndicateCasBlockChanged();
 	}
@@ -189,7 +212,7 @@ bool CasHandler::SeekPrevPart()
 
 bool CasHandler::SeekNextPart()
 {
-	bool ok;
+	bool ok = true;
 	unsigned int part = GetCurrentPartNumber();
 
 	if (part+1 < GetNumberOfParts()) {
@@ -197,16 +220,11 @@ bool CasHandler::SeekNextPart()
 	} else {
 		ok = false;
 	}
+	SetupNewBlock();
 	if (ok) {
 		fTracer->IndicateCasBlockChanged();
 	}
 	return ok;
-}
-
-void CasHandler::SetupNextBlock()
-{
-	fBlockStartTime = MiscUtils::GetCurrentTime() + GetCurrentBlockGap() * 1000;
-	fSIOWrapper->SetTapeBaudrate(GetCurrentBlockBaudRate());
 }
 
 bool CasHandler::CalculateWaitTime(struct timeval& tv)
@@ -221,6 +239,15 @@ bool CasHandler::CalculateWaitTime(struct timeval& tv)
 		MiscUtils::TimestampToTimeval(fBlockStartTime - ts, tv);
 		return true;
 	}
+}
+
+void CasHandler::AbortTapePlayback()
+{
+	if (fState == eInternalStatePlaying) {
+		fSIOWrapper->EndTapeBlock();
+	}
+	fState = eInternalStateDone;
+	fTracer->IndicateCasStateChanged();
 }
 
 CasHandler::EPlayResult CasHandler::DoPlaying()
@@ -239,88 +266,95 @@ CasHandler::EPlayResult CasHandler::DoPlaying()
 	sigdelset(&sigset,SIGALRM);
 
 	while (true) {
+		tv.tv_sec = 0;
+		tv.tv_usec = 0;
+		tvp = &tv;
+
 		switch (fState) {
 		case eInternalStatePaused:
 		case eInternalStateDone:
 			//TRACE("state paused/done");
-			tvp = NULL; // wait forever;
+			return eWaitForStart;
 			break;
 		case eInternalStateWaiting:
 			if (CalculateWaitTime(tv)) {
 				//TRACE("waiting %ld.%6ld secs", tv.tv_sec, tv.tv_usec);
-				tvp = &tv;
 			} else {
-				fState = eInternalStatePlaying;
+				fState = eInternalStateStartPlaying;
+				continue;
+			}
+			break;
+		case eInternalStateStartPlaying:
+			{
+				int ret = fSIOWrapper->StartTapeBlock();
+				if (ret) {
+					AERROR("starting CAS block %d failed: %d", fCurrentBlockNumber + 1, ret);
+					AbortTapePlayback();
+					continue;
+				} else {
+					TRACE("start transmission of tape block %d", fCurrentBlockNumber + 1);
+					fState = eInternalStatePlaying;
+				}
 			}
 			break;
 		case eInternalStatePlaying:
+			{
+				int len = GetCurrentBlockLength() - fCurrentBytePos;
+				if (len <= 0) {
+					AERROR("CAS block %d: length <= 0", fCurrentBlockNumber + 1);
+					AbortTapePlayback();
+					continue;
+				}
+				if (len > MAX_KERNEL_BLOCK_SIZE) {
+					len = MAX_KERNEL_BLOCK_SIZE;
+				}
+				TRACE("transmit tape block part: offset = %d len = %d", fCurrentBytePos, len);
+
+				sigprocmask(SIG_BLOCK, &sigset, &orig_sigset);
+				int ret = fSIOWrapper->SendRawFrameNoWait((uint8_t*) (fCurrentCasBlock->GetData() + fCurrentBytePos), len);
+				sigprocmask(SIG_SETMASK, &orig_sigset, NULL);
+
+				fCurrentBytePos += len;
+				if (ret) {
+					AERROR("transmitting CAS block %d failed: %d ", fCurrentBlockNumber + 1, ret);
+					AbortTapePlayback();
+					continue;
+				}
+				if (fCurrentBytePos == GetCurrentBlockLength()) {
+					if (fCurrentBlockNumber + 1 < GetNumberOfBlocks()) {
+						fSIOWrapper->EndTapeBlock();
+						fCurrentBlockNumber++;
+						fState = eInternalStateWaiting;
+						SetupNewBlock();
+						fTracer->IndicateCasBlockChanged();
+					} else {
+						AbortTapePlayback();
+					}
+					continue;
+				}
+			}
 			break;
 		}
 
-		if (fState == eInternalStatePlaying) {
-			//TRACE("sending block");
-			// don't disturb us
-			sigprocmask(SIG_BLOCK, &sigset, &orig_sigset);
+		FD_ZERO(&read_set);
+		FD_SET(STDIN_FILENO, &read_set);
 
-			RCPtr<CasBlock> block = fCasImage->GetBlock(fCurrentBlockNumber);
+		int ret = select(STDIN_FILENO + 1, &read_set, NULL, NULL, tvp);
+		//TRACE("select returned %d", ret);
 
-			bool ok = true;
-			if (block.IsNull()) {
-				AERROR("getting CAS block %d failed", fCurrentBlockNumber + 1);
-				ok = false;
-			} else {
-				unsigned int len = block->GetLength();
-				if (len == 0 || len > 200) {
-					AERROR("illegal CAS block length %d", len);
-					ok = false;
-				} else {
-					int ret = fSIOWrapper->SendTapeBlock((uint8_t*) (block->GetData()), len);
-					if (ret) {
-						AERROR("transmitting CAS block %d failed: %d ", fCurrentBlockNumber + 1, ret);
-						ok = false;
-					}
-				}
+		if (ret == -1) {
+			return eGotSignal;
+		}
+		if (ret == 0) {
+			if (fState == eInternalStateWaiting) {
+				fState = eInternalStateStartPlaying;
 			}
-			if (ok) {
-				if (fCurrentBlockNumber + 1 < GetNumberOfBlocks()) {
-					fCurrentBlockNumber++;
-				} else {
-					ok = false;
-				}
+		}
+		if (ret == 1) {
+			if (!FD_ISSET(STDIN_FILENO, &read_set)) {
+				Assert(false);
 			}
-			if (ok) {
-				SetupNextBlock();
-				fState = eInternalStateWaiting;
-				fTracer->IndicateCasBlockChanged();
-			} else {
-				fState = eInternalStateDone;
-				fTracer->IndicateCasStateChanged();
-			}
-			// setup original signal mask
-			sigprocmask(SIG_SETMASK, &orig_sigset, NULL);
-		} else {
-			FD_ZERO(&read_set);
-			FD_SET(STDIN_FILENO, &read_set);
-
-			int ret = select(STDIN_FILENO + 1, &read_set, NULL, NULL, tvp);
-
-			if (ret == -1) {
-				return eGotSignal;
-			}
-			if (ret == 0) {
-				if (fState == eInternalStateWaiting) {
-					fState = eInternalStatePlaying;
-				} else {
-					AERROR("select timeout with illegal state %d", fState);
-					fState = eInternalStateDone;
-				}
-			}
-			if (ret == 1) {
-				if (!FD_ISSET(STDIN_FILENO, &read_set)) {
-					Assert(false);
-				}
-				return eGotKeypress;
-			}
+			return eGotKeypress;
 		}
 	}
 	Assert(false);
@@ -330,10 +364,46 @@ CasHandler::EPlayResult CasHandler::DoPlaying()
 void CasHandler::SetPause(bool on)
 {
 	if (on) {
+		switch (fState) {
+		case eInternalStatePlaying:
+			fSIOWrapper->EndTapeBlock();
+		case eInternalStateStartPlaying:
+			fUnpauseState = fState;
+			break;
+		default:
+			fUnpauseState = eInternalStateWaiting;
+			break;
+		}
 		fState = eInternalStatePaused;
 	} else {
-		SetupNextBlock();
-		fState = eInternalStateWaiting;
+		switch (fUnpauseState) {
+		case eInternalStatePlaying:
+			fSIOWrapper->StartTapeBlock();
+			break;
+		default:
+			SetupNewBlock();
+			break;
+		}
+		fState = fUnpauseState;
 	}
 	fTracer->IndicateCasStateChanged();
+}
+
+void CasHandler::SkipGap()
+{
+	if (fState == eInternalStateWaiting) {
+		fState = eInternalStateStartPlaying;
+	}
+}
+
+bool CasHandler::SetTapeSpeedPercent(unsigned int p)
+{
+	if (p == 0 || p >= 200) {
+		AERROR("illegal tape speed percent %d", p);
+		return false;
+	} else {
+		fTapeSpeedPercent = p;
+		ALOG("set tape speed to %3d%%", p);
+		return true;
+	}
 }

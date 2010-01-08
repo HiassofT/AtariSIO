@@ -107,6 +107,15 @@ static void process_args(RCPtr<DeviceManager>& manager, CursesFrontend* frontend
 					}
 					trace_level++;
 					break;
+				case 'T':
+					if (i + 1 < argc) {
+						i++;
+						unsigned int p = atoi(argv[i]);
+						manager->SetTapeSpeedPercent(p);
+					} else {
+						AERROR("-T needs a parameter!");
+					}
+					break;
 				case 's':
 					if (i + 1 < argc) {
 						i++;
@@ -398,6 +407,7 @@ int main(int argc, char** argv)
 		printf("-S baud,div   high speed SIO parameters: baudrate and pokey divisor\n");
 		printf("-X            enable XF551 commands\n");
 		printf("-t            increase SIO trace level (default:0, max:3)\n");
+		printf("-T percent    set tape baudrate to x%% of nominal speed (1-200)\n");
 		printf("-1..-8        set current drive number (default: 1)\n"); 
 		printf("-V dens dir   create virtual drive of given density, the second parameter\n");
 		printf("              specifies the directory. dens is s|e|d|(<number>s|d)|S|D\n");

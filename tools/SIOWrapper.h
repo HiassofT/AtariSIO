@@ -146,6 +146,12 @@ public:
 	int SetTapeBaudrate(unsigned int baudrate);
 	int SendTapeBlock(uint8_t* buf, unsigned int length);
 
+	/* new TapeBlock methods */
+
+	int StartTapeBlock();
+	int EndTapeBlock();
+	int SendRawFrameNoWait(uint8_t* buf, unsigned int length);
+
 	int GetBaudrate();
 	int GetExactBaudrate();
 

@@ -134,6 +134,9 @@ public:
 	bool LoadCasImage(const char* filename);
 	void UnloadCasImage();
 
+	bool SetTapeSpeedPercent(unsigned int p);
+	inline unsigned int GetTapeSpeedPercent() const;
+
 private:
 	RCPtr<SIOWrapper> fSIOWrapper;
 	RCPtr<SIOManager> fSIOManager;
@@ -145,6 +148,8 @@ private:
 	bool fUseHighSpeed;
 	unsigned int fHighSpeedBaudrate;
 	unsigned int fPokeyDivisor;
+
+	unsigned int fTapeSpeedPercent;
 	bool fEnableXF551Mode;
 	SIOWrapper::ESIOServerCommandLine fCableType;
 	RCPtr<CasHandler> fCasHandler;
@@ -188,5 +193,10 @@ inline unsigned int DeviceManager::GetHighSpeedBaudrate() const
 inline uint8_t DeviceManager::GetHighSpeedPokeyDivisor() const
 {
 	return fPokeyDivisor;
+}
+
+inline unsigned int DeviceManager::GetTapeSpeedPercent() const
+{
+	return fTapeSpeedPercent;
 }
 #endif

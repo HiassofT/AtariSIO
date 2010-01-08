@@ -60,7 +60,7 @@ void my_signal_handler(int sig)
 
 bool OpenSerial(const char* device)
 {
-	serial_fd = open(device, O_RDWR);
+	serial_fd = open(device, O_RDWR | O_NOCTTY | O_NDELAY);
 	if (serial_fd < 0) {
 		printf("cannot open %s\n", device);
 		return false;

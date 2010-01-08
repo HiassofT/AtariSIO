@@ -59,6 +59,8 @@ public:
 
 	void SetPause(bool on);
 
+	void SkipGap();
+
 	bool SeekStart();
 	bool SeekEnd();
 	bool SeekNextBlock(unsigned int skip=1);
@@ -68,10 +70,16 @@ public:
 
 	enum EPlayResult {
 		eGotKeypress,
-		eGotSignal
+		eGotSignal,
+		eWaitForStart
 	};
 
 	EPlayResult DoPlaying();
+
+	// abort playback (i.e. in case of errors), set internal state to "done"
+	void AbortTapePlayback();
+
+	bool SetTapeSpeedPercent(unsigned int p);
 
 protected:
 
@@ -79,7 +87,7 @@ protected:
 
 private:
 
-	void SetupNextBlock();
+	void SetupNewBlock();
 
 	// returns false if already past start time
 	bool CalculateWaitTime(struct timeval& tv);
@@ -87,6 +95,7 @@ private:
 	enum EInternalState {
 		eInternalStatePaused,
 		eInternalStateWaiting,
+		eInternalStateStartPlaying,
 		eInternalStatePlaying,
 		eInternalStateDone
 	};
@@ -96,13 +105,19 @@ private:
 	unsigned int fCurrentBaudRate;
 	unsigned int fCurrentBlockNumber;
 
+	RCPtr<CasBlock> fCurrentCasBlock;
+	unsigned int fCurrentBytePos;
+
 	EInternalState fState;
+	EInternalState fUnpauseState;
 
 	unsigned int* fPartsIdx;
 
 	MiscUtils::TimestampType fBlockStartTime;
 
 	SIOTracer* fTracer;
+
+	unsigned int fTapeSpeedPercent;
 };
 
 inline unsigned int CasHandler::GetCurrentBlockNumber() const

@@ -704,6 +704,50 @@ int SIOWrapper::SendTapeBlock(uint8_t* buf, unsigned int length)
 	return fLastResult;
 }
 
+int SIOWrapper::StartTapeBlock()
+{
+	if (fDeviceFileNo < 0) {
+		fLastResult = ENODEV;
+	} else {
+		fLastResult = ioctl(fDeviceFileNo, ATARISIO_IOC_START_TAPE_BLOCK);
+		if (fLastResult == -1) {
+			fLastResult = errno;
+		}
+	}
+	return fLastResult;
+}
+
+int SIOWrapper::EndTapeBlock()
+{
+	if (fDeviceFileNo < 0) {
+		fLastResult = ENODEV;
+	} else {
+		fLastResult = ioctl(fDeviceFileNo, ATARISIO_IOC_END_TAPE_BLOCK);
+		if (fLastResult == -1) {
+			fLastResult = errno;
+		}
+	}
+	return fLastResult;
+}
+
+int SIOWrapper::SendRawFrameNoWait(uint8_t* buf, unsigned int length)
+{
+	SIO_data_frame frame;
+
+	frame.data_buffer = buf;
+	frame.data_length = length;
+
+	if (fDeviceFileNo < 0) {
+		fLastResult = ENODEV;
+	} else {
+		fLastResult = ioctl(fDeviceFileNo, ATARISIO_IOC_SEND_RAW_FRAME_NOWAIT, &frame);
+		if (fLastResult == -1) {
+			fLastResult = errno;
+		}
+	}
+	return fLastResult;
+}
+
 int SIOWrapper::DebugKernelStatus()
 {
 	if (fDeviceFileNo < 0) {

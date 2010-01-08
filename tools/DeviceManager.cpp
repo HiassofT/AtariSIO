@@ -47,7 +47,8 @@ DeviceManager::DeviceManager(const char* devname)
 	: fSIOWrapper(new SIOWrapper(devname)),
 	  fSIOManager(new SIOManager(fSIOWrapper)),
           fHighSpeedBaudrate(ATARISIO_HIGHSPEED_BAUDRATE),
-	  fPokeyDivisor(8)
+	  fPokeyDivisor(8),
+	  fTapeSpeedPercent(100)
 {
 	if (!SetSioServerMode(SIOWrapper::eCommandLine_RI)) {
 		throw ErrorObject("unable to activate SIO server mode");
@@ -1127,8 +1128,23 @@ bool DeviceManager::LoadCasImage(const char* filename)
 
 	if (image->ReadImageFromFile(absPath)) {
 		fCasHandler = new CasHandler(image, fSIOWrapper);
+		fCasHandler->SetTapeSpeedPercent(fTapeSpeedPercent);
 		return true;
 	} else {
 		return false;
+	}
+}
+
+bool DeviceManager::SetTapeSpeedPercent(unsigned int p)
+{
+	if (p == 0 || p >= 200) {
+		AERROR("illegal tape speed percent %d", p);
+		return false;
+	} else {
+		fTapeSpeedPercent = p;
+		if (fCasHandler) {
+			fCasHandler->SetTapeSpeedPercent(fTapeSpeedPercent);
+		}
+		return true;
 	}
 }

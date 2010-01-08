@@ -23,7 +23,7 @@
 */
 
 #define ATARISIO_MAJOR_VERSION 1
-#define ATARISIO_MINOR_VERSION 5
+#define ATARISIO_MINOR_VERSION 6
 #define ATARISIO_VERSION_MAGIC 42
 
 #define ATARISIO_VERSION ( ( (ATARISIO_VERSION_MAGIC) << 16) | ( (ATARISIO_MAJOR_VERSION) << 8) | (ATARISIO_MINOR_VERSION) )
@@ -324,7 +324,21 @@ typedef struct SIO_timestamp_struct {
 */
 #define ATARISIO_IOC_GET_EXACT_BAUDRATE	_IO( ATARISIO_IOC_MAGIC, 28)
 
-#define ATARISIO_IOC_MAXNR 28
+/*
+   new tape block interface: begin with START_TAPE_BLOCK,
+   then use SEND_RAW_FRAME_NOWAIT (multiple times) to transmit the data
+   and end with END_TAPE_BLOCK
+*/
+#define ATARISIO_IOC_START_TAPE_BLOCK	_IO( ATARISIO_IOC_MAGIC, 29)
+#define ATARISIO_IOC_END_TAPE_BLOCK	_IO( ATARISIO_IOC_MAGIC, 30)
+
+/*
+   send a raw frame, but don't wait for the FIFO/THRE to empty
+*/
+#define ATARISIO_IOC_SEND_RAW_FRAME_NOWAIT	_IOW( ATARISIO_IOC_MAGIC, 31, SIO_data_frame *)
+
+
+#define ATARISIO_IOC_MAXNR 31
 
 /*
    errno codes for DO_SIO, mainly according to

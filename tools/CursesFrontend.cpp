@@ -2857,7 +2857,11 @@ void CursesFrontend::ProcessTapeEmulation(const char* loadfilename)
 				continue;
 			}
 		} else {
-			ch = wgetch(fInputLineWindow);
+			if (ret == CasHandler::eWaitForStart) {
+				ch = GetCh(false);
+			} else {
+				ch = wgetch(fInputLineWindow);
+			}
 			if (ch == KEY_RESIZE) {
 				//DPRINTF("got KEY_RESIZE from ncurses!");
 				continue;
@@ -2874,8 +2878,11 @@ void CursesFrontend::ProcessTapeEmulation(const char* loadfilename)
 				cas->SetPause(true);
 				break;
 			}
+		} else if (ch == 'g') {
+			cas->SkipGap();
 		} else {
 			if (IsAbortChar(ch)) {
+				cas->AbortTapePlayback();
 				done = true;
 				continue;
 			}
@@ -2928,7 +2935,8 @@ void CursesFrontend::ProcessTapeEmulation(const char* loadfilename)
 				DisplayCasStatus();
 				ShowCasHint();
 				break;
-			default: beep();
+			default:
+				beep();
 			}
 		}
 	}
