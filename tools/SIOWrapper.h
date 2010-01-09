@@ -148,9 +148,10 @@ public:
 
 	/* new TapeBlock methods */
 
-	int StartTapeBlock();
-	int EndTapeBlock();
-	int SendRawFrameNoWait(uint8_t* buf, unsigned int length);
+	int StartTapeMode();
+	int EndTapeMode();
+	int SendRawDataNoWait(uint8_t* buf, unsigned int length);
+	int FlushWriteBuffer();
 
 	int GetBaudrate();
 	int GetExactBaudrate();

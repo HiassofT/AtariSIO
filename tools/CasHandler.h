@@ -41,9 +41,11 @@ public:
 	unsigned int GetCurrentBlockBaudRate() const;
 	unsigned int GetCurrentBlockGap() const;
 	unsigned int GetCurrentBlockLength() const;
+	inline unsigned int GetCurrentBytePos() const;
 
 	unsigned int GetNumberOfBlocks() const;
 	unsigned int GetNumberOfParts() const;
+
 
 	const char* GetFilename() const;
 	const char* GetDescription() const;
@@ -51,6 +53,7 @@ public:
 	// external state information
 	enum EState {
 		eStatePaused,
+		eStateGap,
 		eStatePlaying,
 		eStateDone
 	};
@@ -58,6 +61,8 @@ public:
 	EState GetState() const;
 
 	void SetPause(bool on);
+
+	void PauseIfPlaying();
 
 	void SkipGap();
 
@@ -81,6 +86,9 @@ public:
 
 	bool SetTapeSpeedPercent(unsigned int p);
 
+	// larger CasBlocks are transferred in 200 byte chunks
+	enum { eMaxTransferSize = 200 };
+
 protected:
 
 	virtual ~CasHandler();
@@ -95,7 +103,6 @@ private:
 	enum EInternalState {
 		eInternalStatePaused,
 		eInternalStateWaiting,
-		eInternalStateStartPlaying,
 		eInternalStatePlaying,
 		eInternalStateDone
 	};
@@ -109,7 +116,6 @@ private:
 	unsigned int fCurrentBytePos;
 
 	EInternalState fState;
-	EInternalState fUnpauseState;
 
 	unsigned int* fPartsIdx;
 
@@ -143,6 +149,11 @@ inline const char* CasHandler::GetDescription() const
 inline const char* CasHandler::GetFilename() const
 {
 	return fCasImage->GetFilename();
+}
+
+inline unsigned int CasHandler::GetCurrentBytePos() const
+{
+	return fCurrentBytePos;
 }
 
 #endif

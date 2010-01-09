@@ -704,12 +704,12 @@ int SIOWrapper::SendTapeBlock(uint8_t* buf, unsigned int length)
 	return fLastResult;
 }
 
-int SIOWrapper::StartTapeBlock()
+int SIOWrapper::StartTapeMode()
 {
 	if (fDeviceFileNo < 0) {
 		fLastResult = ENODEV;
 	} else {
-		fLastResult = ioctl(fDeviceFileNo, ATARISIO_IOC_START_TAPE_BLOCK);
+		fLastResult = ioctl(fDeviceFileNo, ATARISIO_IOC_START_TAPE_MODE);
 		if (fLastResult == -1) {
 			fLastResult = errno;
 		}
@@ -717,12 +717,12 @@ int SIOWrapper::StartTapeBlock()
 	return fLastResult;
 }
 
-int SIOWrapper::EndTapeBlock()
+int SIOWrapper::EndTapeMode()
 {
 	if (fDeviceFileNo < 0) {
 		fLastResult = ENODEV;
 	} else {
-		fLastResult = ioctl(fDeviceFileNo, ATARISIO_IOC_END_TAPE_BLOCK);
+		fLastResult = ioctl(fDeviceFileNo, ATARISIO_IOC_END_TAPE_MODE);
 		if (fLastResult == -1) {
 			fLastResult = errno;
 		}
@@ -730,7 +730,7 @@ int SIOWrapper::EndTapeBlock()
 	return fLastResult;
 }
 
-int SIOWrapper::SendRawFrameNoWait(uint8_t* buf, unsigned int length)
+int SIOWrapper::SendRawDataNoWait(uint8_t* buf, unsigned int length)
 {
 	SIO_data_frame frame;
 
@@ -740,7 +740,20 @@ int SIOWrapper::SendRawFrameNoWait(uint8_t* buf, unsigned int length)
 	if (fDeviceFileNo < 0) {
 		fLastResult = ENODEV;
 	} else {
-		fLastResult = ioctl(fDeviceFileNo, ATARISIO_IOC_SEND_RAW_FRAME_NOWAIT, &frame);
+		fLastResult = ioctl(fDeviceFileNo, ATARISIO_IOC_SEND_RAW_DATA_NOWAIT, &frame);
+		if (fLastResult == -1) {
+			fLastResult = errno;
+		}
+	}
+	return fLastResult;
+}
+
+int SIOWrapper::FlushWriteBuffer()
+{
+	if (fDeviceFileNo < 0) {
+		fLastResult = ENODEV;
+	} else {
+		fLastResult = ioctl(fDeviceFileNo, ATARISIO_IOC_FLUSH_WRITE_BUFFER);
 		if (fLastResult == -1) {
 			fLastResult = errno;
 		}

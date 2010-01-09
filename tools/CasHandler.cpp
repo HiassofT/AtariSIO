@@ -26,15 +26,12 @@
 #include <list>
 #include <signal.h>
 
-#define MAX_KERNEL_BLOCK_SIZE 32
-
 CasHandler::CasHandler(const RCPtr<CasImage>& image, RCPtr<SIOWrapper>& siowrapper)
 	: fCasImage(image),
 	  fSIOWrapper(siowrapper),
 	  fCurrentBaudRate(0),
 	  fCurrentBlockNumber(0),
 	  fState(eInternalStatePaused),
-	  fUnpauseState(eInternalStateWaiting),
 	  fPartsIdx(0)
 {
 	Assert(fCasImage.IsNotNull());
@@ -72,7 +69,7 @@ CasHandler::~CasHandler()
 {
 	if (fState == eInternalStatePlaying) {
 		AWARN("~CasHandler: still in playing state");
-		fSIOWrapper->EndTapeBlock();
+		fSIOWrapper->EndTapeMode();
 	}
 	if (fPartsIdx) {
 		delete[] fPartsIdx;
@@ -85,7 +82,7 @@ CasHandler::EState CasHandler::GetState() const
 	case eInternalStatePaused:
 		return eStatePaused;
 	case eInternalStateWaiting:
-	case eInternalStateStartPlaying:
+		return eStateGap;
 	case eInternalStatePlaying:
 		return eStatePlaying;
 	case eInternalStateDone:
@@ -243,8 +240,13 @@ bool CasHandler::CalculateWaitTime(struct timeval& tv)
 
 void CasHandler::AbortTapePlayback()
 {
-	if (fState == eInternalStatePlaying) {
-		fSIOWrapper->EndTapeBlock();
+	switch (fState) {
+	case eInternalStateWaiting:
+	case eInternalStatePlaying:
+		fSIOWrapper->EndTapeMode();
+		break;
+	default:
+		break;
 	}
 	fState = eInternalStateDone;
 	fTracer->IndicateCasStateChanged();
@@ -266,9 +268,7 @@ CasHandler::EPlayResult CasHandler::DoPlaying()
 	sigdelset(&sigset,SIGALRM);
 
 	while (true) {
-		tv.tv_sec = 0;
-		tv.tv_usec = 0;
-		tvp = &tv;
+		tvp = NULL;
 
 		switch (fState) {
 		case eInternalStatePaused:
@@ -279,82 +279,80 @@ CasHandler::EPlayResult CasHandler::DoPlaying()
 		case eInternalStateWaiting:
 			if (CalculateWaitTime(tv)) {
 				//TRACE("waiting %ld.%6ld secs", tv.tv_sec, tv.tv_usec);
+				tvp = &tv;
 			} else {
-				fState = eInternalStateStartPlaying;
-				continue;
-			}
-			break;
-		case eInternalStateStartPlaying:
-			{
-				int ret = fSIOWrapper->StartTapeBlock();
-				if (ret) {
-					AERROR("starting CAS block %d failed: %d", fCurrentBlockNumber + 1, ret);
-					AbortTapePlayback();
-					continue;
-				} else {
-					TRACE("start transmission of tape block %d", fCurrentBlockNumber + 1);
-					fState = eInternalStatePlaying;
-				}
+				fState = eInternalStatePlaying;
 			}
 			break;
 		case eInternalStatePlaying:
 			{
+				fTracer->IndicateCasStateChanged();
 				int len = GetCurrentBlockLength() - fCurrentBytePos;
 				if (len <= 0) {
 					AERROR("CAS block %d: length <= 0", fCurrentBlockNumber + 1);
 					AbortTapePlayback();
-					continue;
 				}
-				if (len > MAX_KERNEL_BLOCK_SIZE) {
-					len = MAX_KERNEL_BLOCK_SIZE;
+				if (len > eMaxTransferSize) {
+					len = eMaxTransferSize;
 				}
-				TRACE("transmit tape block part: offset = %d len = %d", fCurrentBytePos, len);
+				//TRACE("transmit tape block part: offset = %d len = %d", fCurrentBytePos, len);
 
 				sigprocmask(SIG_BLOCK, &sigset, &orig_sigset);
-				int ret = fSIOWrapper->SendRawFrameNoWait((uint8_t*) (fCurrentCasBlock->GetData() + fCurrentBytePos), len);
+				int ret = fSIOWrapper->SendRawDataNoWait((uint8_t*) (fCurrentCasBlock->GetData() + fCurrentBytePos), len);
 				sigprocmask(SIG_SETMASK, &orig_sigset, NULL);
 
 				fCurrentBytePos += len;
 				if (ret) {
 					AERROR("transmitting CAS block %d failed: %d ", fCurrentBlockNumber + 1, ret);
 					AbortTapePlayback();
-					continue;
 				}
 				if (fCurrentBytePos == GetCurrentBlockLength()) {
+					if ((ret = fSIOWrapper->FlushWriteBuffer())) {
+						AERROR("flushing write buffer failed");
+						AbortTapePlayback();
+					}
+
 					if (fCurrentBlockNumber + 1 < GetNumberOfBlocks()) {
-						fSIOWrapper->EndTapeBlock();
 						fCurrentBlockNumber++;
 						fState = eInternalStateWaiting;
 						SetupNewBlock();
 						fTracer->IndicateCasBlockChanged();
+						fTracer->IndicateCasStateChanged();
 					} else {
 						AbortTapePlayback();
 					}
-					continue;
+				}
+				if (fState == eInternalStatePlaying) {
+					// poll for keypress/signals
+					tv.tv_usec = 0;
+					tv.tv_sec = 0;
+					tvp = &tv;
 				}
 			}
 			break;
 		}
 
-		FD_ZERO(&read_set);
-		FD_SET(STDIN_FILENO, &read_set);
+		if (tvp) {
+			FD_ZERO(&read_set);
+			FD_SET(STDIN_FILENO, &read_set);
 
-		int ret = select(STDIN_FILENO + 1, &read_set, NULL, NULL, tvp);
-		//TRACE("select returned %d", ret);
+			int ret = select(STDIN_FILENO + 1, &read_set, NULL, NULL, tvp);
+			//TRACE("select returned %d", ret);
 
-		if (ret == -1) {
-			return eGotSignal;
-		}
-		if (ret == 0) {
-			if (fState == eInternalStateWaiting) {
-				fState = eInternalStateStartPlaying;
+			if (ret == -1) {
+				return eGotSignal;
 			}
-		}
-		if (ret == 1) {
-			if (!FD_ISSET(STDIN_FILENO, &read_set)) {
-				Assert(false);
+			if (ret == 0) {
+				if (fState == eInternalStateWaiting) {
+					fState = eInternalStatePlaying;
+				}
 			}
-			return eGotKeypress;
+			if (ret == 1) {
+				if (!FD_ISSET(STDIN_FILENO, &read_set)) {
+					Assert(false);
+				}
+				return eGotKeypress;
+			}
 		}
 	}
 	Assert(false);
@@ -365,34 +363,47 @@ void CasHandler::SetPause(bool on)
 {
 	if (on) {
 		switch (fState) {
+		case eInternalStateWaiting:
 		case eInternalStatePlaying:
-			fSIOWrapper->EndTapeBlock();
-		case eInternalStateStartPlaying:
-			fUnpauseState = fState;
+			fSIOWrapper->EndTapeMode();
+			fState = eInternalStatePaused;
 			break;
 		default:
-			fUnpauseState = eInternalStateWaiting;
+			AWARN("CasHandler::SetPause(true) called in paused state");
 			break;
 		}
-		fState = eInternalStatePaused;
 	} else {
-		switch (fUnpauseState) {
-		case eInternalStatePlaying:
-			fSIOWrapper->StartTapeBlock();
+		switch (fState) {
+		case eInternalStatePaused:
+		case eInternalStateDone:
+			SetupNewBlock();
+			fSIOWrapper->StartTapeMode();
+			fState = eInternalStateWaiting;
 			break;
 		default:
-			SetupNewBlock();
+			AWARN("CasHandler::SetPause(false) called in running state");
 			break;
 		}
-		fState = fUnpauseState;
 	}
 	fTracer->IndicateCasStateChanged();
+}
+
+void CasHandler::PauseIfPlaying()
+{
+	switch (fState) {
+	case eInternalStateWaiting:
+	case eInternalStatePlaying:
+		SetPause(true);
+		break;
+	default:
+		break;
+	}
 }
 
 void CasHandler::SkipGap()
 {
 	if (fState == eInternalStateWaiting) {
-		fState = eInternalStateStartPlaying;
+		fState = eInternalStatePlaying;
 	}
 }
 

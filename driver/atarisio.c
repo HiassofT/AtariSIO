@@ -2059,7 +2059,7 @@ static int perform_receive_frame(struct atarisio_dev* dev, unsigned long arg, in
 	return receive_block(dev, frame.data_length, frame.data_buffer, DELAY_T3_MAX/1000, handle_checksum);
 }
 
-static int start_tape_block(struct atarisio_dev* dev)
+static int start_tape_mode(struct atarisio_dev* dev)
 {
 	int ret = 0;
 
@@ -2080,14 +2080,12 @@ static int start_tape_block(struct atarisio_dev* dev)
 	return ret;
 }
 
-static int end_tape_block(struct atarisio_dev* dev)
+static int end_tape_mode(struct atarisio_dev* dev)
 {
 	int ret = 0;
 	if (!dev->tape_mode_enabled) {
 		DBG_PRINTK(DEBUG_STANDARD, "end tape mode: tape mode not enabled\n");
 	} else {
-		ret = wait_send(dev, 0, SEND_MODE_WAIT_ALL);
-		
 		set_baudrate(dev, dev->tape_old_baudrate, 1);
 		dev->do_autobaud = dev->tape_old_autobaud;
 
@@ -2099,21 +2097,24 @@ static int end_tape_block(struct atarisio_dev* dev)
 
 static int perform_send_tape_block(struct atarisio_dev* dev, unsigned long arg)
 {
-	int ret = 0;
+	int r, ret = 0;
 
-	PRINT_TIMESTAMP("start tape block\n");
-	if ((ret = start_tape_block(dev))) {
+	PRINT_TIMESTAMP("start tape mode\n");
+	if ((ret = start_tape_mode(dev))) {
 		return ret;
 	}
 
 	PRINT_TIMESTAMP("send tape block\n");
-	if ((ret = perform_send_frame(dev, arg, 0, SEND_MODE_WAIT_BUFFER))) {
-		PRINT_TIMESTAMP("end tape block (error)\n");
-		end_tape_block(dev);
-	} else {
-		PRINT_TIMESTAMP("end tape block (OK)\n");
-		ret = end_tape_block(dev);
-	}
+	ret = perform_send_frame(dev, arg, 0, SEND_MODE_WAIT_BUFFER);
+
+	PRINT_TIMESTAMP("wait_send\n");
+	r = wait_send(dev, 0, SEND_MODE_WAIT_ALL);
+	if (!ret) ret = r;
+
+	PRINT_TIMESTAMP("end tape mode\n");
+	r = end_tape_mode(dev);
+	if (!ret) ret = r;
+
 	return ret;
 }
 
@@ -2599,6 +2600,9 @@ static int atarisio_ioctl(struct inode* inode, struct file* filp,
 		break;
 	case ATARISIO_IOC_SET_TAPE_BAUDRATE:
 		dev->tape_baudrate = arg;
+		if (dev->tape_mode_enabled) {
+			ret = set_baudrate(dev, arg, 1);
+		}
 		break;
 	case ATARISIO_IOC_SEND_TAPE_BLOCK:
 		PRINT_TIMESTAMP("begin send tape block\n");
@@ -2611,18 +2615,21 @@ static int atarisio_ioctl(struct inode* inode, struct file* filp,
 	case ATARISIO_IOC_GET_EXACT_BAUDRATE:
 		ret = dev->serial_config.exact_baudrate;
 		break;
-	case ATARISIO_IOC_START_TAPE_BLOCK:
-		PRINT_TIMESTAMP("start tape block\n");
-		ret = start_tape_block(dev);
+	case ATARISIO_IOC_START_TAPE_MODE:
+		PRINT_TIMESTAMP("start tape mode\n");
+		ret = start_tape_mode(dev);
 		break;
-	case ATARISIO_IOC_END_TAPE_BLOCK:
-		PRINT_TIMESTAMP("end tape block\n");
-		ret = end_tape_block(dev);
+	case ATARISIO_IOC_END_TAPE_MODE:
+		PRINT_TIMESTAMP("end tape mode\n");
+		ret = end_tape_mode(dev);
 		break;
-	case ATARISIO_IOC_SEND_RAW_FRAME_NOWAIT:
-		PRINT_TIMESTAMP("begin send raw frame nowait\n");
+	case ATARISIO_IOC_SEND_RAW_DATA_NOWAIT:
+		PRINT_TIMESTAMP("begin send raw data nowait\n");
 		ret = perform_send_frame(dev, arg, 0, SEND_MODE_WAIT_BUFFER);
-		PRINT_TIMESTAMP("end send raw frame nowait\n");
+		PRINT_TIMESTAMP("end send raw data nowait\n");
+		break;
+	case ATARISIO_IOC_FLUSH_WRITE_BUFFER:
+		ret = wait_send(dev, 0, SEND_MODE_WAIT_ALL);
 		break;
 	default:
 		ret = -EINVAL;

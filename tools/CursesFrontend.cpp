@@ -998,13 +998,23 @@ void CursesFrontend::DisplayCasState()
 
 	switch (casHandler->GetState()) {
 	case CasHandler::eStatePaused:
-		waddstr(fCasWindow, "Pause");
+		waddstr(fCasWindow, "Pause      ");
+		break;
+	case CasHandler::eStateGap:
+		waddstr(fCasWindow, "Play Gap   ");
 		break;
 	case CasHandler::eStatePlaying:
-		waddstr(fCasWindow, "Play ");
+		{
+			unsigned int blocklen = casHandler->GetCurrentBlockLength();
+			if (blocklen <= CasHandler::eMaxTransferSize) {
+				waddstr(fCasWindow, "Play       ");
+			} else {
+				wprintw(fCasWindow, "Play %d    ", casHandler->GetCurrentBytePos());
+			}
+		}
 		break;
 	case CasHandler::eStateDone:
-		waddstr(fCasWindow, "Done ");
+		waddstr(fCasWindow, "Done       ");
 		break;
 	}
 
@@ -2874,6 +2884,7 @@ void CursesFrontend::ProcessTapeEmulation(const char* loadfilename)
 			case CasHandler::eStateDone:
 				cas->SetPause(false);
 				break;
+			case CasHandler::eStateGap:
 			case CasHandler::eStatePlaying:
 				cas->SetPause(true);
 				break;
@@ -2887,49 +2898,56 @@ void CursesFrontend::ProcessTapeEmulation(const char* loadfilename)
 				continue;
 			}
 
-			cas->SetPause(true);
-
 			switch (ch) {
 			case KEY_LEFT:
+				cas->PauseIfPlaying();
 				if (!cas->SeekPrevBlock()) {
 					beep();
 				}
 				break;
 			case KEY_RIGHT:
+				cas->PauseIfPlaying();
 				if (!cas->SeekNextBlock()) {
 					beep();
 				}
 				break;
 			case KEY_UP:
+				cas->PauseIfPlaying();
 				if (!cas->SeekPrevBlock(20)) {
 					beep();
 				}
 				break;
 			case KEY_DOWN:
+				cas->PauseIfPlaying();
 				if (!cas->SeekNextBlock(20)) {
 					beep();
 				}
 				break;
 			case KEY_PPAGE:
+				cas->PauseIfPlaying();
 				if (!cas->SeekPrevPart()) {
 					beep();
 				}
 				break;
 			case KEY_NPAGE:
+				cas->PauseIfPlaying();
 				if (!cas->SeekNextPart()) {
 					beep();
 				}
 				break;
 			case KEY_HOME:
+				cas->PauseIfPlaying();
 				if (!cas->SeekStart()) {
 					beep();
 				}
 				break;
 			case KEY_END:
+				cas->PauseIfPlaying();
 				if (!cas->SeekEnd()) {
 					beep();
 				}
 				break;
+			case 12:
 			case KEY_RESIZE:
 				HandleResize();
 				DisplayCasStatus();
