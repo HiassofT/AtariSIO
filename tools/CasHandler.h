@@ -58,7 +58,7 @@ public:
 		eStateDone
 	};
 
-	EState GetState() const;
+	inline EState GetState() const;
 
 	void SetPause(bool on);
 
@@ -100,13 +100,6 @@ private:
 	// returns false if already past start time
 	bool CalculateWaitTime(struct timeval& tv);
 
-	enum EInternalState {
-		eInternalStatePaused,
-		eInternalStateWaiting,
-		eInternalStatePlaying,
-		eInternalStateDone
-	};
-
 	RCPtr<CasImage> fCasImage;
 	RCPtr<SIOWrapper> fSIOWrapper;
 	unsigned int fCurrentBaudRate;
@@ -115,7 +108,7 @@ private:
 	RCPtr<CasBlock> fCurrentCasBlock;
 	unsigned int fCurrentBytePos;
 
-	EInternalState fState;
+	EState fState;
 
 	unsigned int* fPartsIdx;
 
@@ -156,4 +149,8 @@ inline unsigned int CasHandler::GetCurrentBytePos() const
 	return fCurrentBytePos;
 }
 
+inline CasHandler::EState CasHandler::GetState() const
+{
+	return fState;
+}
 #endif
