@@ -147,9 +147,13 @@
 #define DEBUG_NOISY 2
 #define DEBUG_VERY_NOISY 3
 
+/*
 #define ATARISIO_DEBUG_TIMING
+*/
 
+/*
 #define ATARISIO_PRINT_TIMESTAMPS
+*/
 
 #define PRINTK_NODEV(x...) printk(NAME ": " x)
 
