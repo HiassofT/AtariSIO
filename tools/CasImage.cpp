@@ -105,7 +105,7 @@ CasImage::EBlockType CasImage::ReadBlockFromFile(
 				buf[tmp] = '?';
 			}
 		}
-		buf[5] = 0;
+		buf[4] = 0;
 		AWARN("unknown block type \"%s\"", buf);
 	}
 	return type;
