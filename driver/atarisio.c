@@ -153,7 +153,9 @@
 #define DEBUG_NOISY 2
 #define DEBUG_VERY_NOISY 3
 
+/*
 #define ATARISIO_DEBUG_TIMING
+*/
 
 /*
 #define ATARISIO_PRINT_TIMESTAMPS
@@ -461,6 +463,7 @@ struct atarisio_dev {
 	/* new tape mode using start tape block, send raw frame nowait and end tape block */
 	unsigned int tape_old_baudrate;
 	int tape_old_autobaud;
+	int tape_old_ier;
 	int tape_mode_enabled; /* = 0; */
 
 	uint8_t standard_lcr; /* = UART_LCR_WLEN8; */
@@ -656,7 +659,7 @@ static inline void reset_cmdframe_buf_data(struct atarisio_dev* dev)
 #define MAX_UDELAY_MS 5
 #endif
 
-static int my_udelay(unsigned long usecs)
+static int my_udelay(struct atarisio_dev* dev, unsigned long usecs)
 {
 	uint64_t current_time, end_time;
 	long delay_time;
@@ -680,12 +683,15 @@ static int my_udelay(unsigned long usecs)
 			return 0;
 		}
 
-		if (delay_time >= 3 * 1000000 / HZ) {
-			long expire = delay_time * HZ / 1000000;
+		if (delay_time >= 100 * 1000000) {
+			long expire = (delay_time - 50 * 1000000) * HZ / 1000000;
+			PRINT_TIMESTAMP("my_udelay: using schedule_timeout(%ld) since delay is %ld\n", expire, delay_time);
 			while (1) {
 				current->state = TASK_INTERRUPTIBLE;
 				expire = schedule_timeout(expire);
+				PRINT_TIMESTAMP("my_udelay: schedule_timeout() returned %ld\n", expire);
 				if (expire == 0) {
+					current->state=TASK_RUNNING;
 					break;
 				}
 				if (signal_pending(current)) {
@@ -2130,16 +2136,25 @@ static int start_tape_mode(struct atarisio_dev* dev)
 	if (dev->tape_mode_enabled) {
 		DBG_PRINTK(DEBUG_STANDARD, "start tape mode: tape mode already enabled\n");
 	} else {
+		unsigned long flags = 0;
+		spin_lock_irqsave(&dev->lock, flags);
+
 		dev->tape_old_baudrate = dev->serial_config.baudrate;
 		dev->tape_old_autobaud = dev->do_autobaud;
+		dev->tape_old_ier = dev->serial_config.IER;
+
+		/* disable all but the transmitter interrupt */
+		dev->serial_config.IER &= UART_IER_THRI;
+		serial_out(dev, UART_IER, dev->serial_config.IER);
 
 		/* disable autobauding and set the baudrate */
 		dev->do_autobaud = 0;
-		if ((ret = set_baudrate(dev, dev->tape_baudrate, 1))) {
+		if ((ret = set_baudrate(dev, dev->tape_baudrate, 0))) {
 			DBG_PRINTK(DEBUG_STANDARD, "setting tape baudrate %d failed\n", dev->tape_baudrate);
 		} else {
 			dev->tape_mode_enabled = 1;
 		}
+		spin_unlock_irqrestore(&dev->lock, flags);
 	}
 	return ret;
 }
@@ -2150,10 +2165,17 @@ static int end_tape_mode(struct atarisio_dev* dev)
 	if (!dev->tape_mode_enabled) {
 		DBG_PRINTK(DEBUG_STANDARD, "end tape mode: tape mode not enabled\n");
 	} else {
-		set_baudrate(dev, dev->tape_old_baudrate, 1);
+		unsigned long flags = 0;
+		spin_lock_irqsave(&dev->lock, flags);
+
+		dev->serial_config.IER = dev->tape_old_ier;
+		serial_out(dev, UART_IER, dev->serial_config.IER);
+
+		set_baudrate(dev, dev->tape_old_baudrate, 0);
 		dev->do_autobaud = dev->tape_old_autobaud;
 
 		dev->tape_mode_enabled = 0;
+		spin_unlock_irqrestore(&dev->lock, flags);
 	}
 
 	return ret;
@@ -2202,7 +2224,7 @@ static int perform_send_fsk_data_udelay(struct atarisio_dev* dev, uint16_t* fsk_
 		}
 		set_lcr(dev, lcr);
 		spin_unlock_irqrestore(&dev->lock, flags);
-		if ((ret = my_udelay(fsk_delays[i] * 100))) {
+		if ((ret = my_udelay(dev, fsk_delays[i] * 100))) {
 			break;
 		}
 		i++;
@@ -2227,7 +2249,6 @@ static int perform_send_fsk_data_hrtimer(struct atarisio_dev* dev, uint16_t* fsk
 	uint64_t delay;
 	struct timespec ts;
 	ktime_t kt;
-	ktime_t kt2;
 
 	ktime_get_ts(&ts);
 	kt = timespec_to_ktime(ts);
@@ -2248,8 +2269,7 @@ static int perform_send_fsk_data_hrtimer(struct atarisio_dev* dev, uint16_t* fsk
 
 		/* delay is specified in units of 100usec */
 		delay = ((uint64_t)fsk_delays[i]) * 100000;
-		kt2 = ktime_add_ns(kt, delay);
-		kt = kt2;
+		kt = ktime_add_ns(kt, delay);
 
 		/*
 		PRINT_TIMESTAMP("bit %d: delay=%ld timeout=%ld\n", i, (long) delay, (long) ktime_to_ns(kt));
@@ -3451,7 +3471,7 @@ static int atarisio_init_module(void)
 	int numtried = 0;
 	atarisio_is_initialized = 0;
 
-	printk("AtariSIO kernel driver V%d.%02d (c) 2002-2009 Matthias Reichl\n",
+	printk("AtariSIO kernel driver V%d.%02d (c) 2002-2010 Matthias Reichl\n",
 		ATARISIO_MAJOR_VERSION, ATARISIO_MINOR_VERSION);
 
 	for (i=0;i<ATARISIO_MAXDEV;i++) {
