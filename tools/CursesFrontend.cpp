@@ -981,8 +981,12 @@ void CursesFrontend::DisplayCasBlock()
 		casHandler->GetCurrentBlockGap());
 
 	wmove(fCasWindow, fCasLengthY, fCasXStart);
-	wprintw(fCasWindow, "%5d",
-		casHandler->GetCurrentBlockLength());
+
+	unsigned int blocklen = casHandler->GetCurrentBlockLength();
+	if (casHandler->CurrentBlockIsFskBlock()) {
+		blocklen *= 2;
+	}
+	wprintw(fCasWindow, "%5d", blocklen);
 
 	wattrset(fCasWindow, fCasColorStandard);
 }

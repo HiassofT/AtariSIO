@@ -1,6 +1,6 @@
 AtariSIO driver and utilities V0.30
 
-Copyright (C) 2002-2008 Matthias Reichl <hias@horus.com>
+Copyright (C) 2002-2010 Matthias Reichl <hias@horus.com>
 
 This program is proteced under the terms of the GNU General Public
 License, version 2. Please read LICENSE for further details.
@@ -407,8 +407,6 @@ file you can view it's DOS2.x directory by pressing '^D'.
      one block, up/down seeks 20 blocks, pageup/down seeks to the
      previous/next part, home/end seek to the beginning/end.
      Use 'q' to exit tape emulation and return back to disk drive emulation.
-     Note: CAS image with long blocks (more than 200 bytes) are currently
-     not supported.
 
 
 4. SIO trace levels
