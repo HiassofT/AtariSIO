@@ -352,3 +352,47 @@ void MiscUtils::WaitUntil(TimestampType endTime)
 */
 }
 #endif
+
+void MiscUtils::ByteToFsk(const uint8_t byte, std::list<uint16_t>& bit_delays, unsigned int bit_time)
+{
+	int current_bit = 0;
+	int delay = bit_time; // account for start bit;
+
+	int i;
+	int mybyte = byte | 0x100;	// byte plus stop-bit
+
+	for (i=0; i<9 ;i++) {
+		if ( (mybyte & 1) == current_bit) {
+			delay += bit_time;
+		} else {
+			bit_delays.push_back(delay);
+			current_bit = mybyte & 1;
+			delay = bit_time;
+		}
+		mybyte >>= 1;
+	}
+	bit_delays.push_back(delay);
+}
+
+bool MiscUtils::DataBlockToFsk(const uint8_t* data, unsigned int data_len, uint16_t** fsk_data, unsigned int* fsk_len)
+{
+	if (data == 0 || data_len == 0 || fsk_data == 0 || fsk_len == 0) {
+		return false;
+	}
+        unsigned int i;
+        std::list<uint16_t> fsk;
+        for (i=0; i<data_len; i++) {
+                MiscUtils::ByteToFsk(data[i], fsk);
+        }
+        *fsk_len = fsk.size();
+        *fsk_data = new uint16_t[*fsk_len];
+
+        std::list< uint16_t >::const_iterator iter;
+        std::list< uint16_t >::const_iterator listend = fsk.end();
+        i = 0;
+        for (iter=fsk.begin(); iter != listend; iter++) {
+                (*fsk_data)[i++] = *iter;
+        }
+	return true;
+}
+

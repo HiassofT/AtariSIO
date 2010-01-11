@@ -153,6 +153,8 @@ public:
 	int SendRawDataNoWait(uint8_t* buf, unsigned int length);
 	int FlushWriteBuffer();
 
+	int SendFskData(uint16_t* bit_delays, unsigned int num_bits);
+
 	int GetBaudrate();
 	int GetExactBaudrate();
 

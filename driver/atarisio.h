@@ -339,8 +339,29 @@ typedef struct SIO_timestamp_struct {
 
 #define ATARISIO_IOC_FLUSH_WRITE_BUFFER	_IO( ATARISIO_IOC_MAGIC, 32)
 
+/*
+   FSK data struct used by SEND_FSK_DATA
+   the array contains the length of the single bits to be transferred,
+   in 100uS units.
+*/
+typedef struct FSK_data_struct {
+	uint16_t* bit_time;
+	unsigned int num_entries;
+} FSK_data;
 
-#define ATARISIO_IOC_MAXNR 32
+/*
+   transmit FSK (raw bit) data, compatible with the liba8cas FSK
+   extension.
+   Before transmitting the data the ioctl waits for the FIFO (and THR)
+   to empty.
+   The code then transmits alternating 0 and 1 bits (starting with a 0 bit),
+   the entries in bit_time array define the length of each bit (in units
+   of 100uS)
+*/
+
+#define ATARISIO_IOC_SEND_FSK_DATA	_IOW( ATARISIO_IOC_MAGIC, 33, FSK_data *)
+
+#define ATARISIO_IOC_MAXNR 33
 
 /*
    errno codes for DO_SIO, mainly according to

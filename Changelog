@@ -149,3 +149,4 @@ AtariSIO changelog:
   - fix compile errors with Ubuntu 9.10/glibc2.10
   - ataricom: option to output file offsets and block length in hex
   - atarisio/atariserver: first attempt to support cas files with long blocks
+  - atarisio: preliminary support for sending FSK data

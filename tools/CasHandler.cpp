@@ -22,9 +22,12 @@
 #include "CasHandler.h"
 #include "AtariDebug.h"
 #include "FileIO.h"
+#include "MiscUtils.h"
 #include <string.h>
 #include <list>
 #include <signal.h>
+
+//#define CONVERT_DATA_INTO_FSK
 
 CasHandler::CasHandler(const RCPtr<CasImage>& image, RCPtr<SIOWrapper>& siowrapper)
 	: fCasImage(image),
@@ -62,7 +65,8 @@ CasHandler::CasHandler(const RCPtr<CasImage>& image, RCPtr<SIOWrapper>& siowrapp
 		}
 		Assert(part + 1 == fCasImage->GetNumberOfParts());
 	}
-	SetupNewBlock();
+	fCurrentCasBlock = fCasImage->GetBlock(fCurrentBlockNumber);
+	fCurrentBytePos = 0;
 }
 
 CasHandler::~CasHandler()
@@ -269,6 +273,7 @@ CasHandler::EPlayResult CasHandler::DoPlaying()
 			break;
 		case eStatePlaying:
 			{
+				int ret = 0;
 				fTracer->IndicateCasStateChanged();
 				int len = GetCurrentBlockLength() - fCurrentBytePos;
 				if (len <= 0) {
@@ -281,7 +286,21 @@ CasHandler::EPlayResult CasHandler::DoPlaying()
 				//TRACE("transmit tape block part: offset = %d len = %d", fCurrentBytePos, len);
 
 				sigprocmask(SIG_BLOCK, &sigset, &orig_sigset);
-				int ret = fSIOWrapper->SendRawDataNoWait((uint8_t*) (fCurrentCasBlock->GetData() + fCurrentBytePos), len);
+#ifdef CONVERT_DATA_INTO_FSK
+				// testing fsk code, but only for blocks up to 150 bytes
+				if (GetCurrentBlockBaudRate() == 600) {
+					unsigned int fsk_len;
+					uint16_t* fsk_data;
+					MiscUtils::DataBlockToFsk(fCurrentCasBlock->GetData() + fCurrentBytePos, len,
+						&fsk_data, &fsk_len);
+					ret = fSIOWrapper->SendFskData(fsk_data, fsk_len);
+					delete[] fsk_data;
+				} else {
+					ret = fSIOWrapper->SendRawDataNoWait((uint8_t*) (fCurrentCasBlock->GetData() + fCurrentBytePos), len);
+				}
+#else
+				ret = fSIOWrapper->SendRawDataNoWait((uint8_t*) (fCurrentCasBlock->GetData() + fCurrentBytePos), len);
+#endif
 				sigprocmask(SIG_SETMASK, &orig_sigset, NULL);
 
 				fCurrentBytePos += len;

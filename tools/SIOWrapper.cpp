@@ -761,6 +761,25 @@ int SIOWrapper::FlushWriteBuffer()
 	return fLastResult;
 }
 
+int SIOWrapper::SendFskData(uint16_t* bit_delays, unsigned int num_bits)
+{
+	FSK_data fsk;
+
+	fsk.num_entries = num_bits;
+	fsk.bit_time = bit_delays;
+
+	if (fDeviceFileNo < 0) {
+		fLastResult = ENODEV;
+	} else {
+		fLastResult = ioctl(fDeviceFileNo, ATARISIO_IOC_SEND_FSK_DATA, &fsk);
+		if (fLastResult == -1) {
+			fLastResult = errno;
+		}
+	}
+	return fLastResult;
+}
+
+
 int SIOWrapper::DebugKernelStatus()
 {
 	if (fDeviceFileNo < 0) {

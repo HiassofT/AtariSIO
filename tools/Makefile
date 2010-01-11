@@ -19,7 +19,7 @@ ifdef ALL_IN_ONE
 EXECUTABLES = atarisio
 CXXFLAGS += -DALL_IN_ONE
 else
-EXECUTABLES = atariserver atarixfer adir dir2atr measure-system-latency casinfo ataricom
+EXECUTABLES = atariserver atarixfer adir dir2atr measure-system-latency casinfo ataricom test-fsk
 #	atariserver-nocurses
 #	ataridd smag24 
 #	speedy
@@ -45,6 +45,9 @@ ATARIXFER_OBJS = atarixfer.o $(COMMON_OBJS) $(ATRIMAGE_OBJS) \
 	Dos2xUtils.o VirtualImageObserver.o MyPicoDosCode.o 
 
 MEASURE_SYSTEM_LATENCY_OBJS = measure-system-latency.o $(COMMON_OBJS) \
+	SIOWrapper.o MiscUtils.o Directory.o
+
+TEST_FSK_OBJS = test-fsk.o $(COMMON_OBJS) \
 	SIOWrapper.o MiscUtils.o Directory.o
 
 TURBO_OBJS = turbo.o $(COMMON_OBJS) $(ATRIMAGE_OBJS) \
@@ -108,7 +111,7 @@ SERIALWATCHER_OBJS = serialwatcher.o SIOTracer.o FileTracer.o Error.o \
 	MiscUtils.o Directory.o
 
 CASINFO_OBJS = $(COMMON_OBJS) CasImage.o CasBlock.o CasHandler.o SIOWrapper.o \
-	casinfo.o
+	MiscUtils.o casinfo.o
 
 ATARICOM_OBJS = ComBlock.o Error.o AtariComMemory.o FileIO.o \
 	ataricom.o
@@ -135,6 +138,9 @@ atariserver-nocurses: $(ATARISERVER_NOCURSES_OBJS)
 
 measure-system-latency: $(MEASURE_SYSTEM_LATENCY_OBJS)
 	$(CXX) $(LDFLAGS) -o $@ $(MEASURE_SYSTEM_LATENCY_OBJS) $(COMMON_LIBS)
+
+test-fsk: $(TEST_FSK_OBJS)
+	$(CXX) $(LDFLAGS) -o $@ $(TEST_FSK_OBJS) $(COMMON_LIBS)
 
 atr2atp: $(ATR2ATP_OBJS)
 	$(CXX) $(LDFLAGS) -o $@ $(ATR2ATP_OBJS) $(COMMON_LIBS)

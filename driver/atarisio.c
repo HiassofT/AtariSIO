@@ -39,6 +39,12 @@
 
 #endif
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,28)
+#define ATARISIO_USE_HRTIMER
+#include <linux/hrtimer.h>
+#include <linux/ktime.h>
+#endif
+
 #include <linux/fs.h>
 #include <linux/serial.h>
 
@@ -147,9 +153,7 @@
 #define DEBUG_NOISY 2
 #define DEBUG_VERY_NOISY 3
 
-/*
 #define ATARISIO_DEBUG_TIMING
-*/
 
 /*
 #define ATARISIO_PRINT_TIMESTAMPS
@@ -229,6 +233,7 @@ static int   baud_base[ATARISIO_MAXDEV]  = { [0 ... ATARISIO_MAXDEV-1] = 0 };
 static int   ext_16c950[ATARISIO_MAXDEV] = { [0 ... ATARISIO_MAXDEV-1] = 1 };
 static int   debug = 0;
 static int   debug_irq = 0;
+static int   hrtimer = 1;
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,10)
 MODULE_PARM(minor,"i");
@@ -239,6 +244,7 @@ MODULE_PARM(baud_base,"1-" __MODULE_STRING(ATARISIO_MAXDEV) "i");
 MODULE_PARM(ext_16c950,"1-" __MODULE_STRING(ATARISIO_MAXDEV) "i");
 MODULE_PARM(debug,"i");
 MODULE_PARM(debug_irq,"i");
+MODULE_PARM(hrtimer,"i");
 #else
 module_param(minor, int, S_IRUGO);
 module_param_array(port, charp, 0, S_IRUGO);
@@ -248,6 +254,7 @@ module_param_array(baud_base, int, 0, S_IRUGO);
 module_param_array(ext_16c950, int, 0, S_IRUGO);
 module_param(debug, int, S_IRUGO | S_IWUSR);
 module_param(debug_irq, int, S_IRUGO | S_IWUSR);
+module_param(hrtimer, int, S_IRUGO | S_IWUSR);
 #endif
 
 #ifdef MODULE_PARM_DESC
@@ -259,6 +266,7 @@ MODULE_PARM_DESC(ext_16c950,"use extended 16C950 features (default: 1)");
 MODULE_PARM_DESC(minor,"minor device number (default: 240)");
 MODULE_PARM_DESC(debug,"debug level (default: 0)");
 MODULE_PARM_DESC(debug_irq,"interrupt debug level (default: 0)");
+MODULE_PARM_DESC(hrtimer,"use high resolution timers (default: 1)");
 #endif
 
 /*
@@ -637,6 +645,52 @@ static inline void reset_cmdframe_buf_data(struct atarisio_dev* dev)
 	dev->cmdframe_buf.break_chars = 0;
 	dev->cmdframe_buf.start_reception_time=0;
 	dev->cmdframe_buf.end_reception_time=0;
+}
+
+#ifndef MAX_UDELAY_MS
+#define MAX_UDELAY_MS 5
+#endif
+
+static int my_udelay(unsigned long usecs)
+{
+	uint64_t current_time, end_time, delay_time;
+
+	if (usecs <= MAX_UDELAY_MS * 1000) {
+		udelay(usecs);
+		return 0;
+	}
+
+	end_time = get_timestamp() + usecs;
+
+	while (1) {
+		current_time = get_timestamp();
+		if (current_time >= end_time) {
+			return 0;
+		}
+		delay_time = end_time - current_time;
+
+		if (delay_time <= MAX_UDELAY_MS * 1000) {
+			udelay(delay_time);
+			return 0;
+		}
+
+		if (delay_time >= 3 * 1000000 / HZ) {
+			signed long expire = delay_time * HZ / 1000000;
+			while (1) {
+				current->state = TASK_INTERRUPTIBLE;
+				expire = schedule_timeout(expire);
+				if (expire == 0) {
+					break;
+				}
+				if (signal_pending(current)) {
+					current->state=TASK_RUNNING;
+					return -EINTR;
+				}
+			}
+		} else {
+			udelay(MAX_UDELAY_MS * 1000);
+		}
+	}
 }
 
 typedef struct {
@@ -2122,6 +2176,146 @@ static int perform_send_tape_block(struct atarisio_dev* dev, unsigned long arg)
 	return ret;
 }
 
+static int perform_send_fsk_data_udelay(struct atarisio_dev* dev, uint16_t* fsk_delays, unsigned int num_entries)
+{
+	int ret = 0;
+	int bit = 0;
+	int i = 0;
+	unsigned long flags;
+	uint8_t lcr;
+
+	while (i < num_entries) {
+		spin_lock_irqsave(&dev->lock, flags);
+		if (bit) {
+			lcr = dev->serial_config.LCR & (~UART_LCR_SBC);
+			bit = 0;
+		} else {
+			lcr = dev->serial_config.LCR | UART_LCR_SBC;
+			bit = 1;
+		}
+		set_lcr(dev, lcr);
+		spin_unlock_irqrestore(&dev->lock, flags);
+		if ((ret = my_udelay(fsk_delays[i] * 100))) {
+			break;
+		}
+		i++;
+	}
+	spin_lock_irqsave(&dev->lock, flags);
+	set_lcr(dev, dev->serial_config.LCR & (~UART_LCR_SBC));
+	spin_unlock_irqrestore(&dev->lock, flags);
+
+	return ret;
+}
+
+#ifdef ATARISIO_USE_HRTIMER
+
+static int perform_send_fsk_data_hrtimer(struct atarisio_dev* dev, uint16_t* fsk_delays, unsigned int num_entries)
+{
+	int ret = 0;
+	int bit = 0;
+	int i = 0;
+	unsigned long flags;
+	uint8_t lcr;
+	uint64_t delay;
+	struct timespec ts;
+	ktime_t kt;
+	ktime_t kt2;
+
+	ktime_get_ts(&ts);
+	kt = timespec_to_ktime(ts);
+
+	PRINT_TIMESTAMP("start of send_fsk_data_hrtimer\n");
+
+	while (i < num_entries) {
+		spin_lock_irqsave(&dev->lock, flags);
+		if (bit) {
+			lcr = dev->serial_config.LCR & (~UART_LCR_SBC);
+			bit = 0;
+		} else {
+			lcr = dev->serial_config.LCR | UART_LCR_SBC;
+			bit = 1;
+		}
+		set_lcr(dev, lcr);
+		spin_unlock_irqrestore(&dev->lock, flags);
+
+		/* delay is specified in units of 100usec */
+		delay = ((uint64_t)fsk_delays[i]) * 100000;
+		kt2 = ktime_add_ns(kt, delay);
+		kt = kt2;
+
+		/*
+		PRINT_TIMESTAMP("bit %d: delay=%ld timeout=%ld\n", i, (long) delay, (long) ktime_to_ns(kt));
+		*/
+
+		while (1) {
+			current->state = TASK_INTERRUPTIBLE;
+			ret = schedule_hrtimeout(&kt, HRTIMER_MODE_ABS);
+			if (ret == 0) {
+				break;
+			}
+			DBG_PRINTK(DEBUG_STANDARD, "send_fsk_data_hrtimer: schedule_hrtimeout returned %d\n", ret);
+			if (signal_pending(current)) {
+				current->state=TASK_RUNNING;
+				ret = -EINTR;
+				break;
+			}
+		}
+
+		if (ret) {
+			break;
+		}
+		i++;
+	}
+	spin_lock_irqsave(&dev->lock, flags);
+	set_lcr(dev, dev->serial_config.LCR & (~UART_LCR_SBC));
+	spin_unlock_irqrestore(&dev->lock, flags);
+
+	ktime_get_ts(&ts);
+	kt = timespec_to_ktime(ts);
+
+	PRINT_TIMESTAMP("end of send_fsk_data_hrtimer\n");
+
+	return ret;
+}
+#endif
+
+static int perform_send_fsk_data(struct atarisio_dev* dev, unsigned long arg)
+{
+	FSK_data fsk;
+	uint16_t* fsk_delays;
+	int ret = 0;
+
+	if (copy_from_user(&fsk, (FSK_data*) arg, sizeof(FSK_data)) ) {
+		return -EFAULT;
+	}
+
+	if (fsk.num_entries == 0) {
+		return -EINVAL;
+	}
+
+	fsk_delays = kmalloc(sizeof(uint16_t) * fsk.num_entries, GFP_KERNEL);
+	if (fsk_delays == 0) {
+		return -EFAULT;
+	}
+
+	if (copy_from_user(fsk_delays, fsk.bit_time, sizeof(uint16_t) * fsk.num_entries)) {
+		kfree(fsk_delays);
+		return -EFAULT;
+	}
+
+#ifdef ATARISIO_USE_HRTIMER
+	if (hrtimer) {
+		ret = perform_send_fsk_data_hrtimer(dev, fsk_delays, fsk.num_entries);
+	} else {
+		ret = perform_send_fsk_data_udelay(dev, fsk_delays, fsk.num_entries);
+	}
+#else
+	ret = perform_send_fsk_data_udelay(dev, fsk_delays, fsk.num_entries);
+#endif
+	kfree(fsk_delays);
+	return ret;
+}
+
 static int check_command_frame_time(struct atarisio_dev* dev, int do_lock)
 {
 	unsigned long flags = 0;
@@ -2634,6 +2828,12 @@ static int atarisio_ioctl(struct inode* inode, struct file* filp,
 		break;
 	case ATARISIO_IOC_FLUSH_WRITE_BUFFER:
 		ret = wait_send(dev, 0, SEND_MODE_WAIT_ALL);
+		break;
+	case ATARISIO_IOC_SEND_FSK_DATA:
+		if ((ret = wait_send(dev, 0, SEND_MODE_WAIT_ALL))) {
+			break;
+		}
+		ret = perform_send_fsk_data(dev, arg);
 		break;
 	default:
 		ret = -EINVAL;
@@ -3296,6 +3496,11 @@ static int atarisio_init_module(void)
 		PRINTK_NODEV("failed to register any devices\n");
 		return -ENODEV;
 	}
+#ifndef ATARISIO_USE_HRTIMER
+	if (hrtimer) {
+		PRINTK_NODEV("warning: high resolution timers are not available\n");
+	}
+#endif
 	atarisio_is_initialized = 1;
 	return 0;
 }

@@ -25,6 +25,7 @@
 #include <stdint.h>
 #include "DiskImage.h"
 #include "Dos2xUtils.h"
+#include <list>
 #ifndef WINVER
 #include <sys/time.h>
 #endif
@@ -73,6 +74,10 @@ namespace MiscUtils {
 	bool PokeyDivisorToBaudrate(unsigned int divisor, unsigned int& baudrate, bool enable_calculated_speed = true);
 
 	bool ParseHighSpeedParameters(const char* string, uint8_t& pokeyDivisor, unsigned int& baudrate, bool enable_calculated_speed = true);
+
+	void ByteToFsk(const uint8_t byte, std::list<uint16_t>& bit_delays, unsigned int bit_time = 16);
+
+	bool DataBlockToFsk(const uint8_t* data, unsigned int data_len, uint16_t** fsk_data, unsigned int* fsk_len);
 
 };
 
