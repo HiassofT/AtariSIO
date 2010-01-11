@@ -233,7 +233,12 @@ static int   baud_base[ATARISIO_MAXDEV]  = { [0 ... ATARISIO_MAXDEV-1] = 0 };
 static int   ext_16c950[ATARISIO_MAXDEV] = { [0 ... ATARISIO_MAXDEV-1] = 1 };
 static int   debug = 0;
 static int   debug_irq = 0;
+#ifdef ATARISIO_USE_HRTIMER
 static int   hrtimer = 1;
+#else
+static int   hrtimer = 0;
+#endif
+
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,10)
 MODULE_PARM(minor,"i");
@@ -266,7 +271,7 @@ MODULE_PARM_DESC(ext_16c950,"use extended 16C950 features (default: 1)");
 MODULE_PARM_DESC(minor,"minor device number (default: 240)");
 MODULE_PARM_DESC(debug,"debug level (default: 0)");
 MODULE_PARM_DESC(debug_irq,"interrupt debug level (default: 0)");
-MODULE_PARM_DESC(hrtimer,"use high resolution timers (default: 1)");
+MODULE_PARM_DESC(hrtimer,"use high resolution timers (default: 1, if available)");
 #endif
 
 /*
@@ -653,7 +658,8 @@ static inline void reset_cmdframe_buf_data(struct atarisio_dev* dev)
 
 static int my_udelay(unsigned long usecs)
 {
-	uint64_t current_time, end_time, delay_time;
+	uint64_t current_time, end_time;
+	long delay_time;
 
 	if (usecs <= MAX_UDELAY_MS * 1000) {
 		udelay(usecs);
@@ -675,7 +681,7 @@ static int my_udelay(unsigned long usecs)
 		}
 
 		if (delay_time >= 3 * 1000000 / HZ) {
-			signed long expire = delay_time * HZ / 1000000;
+			long expire = delay_time * HZ / 1000000;
 			while (1) {
 				current->state = TASK_INTERRUPTIBLE;
 				expire = schedule_timeout(expire);
@@ -2184,6 +2190,7 @@ static int perform_send_fsk_data_udelay(struct atarisio_dev* dev, uint16_t* fsk_
 	unsigned long flags;
 	uint8_t lcr;
 
+	PRINT_TIMESTAMP("start of send_fsk_data_udelay\n");
 	while (i < num_entries) {
 		spin_lock_irqsave(&dev->lock, flags);
 		if (bit) {
@@ -2203,6 +2210,7 @@ static int perform_send_fsk_data_udelay(struct atarisio_dev* dev, uint16_t* fsk_
 	spin_lock_irqsave(&dev->lock, flags);
 	set_lcr(dev, dev->serial_config.LCR & (~UART_LCR_SBC));
 	spin_unlock_irqrestore(&dev->lock, flags);
+	PRINT_TIMESTAMP("end of send_fsk_data_udelay\n");
 
 	return ret;
 }
