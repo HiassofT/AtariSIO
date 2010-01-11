@@ -1,7 +1,7 @@
 /*
    atarixfer.cpp - transfer disk images from/to an Atari disk drive
 
-   Copyright (C) 2002-2004 Matthias Reichl <hias@horus.com>
+   Copyright (C) 2002-2010 Matthias Reichl <hias@horus.com>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -619,7 +619,7 @@ int main(int argc, char** argv)
 
 	char* atarisioDevName = getenv("ATARIXFER_DEVICE");
 
-	printf("atarixfer %s\n(c) 2002-2009 by Matthias Reichl <hias@horus.com>\n\n",VERSION_STRING);
+	printf("atarixfer %s\n(c) 2002-2010 by Matthias Reichl <hias@horus.com>\n\n",VERSION_STRING);
 	while(!finished) {
 		c = getopt(argc, argv, "prw12345678df:sStx");
 		if (c == -1) {

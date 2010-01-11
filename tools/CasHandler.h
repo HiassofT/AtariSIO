@@ -43,6 +43,9 @@ public:
 	unsigned int GetCurrentBlockLength() const;
 	inline unsigned int GetCurrentBytePos() const;
 
+	unsigned int CurrentBlockIsDataBlock() const;
+	unsigned int CurrentBlockIsFskBlock() const;
+
 	unsigned int GetNumberOfBlocks() const;
 	unsigned int GetNumberOfParts() const;
 
@@ -152,5 +155,23 @@ inline unsigned int CasHandler::GetCurrentBytePos() const
 inline CasHandler::EState CasHandler::GetState() const
 {
 	return fState;
+}
+
+inline unsigned int CasHandler::CurrentBlockIsDataBlock() const
+{
+	if (fCurrentCasBlock.IsNotNull()) {
+		return fCurrentCasBlock->IsDataBlock();
+	} else {
+		return false;
+	}
+}
+
+inline unsigned int CasHandler::CurrentBlockIsFskBlock() const
+{
+	if (fCurrentCasBlock.IsNotNull()) {
+		return fCurrentCasBlock->IsFskBlock();
+	} else {
+		return false;
+	}
 }
 #endif

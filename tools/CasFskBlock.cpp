@@ -1,5 +1,5 @@
 /*
-   CasBlock - base class for CasBlockData and CasBlockFsk
+   CasFskBlock - standard data CAS block
 
    (c) 2007-2010 Matthias Reichl <hias@horus.com>
 
@@ -18,29 +18,35 @@
    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-#include "CasBlock.h"
+#include "CasFskBlock.h"
 #include <string.h>
 
-CasBlock::CasBlock(
+CasFskBlock::CasFskBlock(
 	unsigned int gap,
 	unsigned int length,
+	uint8_t* data,
 	unsigned int partnumber)
-	: fGap(gap),
-	  fLength(length),
-	  fPartNumber(partnumber)
+	: super(gap, length/2, partnumber)
 {
+	if (fLength) {
+		unsigned int i;
+		fFskData = new uint16_t[fLength];
+		for (i=0; i<fLength; i++) {
+			fFskData[i] = data[i*2] | (data[i*2+1] << 8);
+		}
+	} else {
+		fFskData = 0;
+	}
 }
 
-CasBlock::~CasBlock()
+CasFskBlock::~CasFskBlock()
 {
+	if (fFskData) {
+		delete[] fFskData;
+	}
 }
 
-bool CasBlock::IsDataBlock() const
+bool CasFskBlock::IsFskBlock() const
 {
-	return false;
-}
-
-bool CasBlock::IsFskBlock() const
-{
-	return false;
+	return true;
 }

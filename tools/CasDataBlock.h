@@ -1,5 +1,8 @@
+#ifndef CASDATABLOCK_H
+#define CASDATABLOCK_H
+
 /*
-   CasBlock - base class for CasBlockData and CasBlockFsk
+   CasDataBlock - standard data CAS block
 
    (c) 2007-2010 Matthias Reichl <hias@horus.com>
 
@@ -19,28 +22,36 @@
 */
 
 #include "CasBlock.h"
-#include <string.h>
 
-CasBlock::CasBlock(
-	unsigned int gap,
-	unsigned int length,
-	unsigned int partnumber)
-	: fGap(gap),
-	  fLength(length),
-	  fPartNumber(partnumber)
+class CasDataBlock : public CasBlock {
+public:
+	CasDataBlock(unsigned int gap, unsigned int length, uint8_t* data, unsigned int baudrate, unsigned int partNumber = 1);
+
+	inline unsigned int GetBaudRate() const;
+	inline const uint8_t* GetData() const;
+
+	virtual bool IsDataBlock() const;
+
+protected:
+
+	virtual ~CasDataBlock();
+
+private:
+	typedef CasBlock super;
+
+	uint8_t* fData;
+
+	unsigned int fBaudRate;
+};
+
+inline unsigned int CasDataBlock::GetBaudRate() const
 {
+	return fBaudRate;
 }
 
-CasBlock::~CasBlock()
+inline const uint8_t* CasDataBlock::GetData() const
 {
+	return fData;
 }
 
-bool CasBlock::IsDataBlock() const
-{
-	return false;
-}
-
-bool CasBlock::IsFskBlock() const
-{
-	return false;
-}
+#endif

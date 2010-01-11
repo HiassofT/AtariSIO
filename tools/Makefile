@@ -38,7 +38,7 @@ CXXFLAGS += $(ZLIB_CFLAGS) $(NCURSES_CFLAGS)
 COMMON_OBJS = DiskImage.o FileIO.o SIOTracer.o FileTracer.o Error.o
 
 ATRIMAGE_OBJS = AtrImage.o AtrMemoryImage.o DCMCodec.o \
-	CasBlock.o CasImage.o
+	CasBlock.o CasDataBlock.o CasFskBlock.o CasImage.o
 
 ATARIXFER_OBJS = atarixfer.o $(COMMON_OBJS) $(ATRIMAGE_OBJS) \
 	SIOWrapper.o MiscUtils.o Directory.o \
@@ -110,8 +110,8 @@ DIR2ATR_OBJS = dir2atr.o $(COMMON_OBJS) $(ATRIMAGE_OBJS) \
 SERIALWATCHER_OBJS = serialwatcher.o SIOTracer.o FileTracer.o Error.o \
 	MiscUtils.o Directory.o
 
-CASINFO_OBJS = $(COMMON_OBJS) CasImage.o CasBlock.o CasHandler.o SIOWrapper.o \
-	MiscUtils.o casinfo.o
+CASINFO_OBJS = $(COMMON_OBJS) CasImage.o CasBlock.o CasDataBlock.o CasFskBlock.o \
+	CasHandler.o SIOWrapper.o MiscUtils.o casinfo.o
 
 ATARICOM_OBJS = ComBlock.o Error.o AtariComMemory.o FileIO.o \
 	ataricom.o
@@ -161,10 +161,10 @@ DIR2ATR_OBJS = dir2atr.o $(COMMON_OBJS) $(ATRIMAGE_OBJS) \
 COMMON_OBJS = DiskImage.o FileIO.o SIOTracer.o FileTracer.o Error.o
 
 ATRIMAGE_OBJS = AtrImage.o AtrMemoryImage.o DCMCodec.o \
-        CasBlock.o CasImage.o
+        CasBlock.o CasDataBlock.o CasFskBlock.o CasImage.o
 
 dir2atr.exe: dir2atr.cpp DiskImage.cpp FileIO.cpp SIOTracer.cpp FileTracer.cpp Error.cpp \
-	AtrImage.cpp AtrMemoryImage.cpp DCMCodec.cpp CasBlock.cpp CasImage.cpp \
+	AtrImage.cpp AtrMemoryImage.cpp DCMCodec.cpp CasBlock.cpp CasDataBlock.o CasFskBlock.o CasImage.cpp \
 	Dos2xUtils.cpp VirtualImageObserver.cpp Directory.cpp MiscUtils.cpp MyPicoDosCode.cpp \
 	winver.cpp
 	i586-mingw32msvc-g++ -W -Wall -DATARISIO_DEBUG -DWINVER -o $@ $^

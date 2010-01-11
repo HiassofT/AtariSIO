@@ -1,7 +1,7 @@
 /*
    ataricom - list and manipulate blocks of a Atari COM file
 
-   Copyright (C) 2008 Matthias Reichl <hias@horus.com>
+   Copyright (C) 2008-2010 Matthias Reichl <hias@horus.com>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -189,7 +189,7 @@ int main(int argc, char** argv)
 
 	RCPtr<AtariComMemory> memory;
 
-	std::cout << "ataricom V" << VERSION_STRING << " (c) 2008-2009 by Matthias Reichl <hias@horus.com>" << std::endl;
+	std::cout << "ataricom V" << VERSION_STRING << " (c) 2008-2010 by Matthias Reichl <hias@horus.com>" << std::endl;
 
 	for (idx = 1; idx < argc; idx++) {
 		char * arg = argv[idx];

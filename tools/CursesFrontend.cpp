@@ -969,8 +969,12 @@ void CursesFrontend::DisplayCasBlock()
 	wmove(fCasWindow, fCasBaudY, fCasXStart);
 	wattrset(fCasWindow, fCasColorInfo);
 
-	wprintw(fCasWindow, "%5d",
-		casHandler->GetCurrentBlockBaudRate());
+	if (casHandler->CurrentBlockIsDataBlock()) {
+		wprintw(fCasWindow, "%5d      ",
+			casHandler->GetCurrentBlockBaudRate());
+	} else {
+		waddstr(fCasWindow,"  n/a (fsk)");
+	}
 
 	wmove(fCasWindow, fCasGapY, fCasXStart);
 	wprintw(fCasWindow, "%5d",

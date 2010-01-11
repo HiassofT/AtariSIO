@@ -1,5 +1,8 @@
+#ifndef CASFSKBLOCK_H
+#define CASFSKBLOCK_H
+
 /*
-   CasBlock - base class for CasBlockData and CasBlockFsk
+   CasFskBlock - extended fsk CAS block
 
    (c) 2007-2010 Matthias Reichl <hias@horus.com>
 
@@ -19,28 +22,30 @@
 */
 
 #include "CasBlock.h"
-#include <string.h>
 
-CasBlock::CasBlock(
-	unsigned int gap,
-	unsigned int length,
-	unsigned int partnumber)
-	: fGap(gap),
-	  fLength(length),
-	  fPartNumber(partnumber)
+class CasFskBlock : public CasBlock {
+public:
+	CasFskBlock(unsigned int gap, unsigned int byte_length, uint8_t* data, unsigned int partNumber = 1);
+
+	inline const uint16_t* GetFskData() const;
+
+	virtual bool IsFskBlock() const;
+
+protected:
+
+	virtual ~CasFskBlock();
+
+private:
+	typedef CasBlock super;
+
+	uint16_t* fFskData;
+
+	unsigned int fPartNumber;
+};
+
+inline const uint16_t* CasFskBlock::GetFskData() const
 {
+	return fFskData;
 }
 
-CasBlock::~CasBlock()
-{
-}
-
-bool CasBlock::IsDataBlock() const
-{
-	return false;
-}
-
-bool CasBlock::IsFskBlock() const
-{
-	return false;
-}
+#endif

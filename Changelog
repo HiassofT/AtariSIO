@@ -150,3 +150,4 @@ AtariSIO changelog:
   - ataricom: option to output file offsets and block length in hex
   - atarisio/atariserver: first attempt to support cas files with long blocks
   - atarisio: preliminary support for sending FSK data
+  - atariserver: support for CAS files with FSK blocks

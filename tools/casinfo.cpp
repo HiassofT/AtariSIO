@@ -1,7 +1,7 @@
 /*
    casinfo - print infos about CAS image
 
-   (c) 2007 Matthias Reichl <hias@horus.com>
+   (c) 2007-2010 Matthias Reichl <hias@horus.com>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -19,6 +19,8 @@
 */
 
 #include "CasHandler.h"
+#include "CasDataBlock.h"
+#include "CasFskBlock.h"
 #include "CasImage.h"
 #include "SIOTracer.h"
 #include "SIOWrapper.h"
@@ -29,7 +31,7 @@
 
 int main(int argc, char** argv)
 {
-	printf("casinfo " VERSION_STRING " (c) 2007-2008 Matthias Reichl\n");
+	printf("casinfo " VERSION_STRING " (c) 2007-2010 Matthias Reichl\n");
 
 	if (argc < 2) {
 		printf("usage: casinfo file.cas ...\n");
@@ -78,12 +80,21 @@ int main(int argc, char** argv)
 		unsigned int i;
 		for (i=0; i<total_blocks; i++) {
 			RCPtr<CasBlock> block = image->GetBlock(i);
+			unsigned int baud = 0;
+			bool is_fsk = false;
+
+			if (block->IsDataBlock()) {
+				baud = RCPtrStaticCast<CasDataBlock>(block)->GetBaudRate();
+			} else {
+				is_fsk = true;
+			}
 
 			if (block) {
-				printf("%4d:  part: %2d  baud: %5d  gap: %5d  length: %5d\n",
+				printf("%4d:  %s part: %2d  baud: %5d  gap: %5d  length: %5d\n",
 					i, 
+					is_fsk ? "fsk " : "data",
 					block->GetPartNumber(),
-					block->GetBaudRate(), block->GetGap(), block->GetLength());
+					baud, block->GetGap(), block->GetLength());
 			} else {
 				printf("%4d:  ERROR getting block\n", i);
 			}

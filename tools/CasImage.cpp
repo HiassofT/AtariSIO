@@ -19,6 +19,8 @@
 */
 
 #include "CasImage.h"
+#include "CasDataBlock.h"
+#include "CasFskBlock.h"
 #include "AtariDebug.h"
 #include "FileIO.h"
 #include <string.h>
@@ -90,6 +92,10 @@ CasImage::EBlockType CasImage::ReadBlockFromFile(
 
 	if (memcmp(buf, "data", 4) == 0) {
 		type = eDataBlock;
+	}
+
+	if (memcmp(buf, "fsk ", 4) == 0) {
+		type = eFskBlock;
 	}
 
 	if (length && (type != eUnknownBlock || readUnknownBlockData) ) {
@@ -171,11 +177,23 @@ bool CasImage::ReadImageFromFile(const char* filename)
 		case eDataBlock:
 			{
 				//ALOG("data block: gap: %d len: %d", aux, length);
-				RCPtr<CasBlock> block;
+				RCPtr<CasDataBlock> block;
 				if (fNumberOfBlocks > 0 && aux > 5000) {
 					partno++;
 				}
-				block = new CasBlock(baudrate, aux, length, fTempBuf, partno);
+				block = new CasDataBlock(aux, length, fTempBuf, baudrate, partno);
+				blocklist.push_back(block);
+				fNumberOfBlocks++;
+			}
+			break;
+		case eFskBlock:
+			{
+				//ALOG("data block: gap: %d len: %d", aux, length);
+				RCPtr<CasFskBlock> block;
+				if (fNumberOfBlocks > 0 && aux > 5000) {
+					partno++;
+				}
+				block = new CasFskBlock(aux, length, fTempBuf, partno);
 				blocklist.push_back(block);
 				fNumberOfBlocks++;
 			}

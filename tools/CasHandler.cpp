@@ -20,6 +20,8 @@
 */
 
 #include "CasHandler.h"
+#include "CasDataBlock.h"
+#include "CasFskBlock.h"
 #include "AtariDebug.h"
 #include "FileIO.h"
 #include "MiscUtils.h"
@@ -87,7 +89,11 @@ unsigned int CasHandler::GetCurrentPartNumber() const
 
 unsigned int CasHandler::GetCurrentBlockBaudRate() const
 {
-	return fCurrentCasBlock->GetBaudRate();
+	if (fCurrentCasBlock->IsDataBlock()) {
+		return RCPtrStaticCast<CasDataBlock>(fCurrentCasBlock)->GetBaudRate();
+	} else {
+		return 0; // dummy
+	}
 }
 
 unsigned int CasHandler::GetCurrentBlockGap() const
@@ -105,7 +111,9 @@ void CasHandler::SetupNewBlock()
 	fCurrentCasBlock = fCasImage->GetBlock(fCurrentBlockNumber);
 	fCurrentBytePos = 0;
 	fBlockStartTime = MiscUtils::GetCurrentTime() + GetCurrentBlockGap() * 1000;
-	fSIOWrapper->SetTapeBaudrate(GetCurrentBlockBaudRate() * fTapeSpeedPercent / 100);
+	if (fCurrentCasBlock->IsDataBlock()) {
+		fSIOWrapper->SetTapeBaudrate(GetCurrentBlockBaudRate() * fTapeSpeedPercent / 100);
+	}
 }
 
 
@@ -286,21 +294,28 @@ CasHandler::EPlayResult CasHandler::DoPlaying()
 				//TRACE("transmit tape block part: offset = %d len = %d", fCurrentBytePos, len);
 
 				sigprocmask(SIG_BLOCK, &sigset, &orig_sigset);
-#ifdef CONVERT_DATA_INTO_FSK
-				// testing fsk code, but only for blocks up to 150 bytes
-				if (GetCurrentBlockBaudRate() == 600) {
-					unsigned int fsk_len;
-					uint16_t* fsk_data;
-					MiscUtils::DataBlockToFsk(fCurrentCasBlock->GetData() + fCurrentBytePos, len,
-						&fsk_data, &fsk_len);
-					ret = fSIOWrapper->SendFskData(fsk_data, fsk_len);
-					delete[] fsk_data;
+
+				if (fCurrentCasBlock->IsFskBlock()) {
+					uint16_t* fsk_data = (uint16_t*) RCPtrStaticCast<CasFskBlock>(fCurrentCasBlock)->GetFskData();
+					ret = fSIOWrapper->SendFskData(fsk_data + fCurrentBytePos, len);
 				} else {
-					ret = fSIOWrapper->SendRawDataNoWait((uint8_t*) (fCurrentCasBlock->GetData() + fCurrentBytePos), len);
-				}
+					uint8_t* data = (uint8_t*) RCPtrStaticCast<CasDataBlock>(fCurrentCasBlock)->GetData();
+#ifdef CONVERT_DATA_INTO_FSK
+					// testing fsk code, but only for blocks up to 150 bytes
+					if (GetCurrentBlockBaudRate() == 600) {
+						unsigned int fsk_len;
+						uint16_t* fsk_data;
+						MiscUtils::DataBlockToFsk(data + fCurrentBytePos, len,
+							&fsk_data, &fsk_len);
+						ret = fSIOWrapper->SendFskData(fsk_data, fsk_len);
+						delete[] fsk_data;
+					} else {
+						ret = fSIOWrapper->SendRawDataNoWait(data + fCurrentBytePos, len);
+					}
 #else
-				ret = fSIOWrapper->SendRawDataNoWait((uint8_t*) (fCurrentCasBlock->GetData() + fCurrentBytePos), len);
+					ret = fSIOWrapper->SendRawDataNoWait(data + fCurrentBytePos, len);
 #endif
+				}
 				sigprocmask(SIG_SETMASK, &orig_sigset, NULL);
 
 				fCurrentBytePos += len;

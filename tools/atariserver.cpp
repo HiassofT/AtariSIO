@@ -2,7 +2,7 @@
    atariserver.cpp - implementation of an Atari SIO server, using
    a curses frontend
 
-   Copyright (C) 2003-2009 Matthias Reichl <hias@horus.com>
+   Copyright (C) 2003-2010 Matthias Reichl <hias@horus.com>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -393,7 +393,7 @@ int main(int argc, char** argv)
 	}
 
 	if (wantHelp) {
-		printf("atariserver " VERSION_STRING " (c) 2002-2009 Matthias Reichl\n");
+		printf("atariserver " VERSION_STRING " (c) 2002-2010 Matthias Reichl\n");
 		printf("usage: [-f device] [-cChmsStX] [-o file] [-P c|l|r file]\n");
 		printf("       [ [-12345678] [-p] (-V dens dir)|file  ... ]\n");
 		printf("-h            display help\n");

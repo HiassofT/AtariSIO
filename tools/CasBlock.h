@@ -2,9 +2,9 @@
 #define CASBLOCK_H
 
 /*
-   CasBlock - one single block of a CAS image
+   CasBlock - base class for CasBlockData and CasBlockFsk
 
-   (c) 2007 Matthias Reichl <hias@horus.com>
+   (c) 2007-2010 Matthias Reichl <hias@horus.com>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -28,34 +28,23 @@
 
 class CasBlock : public RefCounted {
 public:
-	CasBlock(unsigned int baudrate, unsigned int gap, unsigned int length, uint8_t* data, unsigned int partNumber = 1);
-
-	unsigned int GetBaudRate() const;
-	unsigned int GetGap() const;
-	unsigned int GetLength() const;
-	const uint8_t* GetData() const;
+	inline unsigned int GetGap() const;
+	inline unsigned int GetLength() const;
 
 	void SetPartNumber(unsigned int part);
 	unsigned int GetPartNumber() const;
 
-protected:
+	virtual bool IsDataBlock() const;
+	virtual bool IsFskBlock() const;
 
+protected:
+	CasBlock(unsigned int gap, unsigned int length, unsigned int partNumber);
 	virtual ~CasBlock();
 
-private:
-
-	unsigned int fBaudRate;
 	unsigned int fGap;
 	unsigned int fLength;
-	uint8_t* fData;
-
 	unsigned int fPartNumber;
 };
-
-inline unsigned int CasBlock::GetBaudRate() const
-{
-	return fBaudRate;
-}
 
 inline unsigned int CasBlock::GetGap() const
 {
@@ -65,11 +54,6 @@ inline unsigned int CasBlock::GetGap() const
 inline unsigned int CasBlock::GetLength() const
 {
 	return fLength;
-}
-
-inline const uint8_t* CasBlock::GetData() const
-{
-	return fData;
 }
 
 inline void CasBlock::SetPartNumber(unsigned int part)

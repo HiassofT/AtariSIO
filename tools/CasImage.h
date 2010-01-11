@@ -58,7 +58,8 @@ private:
 		eUnknownBlock = 2,
 		eFujiBlock = 3,
 		eBaudBlock = 4,
-		eDataBlock = 5
+		eDataBlock = 5,
+		eFskBlock = 6
 	};
 
 	EBlockType ReadBlockFromFile(
