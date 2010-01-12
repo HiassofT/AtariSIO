@@ -2855,7 +2855,9 @@ static int atarisio_ioctl(struct inode* inode, struct file* filp,
 		PRINT_TIMESTAMP("end send raw data nowait\n");
 		break;
 	case ATARISIO_IOC_FLUSH_WRITE_BUFFER:
+		PRINT_TIMESTAMP("begin flush write buffer\n");
 		ret = wait_send(dev, 0, SEND_MODE_WAIT_ALL);
+		PRINT_TIMESTAMP("end flush write buffer\n");
 		break;
 	case ATARISIO_IOC_SEND_FSK_DATA:
 		if ((ret = wait_send(dev, 0, SEND_MODE_WAIT_ALL))) {
