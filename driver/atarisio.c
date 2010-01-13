@@ -655,6 +655,8 @@ static inline void reset_cmdframe_buf_data(struct atarisio_dev* dev)
 	dev->cmdframe_buf.end_reception_time=0;
 }
 
+#if 0
+
 #ifndef MAX_UDELAY_MS
 #define MAX_UDELAY_MS 5
 #endif
@@ -683,8 +685,9 @@ static int my_udelay(struct atarisio_dev* dev, unsigned long usecs)
 			return 0;
 		}
 
-		if (delay_time >= 100 * 1000000) {
-			long expire = (delay_time - 50 * 1000000) * HZ / 1000000;
+		/* use schedule_timeout when delaying for more than 100ms */
+		if (delay_time >= 100 * 1000) {
+			long expire = (delay_time - 50 * 1000) * HZ / 1000000;
 			PRINT_TIMESTAMP("my_udelay: using schedule_timeout(%ld) since delay is %ld\n", expire, delay_time);
 			while (1) {
 				current->state = TASK_INTERRUPTIBLE;
@@ -704,6 +707,7 @@ static int my_udelay(struct atarisio_dev* dev, unsigned long usecs)
 		}
 	}
 }
+#endif
 
 typedef struct {
 	unsigned int baudrate;
@@ -2204,15 +2208,19 @@ static int perform_send_tape_block(struct atarisio_dev* dev, unsigned long arg)
 	return ret;
 }
 
-static int perform_send_fsk_data_udelay(struct atarisio_dev* dev, uint16_t* fsk_delays, unsigned int num_entries)
+static int perform_send_fsk_data_busywait(struct atarisio_dev* dev, uint16_t* fsk_delays, unsigned int num_entries)
 {
 	int ret = 0;
 	int bit = 0;
 	int i = 0;
 	unsigned long flags;
 	uint8_t lcr;
+	uint64_t current_time, start_time, end_time;
+	long delay;
 
 	PRINT_TIMESTAMP("start of send_fsk_data_udelay\n");
+	end_time = get_timestamp();
+
 	while (i < num_entries) {
 		spin_lock_irqsave(&dev->lock, flags);
 		if (bit) {
@@ -2224,11 +2232,42 @@ static int perform_send_fsk_data_udelay(struct atarisio_dev* dev, uint16_t* fsk_
 		}
 		set_lcr(dev, lcr);
 		spin_unlock_irqrestore(&dev->lock, flags);
-		if ((ret = my_udelay(dev, fsk_delays[i] * 100))) {
-			break;
+
+		start_time = end_time;
+		end_time += fsk_delays[i] * 100;
+
+		while ((current_time = get_timestamp()) < end_time) {
+			if (current_time < start_time) {
+				DBG_PRINTK(DEBUG_STANDARD,
+					"send_fsk error: current time (%lld) < start time (%lld)!\n",
+					current_time, start_time);
+				ret = -EINVAL;
+				goto exit_fsk;
+			}
+			delay = end_time - current_time;
+
+			/* use schedule_timeout when delaying for more than 50ms */
+			if (delay >= 50 * 1000) {
+				/* leave at least 30ms slack time so we don't get caught by timing inaccuracy */
+				long expire = (delay - 20 * 1000) * HZ / 1000000;
+				PRINT_TIMESTAMP("send_fsk: using schedule_timeout(%ld) since delay is %ld\n", expire, delay);
+
+				current->state = TASK_INTERRUPTIBLE;
+				expire = schedule_timeout(expire);
+				current->state=TASK_RUNNING;
+
+				PRINT_TIMESTAMP("send_fsk: schedule_timeout() returned %ld\n", expire);
+
+				if (signal_pending(current)) {
+					current->state=TASK_RUNNING;
+					ret = -EINTR;
+					goto exit_fsk;
+				}
+			}
 		}
 		i++;
 	}
+exit_fsk:
 	spin_lock_irqsave(&dev->lock, flags);
 	set_lcr(dev, dev->serial_config.LCR & (~UART_LCR_SBC));
 	spin_unlock_irqrestore(&dev->lock, flags);
@@ -2335,10 +2374,10 @@ static int perform_send_fsk_data(struct atarisio_dev* dev, unsigned long arg)
 	if (hrtimer) {
 		ret = perform_send_fsk_data_hrtimer(dev, fsk_delays, fsk.num_entries);
 	} else {
-		ret = perform_send_fsk_data_udelay(dev, fsk_delays, fsk.num_entries);
+		ret = perform_send_fsk_data_busywait(dev, fsk_delays, fsk.num_entries);
 	}
 #else
-	ret = perform_send_fsk_data_udelay(dev, fsk_delays, fsk.num_entries);
+	ret = perform_send_fsk_data_busywait(dev, fsk_delays, fsk.num_entries);
 #endif
 	kfree(fsk_delays);
 	return ret;
