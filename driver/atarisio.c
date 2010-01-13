@@ -655,59 +655,6 @@ static inline void reset_cmdframe_buf_data(struct atarisio_dev* dev)
 	dev->cmdframe_buf.end_reception_time=0;
 }
 
-#if 0
-
-#ifndef MAX_UDELAY_MS
-#define MAX_UDELAY_MS 5
-#endif
-
-static int my_udelay(struct atarisio_dev* dev, unsigned long usecs)
-{
-	uint64_t current_time, end_time;
-	long delay_time;
-
-	if (usecs <= MAX_UDELAY_MS * 1000) {
-		udelay(usecs);
-		return 0;
-	}
-
-	end_time = get_timestamp() + usecs;
-
-	while (1) {
-		current_time = get_timestamp();
-		if (current_time >= end_time) {
-			return 0;
-		}
-		delay_time = end_time - current_time;
-
-		if (delay_time <= MAX_UDELAY_MS * 1000) {
-			udelay(delay_time);
-			return 0;
-		}
-
-		/* use schedule_timeout when delaying for more than 100ms */
-		if (delay_time >= 100 * 1000) {
-			long expire = (delay_time - 50 * 1000) * HZ / 1000000;
-			PRINT_TIMESTAMP("my_udelay: using schedule_timeout(%ld) since delay is %ld\n", expire, delay_time);
-			while (1) {
-				current->state = TASK_INTERRUPTIBLE;
-				expire = schedule_timeout(expire);
-				PRINT_TIMESTAMP("my_udelay: schedule_timeout() returned %ld\n", expire);
-				if (expire == 0) {
-					current->state=TASK_RUNNING;
-					break;
-				}
-				if (signal_pending(current)) {
-					current->state=TASK_RUNNING;
-					return -EINTR;
-				}
-			}
-		} else {
-			udelay(MAX_UDELAY_MS * 1000);
-		}
-	}
-}
-#endif
 
 typedef struct {
 	unsigned int baudrate;

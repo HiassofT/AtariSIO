@@ -148,6 +148,6 @@ AtariSIO changelog:
   - dir2atr: added support for XDOS 2.43F and XDOS 2.43N
   - fix compile errors with Ubuntu 9.10/glibc2.10
   - ataricom: option to output file offsets and block length in hex
-  - atarisio/atariserver: first attempt to support cas files with long blocks
-  - atarisio: preliminary support for sending FSK data
+  - atarisio/atariserver: support cas files with long blocks
+  - atarisio: experimental support for sending FSK data
   - atariserver: support for CAS files with FSK blocks
