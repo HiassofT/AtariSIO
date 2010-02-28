@@ -22,6 +22,8 @@
    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
+#include <linux/types.h>
+
 #define ATARISIO_MAJOR_VERSION 1
 #define ATARISIO_MINOR_VERSION 6
 #define ATARISIO_VERSION_MAGIC 42
