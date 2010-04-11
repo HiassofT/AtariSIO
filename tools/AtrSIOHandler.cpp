@@ -148,8 +148,8 @@ int AtrSIOHandler::ProcessCommandFrame(SIO_command_frame& frame, const RCPtr<SIO
 			}
 		} else {
 			buf[0] |= 0x20; /* double density */
-			if (fEnableXF551Mode && (fFormatConfig.fNumberOfSectors == 1440) ) {
-				buf[0] |= 0x80; /* XF551 QD sets both DD and ED flags */
+			if (fFormatConfig.fNumberOfSectors == 1440) {
+				buf[0] |= 0x40; /* XF551 QD sets both DD bit and bit 6 (?) */
 			}
 		}
 		buf[1] = fLastFDCStatus;
