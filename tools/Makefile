@@ -124,6 +124,8 @@ endif
 
 all: asmcode $(EXECUTABLES)
 
+win32: ataricom.exe dir2atr.exe
+
 asmcode:
 	$(MAKE) -C 6502
 
@@ -164,7 +166,7 @@ ATRIMAGE_OBJS = AtrImage.o AtrMemoryImage.o DCMCodec.o \
         CasBlock.o CasDataBlock.o CasFskBlock.o CasImage.o
 
 dir2atr.exe: dir2atr.cpp DiskImage.cpp FileIO.cpp SIOTracer.cpp FileTracer.cpp Error.cpp \
-	AtrImage.cpp AtrMemoryImage.cpp DCMCodec.cpp CasBlock.cpp CasDataBlock.o CasFskBlock.o CasImage.cpp \
+	AtrImage.cpp AtrMemoryImage.cpp DCMCodec.cpp CasBlock.cpp CasDataBlock.cpp CasFskBlock.cpp CasImage.cpp \
 	Dos2xUtils.cpp VirtualImageObserver.cpp Directory.cpp MiscUtils.cpp MyPicoDosCode.cpp \
 	winver.cpp
 	i586-mingw32msvc-g++ -W -Wall -DATARISIO_DEBUG -DWINVER -o $@ $^
@@ -180,7 +182,8 @@ ataricom: $(ATARICOM_OBJS)
 	$(CXX) $(LDFLAGS) -o $@ $(ATARICOM_OBJS) $(COMMON_LIBS)
 
 ataricom.exe: ataricom.cpp Error.cpp AtariComMemory.cpp ComBlock.cpp FileIO.cpp
-	i586-mingw32msvc-g++ -W -Wall -DATARISIO_DEBUG -o $@ $^
+	i586-mingw32msvc-g++ -W -Wall -DATARISIO_DEBUG -DWINVER -o $@ $^
+	i586-mingw32msvc-strip $@
 
 turbo: $(TURBO_OBJS)
 	$(CXX) $(LDFLAGS) -o $@ $(TURBO_OBJS) $(ATARISERVER_LIBS)
@@ -201,7 +204,7 @@ txtiming: txtiming.cpp
 	$(CXX) -O2 -W -Wall -g -o $@ txtiming.cpp
 
 cleanthis:
-	rm -f *.o $(EXECUTABLES)
+	rm -f *.o $(EXECUTABLES) *.exe
 
 allclean: cleanthis
 	$(MAKE) -C 6502 allclean

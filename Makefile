@@ -131,6 +131,9 @@ clean:
 	$(MAKE) -C driver clean
 	$(MAKE) -C tools clean
 
+win32:
+	$(MAKE) -C tools win32
+
 allclean:
 	$(MAKE) -C driver allclean
 	$(MAKE) -C tools allclean
