@@ -151,3 +151,5 @@ AtariSIO changelog:
   - atarisio/atariserver: support cas files with long blocks
   - atarisio: experimental support for sending FSK data
   - atariserver: support for CAS files with FSK blocks
+  - atarisio: added support for kernel >= 2.6.33
+

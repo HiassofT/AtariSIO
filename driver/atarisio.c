@@ -24,7 +24,11 @@
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,19)
 #include <linux/config.h>
 #else
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,33)
 #include <linux/autoconf.h>
+#else
+#include <generated/autoconf.h>
+#endif
 #endif
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,0)
