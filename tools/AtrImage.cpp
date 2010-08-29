@@ -184,6 +184,8 @@ bool AtrImage::SetFormatFromATRHeader(const uint8_t* hdr)
 		density = e128BytesPerSector;
 	} else if (sectSize == 256) {
 		density = e256BytesPerSector;
+	} else if (sectSize == 512) {
+		density = e512BytesPerSector;
 	} else {
 		goto failure;
 	}
@@ -205,6 +207,15 @@ bool AtrImage::SetFormatFromATRHeader(const uint8_t* hdr)
 			}
 			numberOfSectors = imgSize / 256;
 		}
+		break;
+	case e512BytesPerSector:
+		if (imgSize <= 1536) {
+			goto failure;
+		}
+		if (imgSize % 512 != 0) {
+			goto failure;
+		}
+		numberOfSectors = imgSize / 512;
 		break;
 	default:
 		numberOfSectors = 0;
@@ -252,6 +263,10 @@ bool AtrImage::CreateATRHeaderFromFormat(uint8_t* hdr) const
 	case e256BytesPerSector:
 		hdr[4] = 0;
 		hdr[5] = 1;
+		break;
+	case e512BytesPerSector:
+		hdr[4] = 0;
+		hdr[5] = 2;
 		break;
 	}
 

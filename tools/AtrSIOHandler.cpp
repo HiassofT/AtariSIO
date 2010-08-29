@@ -452,7 +452,10 @@ int AtrSIOHandler::ProcessCommandFrame(SIO_command_frame& frame, const RCPtr<SIO
 		} else {
 			buf[5] = 4;
 		}
-		if (fFormatConfig.fSectorLength == e256BytesPerSector) {
+		if (fFormatConfig.fSectorLength == e512BytesPerSector) {
+			buf[6] = 2;
+			buf[7] = 0;
+		} else if (fFormatConfig.fSectorLength == e256BytesPerSector) {
 			buf[6] = 1;
 			buf[7] = 0;
 		} else {
@@ -538,11 +541,13 @@ int AtrSIOHandler::ProcessCommandFrame(SIO_command_frame& frame, const RCPtr<SIO
 
 		total = tracks * sec * sides;
 		if (total > 0 && total < 65536 &&
-		    (secLen == 128 || secLen == 256) ) {
+		    (secLen == 128 || secLen == 256 || secLen == 512) ) {
 			fFormatConfig.fTracksPerSide = tracks;
 			fFormatConfig.fSectorsPerTrack = sec;
 			fFormatConfig.fSides = sides;
-			if (secLen == 256) {
+			if (secLen == 512) {
+				fFormatConfig.fSectorLength = e512BytesPerSector;
+			} else if (secLen == 256) {
 				fFormatConfig.fSectorLength = e256BytesPerSector;
 			} else {
 				fFormatConfig.fSectorLength = e128BytesPerSector;

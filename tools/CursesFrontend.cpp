@@ -649,6 +649,9 @@ void CursesFrontend::DisplayDriveDensity(DeviceManager::EDriveNumber drive)
 				case e256BytesPerSector:
 					waddch(fDriveStatusWindow, 'D');
 					break;
+				case e512BytesPerSector:
+					waddch(fDriveStatusWindow, 'Q');
+					break;
 				default:
 					waddch(fDriveStatusWindow, '?');
 					break;

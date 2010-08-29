@@ -125,6 +125,8 @@ inline ssize_t AtrImage::CalculateOffset(unsigned int sector) const
 		} else {
 			return 384 + (sector-4)*256;
 		}
+	case e512BytesPerSector:
+		return (sector-1)*512;
 	}
 	return -1;
 }
@@ -186,6 +188,9 @@ inline unsigned int AtrImageConfig::GetSectorLength(unsigned int sector) const
 	if (sector == 0 || sector > fNumberOfSectors) {
 		return 0;
 	}
+	if (fSectorLength == e512BytesPerSector) {
+		return 512;
+	}
 	if (fSectorLength == e256BytesPerSector && sector > 3) {
 		return 256;
 	} else {
@@ -214,10 +219,14 @@ inline void AtrImageConfig::DetermineDiskFormatFromLayout()
 
 inline void AtrImageConfig::CalculateImageSize()
 {
-	if (fSectorLength == e256BytesPerSector && fNumberOfSectors >3) {
-		fImageSize = fNumberOfSectors * 256 - 384;
+	if (fSectorLength == e512BytesPerSector) {
+		fImageSize = fNumberOfSectors * 512;
 	} else {
-		fImageSize = fNumberOfSectors * 128;
+		if (fSectorLength == e256BytesPerSector && fNumberOfSectors >3) {
+			fImageSize = fNumberOfSectors * 256 - 384;
+		} else {
+			fImageSize = fNumberOfSectors * 128;
+		}
 	}
 }
 
