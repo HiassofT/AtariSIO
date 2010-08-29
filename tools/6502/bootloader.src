@@ -21,6 +21,7 @@ DBYT	= $0308
 DSEC	= $030A
 
 BSTART	= $4000
+HIGHSIO	= BSTART+$200
 
 	* = $4000
 
@@ -149,7 +150,6 @@ STRT	JMP $1234
 BEND	= *
 
 BUF	= *
-HIGHSIO	= * + 128
 
 	* = (BSTART+383)
 	.BYTE 0
