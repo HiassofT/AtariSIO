@@ -152,4 +152,4 @@ AtariSIO changelog:
   - atarisio: experimental support for sending FSK data
   - atariserver: support for CAS files with FSK blocks
   - atarisio: added support for kernel >= 2.6.33
-
+  - atariserver: experimental support for 512byte/sector ATRs
