@@ -153,4 +153,6 @@ AtariSIO changelog:
   - atariserver: support for CAS files with FSK blocks
   - atarisio: added support for kernel >= 2.6.33
   - atariserver: experimental support for 512byte/sector ATRs
-  - atariserver: loadable highspeed code now only supports ultraspeed mode
+  - atariserver: loadable highspeed code now only supports ultraspeed mode,
+    updated highspeed code to 1.30-100925
+  - atariserver, dir2atr: updated MyPicoDos to 4.05-100925
