@@ -124,7 +124,7 @@ endif
 
 all: asmcode $(EXECUTABLES)
 
-win32: ataricom.exe dir2atr.exe
+win32: ataricom.exe dir2atr.exe adir.exe
 
 asmcode:
 	$(MAKE) -C 6502
@@ -152,6 +152,13 @@ atpdump: $(ATPDUMP_OBJS)
 
 adir: $(ADIR_OBJS)
 	$(CXX) $(LDFLAGS) -o $@ $(ADIR_OBJS) $(COMMON_LIBS)
+
+adir.exe: adir.cpp DiskImage.cpp FileIO.cpp SIOTracer.cpp FileTracer.cpp Error.cpp \
+	AtrImage.cpp AtrMemoryImage.cpp DCMCodec.cpp CasBlock.cpp CasDataBlock.cpp CasFskBlock.cpp CasImage.cpp \
+	Dos2xUtils.cpp VirtualImageObserver.cpp Directory.cpp MiscUtils.cpp MyPicoDosCode.cpp \
+	winver.cpp
+	i586-mingw32msvc-g++ -W -Wall -DATARISIO_DEBUG -DWINVER -o $@ $^
+	i586-mingw32msvc-strip $@
 
 dir2atr: $(DIR2ATR_OBJS)
 	$(CXX) $(LDFLAGS) -o $@ $(DIR2ATR_OBJS) $(COMMON_LIBS)

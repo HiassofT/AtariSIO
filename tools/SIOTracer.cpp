@@ -525,55 +525,22 @@ void SIOTracer::TraceString(ETraceGroup group, const char* format, ...)
 		va_end(arg);
 
 		IterStartTraceLine(group);
-		IterTraceString(group, fString);
-		IterEndTraceLine(group);
-		IterFlushOutput(group);
-	}
-}
-
-void SIOTracer::TraceDebugString(const char* format, ...)
-{
-	if (fTraceGroupsCache & eTraceDebug) {
-		va_list arg;
-		va_start(arg, format);
-
-		vsnprintf(fString, eMaxStringLength, format, arg);
-
-		va_end(arg);
-
-		IterStartTraceLine(eTraceDebug);
-		IterTraceDebugString(eTraceDebug, "Debug: ");
-		IterTraceString(eTraceDebug, fString);
-		IterEndTraceLine(eTraceDebug);
-		IterFlushOutput(eTraceDebug);
-	}
-}
-
-void SIOTracer::TraceInfoString(EInfo infoType, const char* format, ...)
-{
-	if (fTraceGroupsCache & eTraceInfo) {
-		va_list arg;
-		va_start(arg, format);
-
-		vsnprintf(fString, eMaxStringLength, format, arg);
-
-		va_end(arg);
-
-		IterStartTraceLine(eTraceInfo);
-		switch (infoType) {
-		case eInfoWarning:
-			IterTraceWarningString(eTraceInfo,"Warning: ");
+		switch (group) {
+		case eTraceWarning:
+			IterTraceWarningString(group,"Warning: ");
 			break;
-		case eInfoError:
-			IterTraceErrorString(eTraceInfo,"Error: ");
+		case eTraceError:
+			IterTraceErrorString(group,"Error: ");
+			break;
+		case eTraceDebug:
+			IterTraceDebugString(group,"Debug: ");
 			break;
 		default:
 			break;
 		}
-
-		IterTraceString(eTraceInfo, fString);
-		IterEndTraceLine(eTraceInfo);
-		IterFlushOutput(eTraceInfo);
+		IterTraceString(group, fString);
+		IterEndTraceLine(group);
+		IterFlushOutput(group);
 	}
 }
 

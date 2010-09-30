@@ -64,15 +64,11 @@ public:
 		eTraceDataBlocks = 8,
 		eTraceAtpInfo = 16,
 		eTraceInfo = 32,
-		eTraceDebug = 64,
-		eTraceImageStatus = 128,
-		eTracePrinter = 256
-	};
-
-	enum EInfo {
-		eInfoOK,
-		eInfoWarning,
-		eInfoError
+		eTraceWarning = 64,
+		eTraceError = 128,
+		eTraceDebug = 256,
+		eTraceImageStatus = 512,
+		eTracePrinter = 1024
 	};
 
 	void SetTraceGroup(ETraceGroup group, bool on, const RCPtr<AbstractTracer>& tracer = RCPtr<AbstractTracer>());
@@ -126,12 +122,6 @@ public:
 	void TraceString(ETraceGroup group, const char* format, ... )
 		__attribute__ ((format (printf, 3, 4))) ;
 
-	void TraceInfoString(EInfo infoType, const char* format, ... )
-		__attribute__ ((format (printf, 3, 4))) ;
-
-	void TraceDebugString(const char* format, ... )
-		__attribute__ ((format (printf, 2, 3))) ;
-
 	void IndicateDriveChanged(unsigned int drive);
 	void IndicateDriveFormatted(unsigned int drive);
 	void IndicateCwdChanged();
@@ -177,51 +167,51 @@ inline SIOTracer* SIOTracer::GetInstance()
         return fInstance;
 }
 
-#define ALOG(x...) do { SIOTracer::GetInstance()->TraceInfoString(SIOTracer::eInfoOK, x); } while(0)
-#define AWARN(x...) do { SIOTracer::GetInstance()->TraceInfoString(SIOTracer::eInfoWarning, x); } while(0)
-#define AERROR(x...) do { SIOTracer::GetInstance()->TraceInfoString(SIOTracer::eInfoError, x); } while(0)
+#define ALOG(x...) do { SIOTracer::GetInstance()->TraceString(SIOTracer::eTraceInfo, x); } while(0)
+#define AWARN(x...) do { SIOTracer::GetInstance()->TraceString(SIOTracer::eTraceWarning, x); } while(0)
+#define AERROR(x...) do { SIOTracer::GetInstance()->TraceString(SIOTracer::eTraceError, x); } while(0)
 
 // some common warnings/errors
 inline void LOG_SIO_CMD_ACK_FAILED()
 {
-	SIOTracer::GetInstance()->TraceInfoString(SIOTracer::eInfoWarning, "send command ACK failed");
+	SIOTracer::GetInstance()->TraceString(SIOTracer::eTraceWarning, "send command ACK failed");
 }
 
 inline void LOG_SIO_CMD_NAK_FAILED()
 {
-	SIOTracer::GetInstance()->TraceInfoString(SIOTracer::eInfoWarning, "send command NAK failed");
+	SIOTracer::GetInstance()->TraceString(SIOTracer::eTraceWarning, "send command NAK failed");
 }
 
 inline void LOG_SIO_COMPLETE_FAILED()
 {
-	SIOTracer::GetInstance()->TraceInfoString(SIOTracer::eInfoWarning, "send complete failed");
+	SIOTracer::GetInstance()->TraceString(SIOTracer::eTraceWarning, "send complete failed");
 }
 
 inline void LOG_SIO_ERROR_FAILED()
 {
-	SIOTracer::GetInstance()->TraceInfoString(SIOTracer::eInfoWarning, "send error failed");
+	SIOTracer::GetInstance()->TraceString(SIOTracer::eTraceWarning, "send error failed");
 }
 
 inline void LOG_SIO_SEND_DATA_FAILED()
 {
-	SIOTracer::GetInstance()->TraceInfoString(SIOTracer::eInfoWarning, "send data frame failed");
+	SIOTracer::GetInstance()->TraceString(SIOTracer::eTraceWarning, "send data frame failed");
 }
 
 inline void LOG_SIO_RECEIVE_DATA_FAILED()
 {
-	SIOTracer::GetInstance()->TraceInfoString(SIOTracer::eInfoWarning, "receive data frame failed");
+	SIOTracer::GetInstance()->TraceString(SIOTracer::eTraceWarning, "receive data frame failed");
 }
 
 inline void LOG_SIO_READ_ILLEGAL_SECTOR(unsigned int sec)
 {
-	SIOTracer::GetInstance()->TraceInfoString(SIOTracer::eInfoWarning, "illegal sector in read: %d", sec);
+	SIOTracer::GetInstance()->TraceString(SIOTracer::eTraceWarning, "illegal sector in read: %d", sec);
 }
 
 inline void LOG_SIO_WRITE_ILLEGAL_SECTOR(unsigned int sec)
 {
-	SIOTracer::GetInstance()->TraceInfoString(SIOTracer::eInfoWarning, "illegal sector in write: %d", sec);
+	SIOTracer::GetInstance()->TraceString(SIOTracer::eTraceWarning, "illegal sector in write: %d", sec);
 }
 
-#define LOG_SIO_MISC(x...) do { SIOTracer::GetInstance()->TraceInfoString(SIOTracer::eInfoWarning, x); } while(0)
+#define LOG_SIO_MISC(x...) do { SIOTracer::GetInstance()->TraceString(SIOTracer::eTraceWarning, x); } while(0)
 
 #endif

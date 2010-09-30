@@ -123,8 +123,12 @@ int main(int argc, char**argv)
 	SIOTracer* sioTracer = SIOTracer::GetInstance();
 	{
 		RCPtr<FileTracer> tracer(new FileTracer(stderr));
+		RCPtr<FileTracer> tracer_stdout(new FileTracer(stdout));
 		sioTracer->AddTracer(tracer);
-		sioTracer->SetTraceGroup(SIOTracer::eTraceInfo, true, tracer);
+		sioTracer->AddTracer(tracer_stdout);
+		sioTracer->SetTraceGroup(SIOTracer::eTraceInfo, true, tracer_stdout);
+		sioTracer->SetTraceGroup(SIOTracer::eTraceWarning, true, tracer);
+		sioTracer->SetTraceGroup(SIOTracer::eTraceError, true, tracer);
 		sioTracer->SetTraceGroup(SIOTracer::eTraceDebug, true, tracer);
 	}
 

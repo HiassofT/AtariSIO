@@ -27,7 +27,7 @@
 #ifdef ATARISIO_DEBUG
 #include "SIOTracer.h"
 
-#define DPRINTF(x...) do { SIOTracer::GetInstance()->TraceDebugString(x); } while(0)
+#define DPRINTF(x...) do { SIOTracer::GetInstance()->TraceString(SIOTracer::eTraceDebug, x); } while(0)
 #define Assert(expr) assert(expr)
 #define AssertMsg(expr,msg) \
 	if (! (expr) ) { \

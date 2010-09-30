@@ -326,6 +326,8 @@ illegal_option:
 static void SetDefaultTraceLevels(const RCPtr<AbstractTracer>& tracer)
 {
 	sioTracer->SetTraceGroup(SIOTracer::eTraceInfo, true, tracer);
+	sioTracer->SetTraceGroup(SIOTracer::eTraceWarning, true, tracer);
+	sioTracer->SetTraceGroup(SIOTracer::eTraceError, true, tracer);
 	sioTracer->SetTraceGroup(SIOTracer::eTraceDebug, true, tracer);
 }
 

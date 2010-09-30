@@ -685,6 +685,8 @@ int main(int argc, char** argv)
 	}
 	if (debugging) {
 		sioTracer->SetTraceGroup(SIOTracer::eTraceInfo, true, tracer);
+		sioTracer->SetTraceGroup(SIOTracer::eTraceWarning, true, tracer);
+		sioTracer->SetTraceGroup(SIOTracer::eTraceError, true, tracer);
 		sioTracer->SetTraceGroup(SIOTracer::eTraceDebug, true, tracer);
 		sioTracer->SetTraceGroup(SIOTracer::eTraceVerboseCommands, true, tracer);
 	}

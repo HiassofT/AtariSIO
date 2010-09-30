@@ -38,6 +38,8 @@ int main(int argc, char** argv)
 		RCPtr<FileTracer> tracer(new FileTracer(stderr));
 		sioTracer->AddTracer(tracer);
 		sioTracer->SetTraceGroup(SIOTracer::eTraceInfo, true, tracer);
+		sioTracer->SetTraceGroup(SIOTracer::eTraceWarning, true, tracer);
+		sioTracer->SetTraceGroup(SIOTracer::eTraceError, true, tracer);
 		sioTracer->SetTraceGroup(SIOTracer::eTraceDebug, true, tracer);
 	}
 
