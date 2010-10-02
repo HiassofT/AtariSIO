@@ -14,6 +14,13 @@ Installation
 Please read the file "INSTALL".
 
 
+Other docs
+==========
+
+Information about the tools (dir2atr, ataricom, adir) can
+be found in "README-tools".
+
+
 About Atarisio
 ==============
 
@@ -846,90 +853,6 @@ Remote control commands (device $61):
 $43 - execute command
 $52 - read response
 $53 - get last command status and response length
-
-
-Using adir
-==========
-
-'adir' lists the DOS 2.x directory of an image. By default the output
-is similar to what you get when doing a directory listing from within
-DOS 2.x. Filenames plus their sector size is output in 4 columns.
-
--c <num> set number of columns. eg: 'adir -c 1 dos.atr'
-
--t enable 'tree mode', recurse into (MyDOS) subdirectories
-
--r enable raw debugging output:
-   The first number is the file-slot within a directory sector (0-7).
-   The second number is the file attribute (in hex).
-   After the filename the starting sector and the number of sectors
-   (both in decimal) are shown.
-
-  
-Using dir2atr
-=============
-
-With 'dir2atr' you can create a disk image from a directory on your PC.
-Usually you specify the image size (in numbers of sectors), the target
-image filename and the source directory. If you want to create a
-double density image, just add the '-d' option. For example:
-
-dir2atr -d 720 my_files.atr my_files_directory
-
-will create a 180k (720 sectors double density) disk image from the
-files in 'my_files_directory'.
-
-If the image size is 720 sectors (either SD or DD) or if it's 1040
-sectors in SD (the 1050 "enhanced" density format), the disk image
-will be created using standard DOS 2.x format.
-
-If you use any other image size or if you omit the number of sectors
-(in this case dir2atr will calculate the image size automatically),
-the image will be initalized in MyDOS format and subdirectories will
-be added recursively.
-
-The '-p' option tells dir2atr to automatically create a 'PICONAME.TXT'
-file in each directory containing the original (long) filenames. This
-is a plain text file (in ATASCII format) and is used by MyPicoDos when
-displaying the contents of a directory. Have a look at the MyPicoDos
-docs for further details.
-
-The '-b' option can be used to create bootable disks. If you use one
-of the MyPicoDos modes, dir2atr will include the PICODOS.SYS file in
-the disk image and also write the bootsectors. This is more or less
-identical to initializing the disk using the 'myinit.com' program
-on your Atari.
-
-MyPicoDos403 is the (old) 4.03 version without highspeed SIO support,
-MyPicoDos403HS is the 4.03 version with highspeed SIO. These modes
-are basically just here because I already implemented them, in general
-I'd recommend using the most recent MyPicoDos 4.04 modes
-(MyPicoDos404, MyPicoDos404N, MyPicoDos404R, MyPicoDos404RN, MyPicoDos404B):
-
-The 'R'-versions are a little bit larger and also include an atariserver
-remote console. The 'N' versions have highspeed SIO disabled by default.
-This can be useful if you want to create images for harddrives that aren't
-connected to the SIO bus. With both 'N' and non-'N' versions you may
-enable/disable the highspeed SIO with a keystroke. The 'B'-version
-("barebone") contains neither highspeed SIO support nor the remote
-console.
-
-For example:
-
-dir2atr -d -b MyPicoDos404R -p games.atr my_games
-
-creates a bootable double density image with MyPicoDos 4.04R
-(in highspeed SIO mode) and MyPicoDos long filename information
-stored in PICONAME.TXT.
-
-If you use any of the other '-b' modes, you must include the DOS.SYS
-file in the directory and use the appropriate '-b' option. Note: dir2atr
-doesn't check if the mode matches the DOS.SYS file, it just checks for
-the presence of DOS.SYS!
-
-Currently the following boot sector modes are supported:
-Dos20 (DOS 2.0), Dos25 (DOS 2.5), MyDos453 (MyDos 4.53),
-TurboDos21 (TurboDos 2.1) and TurboDos21HS (TurboDos 2.1 HS)
 
 
 Credits
