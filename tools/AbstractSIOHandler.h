@@ -57,6 +57,7 @@ public:
 	virtual bool SetHighSpeedParameters(unsigned int pokeyDivisor, unsigned int baudrate) = 0;
 
 	virtual bool EnableXF551Mode(bool on) = 0;
+	virtual bool EnableStrictFormatChecking(bool on) = 0;
 
 	virtual bool IsAtrSIOHandler() const;
 	virtual bool IsAtpSIOHandler() const;

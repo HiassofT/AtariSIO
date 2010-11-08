@@ -45,6 +45,7 @@ public:
 	virtual bool EnableHighSpeed(bool);
 	virtual bool SetHighSpeedParameters(unsigned int pokeyDivisor, unsigned int baudrate);
 	virtual bool EnableXF551Mode(bool on);
+	virtual bool EnableStrictFormatChecking(bool on);
 
 	void SetEOLConversion(EEOLConversion conv);
 	inline EEOLConversion GetEOLConversion() const;

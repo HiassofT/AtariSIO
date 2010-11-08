@@ -48,6 +48,7 @@ DeviceManager::DeviceManager(const char* devname)
 	  fSIOManager(new SIOManager(fSIOWrapper)),
           fHighSpeedBaudrate(ATARISIO_HIGHSPEED_BAUDRATE),
 	  fPokeyDivisor(8),
+	  fUseStrictFormatChecking(false),
 	  fTapeSpeedPercent(100)
 {
 	if (!SetSioServerMode(SIOWrapper::eCommandLine_RI)) {
@@ -186,6 +187,7 @@ bool DeviceManager::LoadDiskImage(EDriveNumber driveno, const char* filename, bo
 		handler->EnableHighSpeed(fUseHighSpeed);
 		handler->SetHighSpeedParameters(fPokeyDivisor, fHighSpeedBaudrate);
 		handler->EnableXF551Mode(fEnableXF551Mode);
+		handler->EnableStrictFormatChecking(fUseStrictFormatChecking);
 	} else {
 		return false;
 	}
@@ -437,6 +439,7 @@ bool DeviceManager::CreateAtrMemoryImage(EDriveNumber driveno, EDiskFormat forma
 	handler->EnableHighSpeed(fUseHighSpeed);
 	handler->SetHighSpeedParameters(fPokeyDivisor, fHighSpeedBaudrate);
 	handler->EnableXF551Mode(fEnableXF551Mode);
+	handler->EnableStrictFormatChecking(fUseStrictFormatChecking);
 
 	if (DriveInUse(driveno) && forceUnload) {
 		ALOG("unloading D%d:", driveno);
@@ -470,6 +473,7 @@ bool DeviceManager::CreateAtrMemoryImage(EDriveNumber driveno, ESectorLength den
 	handler->EnableHighSpeed(fUseHighSpeed);
 	handler->SetHighSpeedParameters(fPokeyDivisor, fHighSpeedBaudrate);
 	handler->EnableXF551Mode(fEnableXF551Mode);
+	handler->EnableStrictFormatChecking(fUseStrictFormatChecking);
 
 	if (DriveInUse(driveno) && forceUnload) {
 		ALOG("unloading D%d:", driveno);
@@ -957,6 +961,17 @@ bool DeviceManager::EnableXF551Mode(bool on)
 	for (int i=eMinDriveNumber; i<=eMaxDriveNumber; i++) {
 		if (DriveInUse(EDriveNumber(i))) {
 			GetSIOHandler((EDriveNumber)i)->EnableXF551Mode(on);
+		}
+	}
+	return true;
+}
+
+bool DeviceManager::EnableStrictFormatChecking(bool on)
+{
+	fUseStrictFormatChecking = on;
+	for (int i=eMinDriveNumber; i<=eMaxDriveNumber; i++) {
+		if (DriveInUse(EDriveNumber(i))) {
+			GetSIOHandler((EDriveNumber)i)->EnableStrictFormatChecking(on);
 		}
 	}
 	return true;

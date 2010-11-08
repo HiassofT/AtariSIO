@@ -312,6 +312,11 @@ bool RemoteControlHandler::EnableHighSpeed(bool)
 	return false;
 }
 
+bool RemoteControlHandler::EnableStrictFormatChecking(bool)
+{
+	return false;
+}
+
 bool RemoteControlHandler::EnableXF551Mode(bool)
 {
 	return false;

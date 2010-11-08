@@ -43,6 +43,7 @@ public:
 	virtual bool EnableHighSpeed(bool on);
 	virtual bool SetHighSpeedParameters(unsigned int pokeyDivisor, unsigned int baudrate);
 	virtual bool EnableXF551Mode(bool on);
+	virtual bool EnableStrictFormatChecking(bool on);
 
 	virtual RCPtr<DiskImage> GetDiskImage();
 	virtual RCPtr<const DiskImage> GetConstDiskImage() const;
@@ -67,6 +68,7 @@ private:
 
 	bool fEnableHighSpeed;
 	bool fEnableXF551Mode;
+	bool fStrictFormatChecking;
 	uint8_t fSpeedByte;
 	unsigned int fHighSpeedBaudrate;
 
@@ -77,6 +79,8 @@ private:
 	RCPtr<VirtualImageObserver> fVirtualImageObserver;
 
 	inline bool IsVirtualImage() const;
+
+	bool VerifyPercomFormat(uint8_t tracks, uint8_t sides, uint16_t sectors, uint16_t seclen, uint32_t total_sectors) const;
 };
 
 inline RCPtr<DiskImage> AtrSIOHandler::GetDiskImage()

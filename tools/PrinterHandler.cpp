@@ -369,3 +369,8 @@ bool PrinterHandler::EnableXF551Mode(bool)
 {
 	return false;
 }
+
+bool PrinterHandler::EnableStrictFormatChecking(bool)
+{
+	return false;
+}

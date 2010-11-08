@@ -42,6 +42,7 @@ static SIOTracer* sioTracer = 0;
 
 static void my_sig_handler(int sig)
 {
+	ALOG("got signal %d", sig);
 	switch (sig) {
 	case SIGWINCH:
 		if (frontend) {
@@ -169,6 +170,10 @@ static void process_args(RCPtr<DeviceManager>& manager, CursesFrontend* frontend
 				case 'C':
 					manager->SetSioServerMode(SIOWrapper::eCommandLine_CTS);
 					ALOG("using alternative SIO2PC/nullmodem cable type (command=CTS)");
+					break;
+				case 'F':
+					manager->EnableStrictFormatChecking(true);
+					ALOG("disable non-standard disk formats\n");
 					break;
 				case 'p':
 					write_protect_next = true;
@@ -360,6 +365,7 @@ int main(int argc, char** argv)
 	bool wantHelp = false;
 	bool useColor = true;
 	const char* traceFile = 0;
+	struct sigaction sigact;
 
 	// scan argv for "-h", "-m", -"o file"
 	{
@@ -402,6 +408,7 @@ int main(int argc, char** argv)
 		printf("-f device     use alternative AtariSIO device (default: /dev/atarisio0)\n");
 		printf("-c            use alternative SIO2PC cable (command=DSR)\n");
 		printf("-C            use alternative SIO2PC/nullmodem cable (command=CTS)\n");
+		printf("-F            disable non-standard disk formats\n");
 		printf("-m            monochrome mode\n");
 		printf("-o file       save trace output to <file>\n");
 		printf("-p            write protect the next image\n");
@@ -423,7 +430,12 @@ int main(int argc, char** argv)
 		return 0;
 	}
 
-	signal(SIGWINCH, my_sig_handler);
+	//signal(SIGWINCH, my_sig_handler);
+	sigact.sa_handler = my_sig_handler;
+	sigemptyset(&sigact.sa_mask);
+	sigact.sa_flags = 0;
+
+	sigaction(SIGWINCH, &sigact, NULL);
 
 	frontend = new CursesFrontend(manager, useColor);
 
@@ -448,20 +460,29 @@ int main(int argc, char** argv)
 	}
 	frontend->ShowCursor(false);
 
+/*
 	signal(SIGTERM, my_sig_handler);
 	signal(SIGINT, my_sig_handler);
 	signal(SIGHUP, my_sig_handler);
 	signal(SIGPIPE, my_sig_handler);
 	signal(SIGCHLD, my_sig_handler);
+*/
+	sigaction(SIGTERM, &sigact, NULL);
+	sigaction(SIGINT, &sigact, NULL);
+	sigaction(SIGHUP, &sigact, NULL);
+	sigaction(SIGPIPE, &sigact, NULL);
+	sigaction(SIGCHLD, &sigact, NULL);
 
 	if (MiscUtils:: set_realtime_scheduling(0)) {
-/*
+#if 0
 #ifdef ATARISIO_DEBUG
 		ALOG("the server will automatically terminate in 5 minutes!");
-		signal(SIGALRM, my_sig_handler);
+		//signal(SIGALRM, my_sig_handler);
+		sigaction(SIGALRM, &sigact, NULL);
 		alarm(300);
+		//alarm(10);
 #endif
-*/
+#endif
 	}
 
 	process_args(manager, frontend, argc, argv);

@@ -41,6 +41,8 @@ public:
 	virtual bool EnableHighSpeed(bool on);
 	virtual bool SetHighSpeedParameters(unsigned int pokeyDivisor, unsigned int baudrate);
 	virtual bool EnableXF551Mode(bool on);
+	virtual bool EnableStrictFormatChecking(bool on);
+
 	virtual bool IsAtpSIOHandler() const;
 
 	RCPtr<DiskImage> GetDiskImage();

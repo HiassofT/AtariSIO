@@ -114,6 +114,9 @@ public:
 	bool EnableXF551Mode(bool on);
 	bool GetXF551Mode() const;
 
+	bool EnableStrictFormatChecking(bool on);
+	bool GetStrictFormatChecking() const;
+
 	int DoServing(int otherReadPollDevice=-1);
 
 	RCPtr<SIOManager> GetSIOManager();
@@ -148,6 +151,7 @@ private:
 	bool fUseHighSpeed;
 	unsigned int fHighSpeedBaudrate;
 	unsigned int fPokeyDivisor;
+	bool fUseStrictFormatChecking;
 
 	unsigned int fTapeSpeedPercent;
 	bool fEnableXF551Mode;
@@ -183,6 +187,11 @@ inline DeviceManager::EHighSpeedMode DeviceManager::GetHighSpeedMode() const
 inline bool DeviceManager::GetXF551Mode() const
 {
 	return fEnableXF551Mode;
+}
+
+inline bool DeviceManager::GetStrictFormatChecking() const
+{
+	return fUseStrictFormatChecking;
 }
 
 inline unsigned int DeviceManager::GetHighSpeedBaudrate() const

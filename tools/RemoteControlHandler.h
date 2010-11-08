@@ -45,6 +45,7 @@ public:
 	virtual bool EnableHighSpeed(bool);
 	virtual bool SetHighSpeedParameters(unsigned int pokeyDivisor, unsigned int baudrate);
 	virtual bool EnableXF551Mode(bool on);
+	virtual bool EnableStrictFormatChecking(bool on);
 
 	enum ERemoteCommandStatus {
 		eRemoteCommandOK = 1,

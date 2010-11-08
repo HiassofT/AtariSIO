@@ -63,6 +63,7 @@ AtrSIOHandler::AtrSIOHandler(const RCPtr<AtrImage>& image)
 	: fImage(image),
 	  fEnableHighSpeed(false),
 	  fEnableXF551Mode(false),
+	  fStrictFormatChecking(false),
 
 	  fSpeedByte(SPEED_BYTE_57600),
 	  fHighSpeedBaudrate(57600),
@@ -540,8 +541,7 @@ int AtrSIOHandler::ProcessCommandFrame(SIO_command_frame& frame, const RCPtr<SIO
 		secLen = buf[7] + (buf[6]<<8);
 
 		total = tracks * sec * sides;
-		if (total > 0 && total < 65536 &&
-		    (secLen == 128 || secLen == 256 || secLen == 512) ) {
+		if (VerifyPercomFormat(tracks, sides, sec, secLen, total)) {
 			fFormatConfig.fTracksPerSide = tracks;
 			fFormatConfig.fSectorsPerTrack = sec;
 			fFormatConfig.fSides = sides;
@@ -1301,5 +1301,36 @@ bool AtrSIOHandler::SetHighSpeedParameters(unsigned int pokeyDivisor, unsigned i
 	}
 	fSpeedByte = pokeyDivisor;
 	fHighSpeedBaudrate = baudrate;
+	return true;
+}
+
+bool AtrSIOHandler::EnableStrictFormatChecking(bool on)
+{
+	fStrictFormatChecking = on;
+	return true;
+}
+
+bool AtrSIOHandler::VerifyPercomFormat(uint8_t tracks, uint8_t sides, uint16_t sectors, uint16_t seclen, uint32_t total_sectors) const
+{
+	if (total_sectors == 0 or total_sectors >= 65536) {
+		return false;
+	}
+	if (seclen != 128 && seclen != 256 && seclen != 512) {
+		return false;
+	}
+	if (fStrictFormatChecking) {
+		if (sides != 1 || tracks != 40) {
+			return false;
+		}
+		switch (seclen) {
+		case 128:
+			return (sectors == 18) || (sectors == 26);
+			break;
+		case 256:
+			return (sectors == 18);
+		default:
+			return false;
+		}
+	}
 	return true;
 }
