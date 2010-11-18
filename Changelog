@@ -156,3 +156,4 @@ AtariSIO changelog:
   - atariserver: loadable highspeed code now only supports ultraspeed mode,
     updated highspeed code to 1.30-100925
   - atariserver, dir2atr: updated MyPicoDos to 4.05-100925
+  - atarisio: added support for kernel 2.6.36
