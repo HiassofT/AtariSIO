@@ -2624,8 +2624,13 @@ static void print_status(struct atarisio_dev* dev)
 	spin_unlock_irqrestore(&dev->lock, flags);
 }
 
+#ifdef HAVE_UNLOCKED_IOCTL
+static long atarisio_unlocked_ioctl(struct file* filp,
+ 	unsigned int cmd, unsigned long arg)
+#else
 static int atarisio_ioctl(struct inode* inode, struct file* filp,
  	unsigned int cmd, unsigned long arg)
+#endif
 {
 	int ret=0;
 
@@ -3076,7 +3081,11 @@ static struct file_operations atarisio_fops = {
 	owner:		THIS_MODULE,
 #endif
 	poll:		atarisio_poll,
+#ifdef HAVE_UNLOCKED_IOCTL
+	unlocked_ioctl:	atarisio_unlocked_ioctl,
+#else
 	ioctl:		atarisio_ioctl,
+#endif
 	open:		atarisio_open,
 	release:	atarisio_release
 };
@@ -3180,14 +3189,19 @@ int free_atarisio_dev(unsigned int id)
 	return 0;
 }
 
-static long ioctl_wrapper(struct file* f, unsigned int cmd, unsigned long arg)
+static long ioctl_wrapper(struct atarisio_dev* dev, struct file* f, unsigned int cmd, unsigned long arg)
 {
 #ifdef HAVE_UNLOCKED_IOCTL
 	if (f->f_op->unlocked_ioctl) {
 		return f->f_op->unlocked_ioctl(f, cmd, arg);
 	}
 #endif
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,36)
 	return f->f_op->ioctl(f->f_dentry->d_inode, f, cmd, arg);
+#else
+	PRINTK("neither unlocked_ioctl nor ioctl available!\n");
+	return -EINVAL;
+#endif
 }
 
 static int disable_serial_port(struct atarisio_dev* dev)
@@ -3207,16 +3221,20 @@ static int disable_serial_port(struct atarisio_dev* dev)
 		goto fail;
 	}
 #ifdef HAVE_UNLOCKED_IOCTL
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,36)
 	if (f->f_op && (f->f_op->ioctl || f->f_op->unlocked_ioctl) ) {
+#else
+	if (f->f_op && (f->f_op->unlocked_ioctl) ) {
+#endif
 #else
 	if (f->f_op && f->f_op->ioctl) {
 #endif
 		if (f->f_dentry && f->f_dentry->d_inode) {
-			if (ioctl_wrapper(f, TIOCGSERIAL, (unsigned long) &ss)) {
+			if (ioctl_wrapper(dev, f, TIOCGSERIAL, (unsigned long) &ss)) {
 				DBG_PRINTK(DEBUG_STANDARD, "TIOCGSERIAL failed\n");
 				goto fail_close;
 			}
-			if (ioctl_wrapper(f, TIOCGSERIAL, (unsigned long) &dev->orig_serial_struct)) {
+			if (ioctl_wrapper(dev, f, TIOCGSERIAL, (unsigned long) &dev->orig_serial_struct)) {
 				DBG_PRINTK(DEBUG_STANDARD, "TIOCGSERIAL failed\n");
 				goto fail_close;
 			}
@@ -3252,7 +3270,7 @@ static int disable_serial_port(struct atarisio_dev* dev)
 			/* disable serial driver by setting the uart type to none */
 			ss.type = PORT_UNKNOWN;
 
-			if (ioctl_wrapper(f, TIOCSSERIAL, (unsigned long) &ss)) {
+			if (ioctl_wrapper(dev, f, TIOCSSERIAL, (unsigned long) &ss)) {
 				DBG_PRINTK(DEBUG_STANDARD, "TIOCSSERIAL failed\n");
 				goto fail_close;
 			}
@@ -3307,18 +3325,22 @@ static int reenable_serial_port(struct atarisio_dev* dev)
 		goto fail;
 	}
 #ifdef HAVE_UNLOCKED_IOCTL
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,36)
 	if (f->f_op && (f->f_op->ioctl || f->f_op->unlocked_ioctl) ) {
+#else
+	if (f->f_op && (f->f_op->unlocked_ioctl) ) {
+#endif
 #else
 	if (f->f_op && f->f_op->ioctl) {
 #endif
 		if (f->f_dentry && f->f_dentry->d_inode) {
-			if (ioctl_wrapper(f, TIOCGSERIAL, (unsigned long) &ss)) {
+			if (ioctl_wrapper(dev, f, TIOCGSERIAL, (unsigned long) &ss)) {
 				DBG_PRINTK(DEBUG_STANDARD, "TIOCGSERIAL failed\n");
 				goto fail_close;
 			}
 			/* restore original values */
 			ss.type = dev->orig_serial_struct.type;
-			if (ioctl_wrapper(f, TIOCSSERIAL, (unsigned long) &ss)) {
+			if (ioctl_wrapper(dev, f, TIOCSSERIAL, (unsigned long) &ss)) {
 				DBG_PRINTK(DEBUG_STANDARD, "TIOCSSERIAL failed\n");
 				goto fail_close;
 			}
