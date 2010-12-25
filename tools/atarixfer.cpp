@@ -288,6 +288,7 @@ static int read_image(char* filename)
 	int result,length;
 	unsigned int total_sectors, sector_length;
 	unsigned int sec;
+	unsigned int retry;
 
 	bool OK = true;
 	uint8_t buf[256];
@@ -361,7 +362,11 @@ static int read_image(char* filename)
 			length = 256;
 		}
 
-		result = SIO->ReadSector(drive_no, sec, buf, length, highspeed_mode);
+		retry = 10;
+		do {
+			result = SIO->ReadSector(drive_no, sec, buf, length, highspeed_mode);
+			retry--;
+		} while (result && retry);
 
 		if (result) {
 			printf("\nerror reading sector %d from disk ", sec);
@@ -405,9 +410,10 @@ static int write_image(char *filename)
 
 	memset(zero, 0, 256);
 
-	int result,length;
+	int result, length;
 	unsigned int total_sectors;
 	unsigned int sec;
+	unsigned int retry;
 	EDiskFormat diskFormat;
 
 	uint8_t buf[256];
@@ -436,7 +442,13 @@ static int write_image(char *filename)
 
 		printf("\b\b\b\b\b%5d", sec); fflush(stdout);
 
-		if ((result = SIO->WriteSector(drive_no, sec, buf, length, highspeed_mode)) ) {
+		retry = 10;
+		do {
+			result = SIO->WriteSector(drive_no, sec, buf, length, highspeed_mode);
+			retry--;
+		} while (result && retry);
+		
+		if (result) {
 			printf("\nerror writing sector %d to disk ", sec);
 			print_error(result);
 			if (!continue_on_errors) {
@@ -621,7 +633,7 @@ int main(int argc, char** argv)
 
 	printf("atarixfer %s\n(c) 2002-2010 by Matthias Reichl <hias@horus.com>\n\n",VERSION_STRING);
 	while(!finished) {
-		c = getopt(argc, argv, "prw12345678df:sStx");
+		c = getopt(argc, argv, "prw12345678def:sStx");
 		if (c == -1) {
 			break;
 		}
