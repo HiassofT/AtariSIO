@@ -46,6 +46,8 @@ static unsigned int drive_no = 1;
 
 static int debugging = 0;
 
+static unsigned int num_retries = 0;
+
 static unsigned int highspeed_mode = ATARISIO_EXTSIO_SPEED_NORMAL;
 
 static bool xf551_format_detection = false;
@@ -362,7 +364,7 @@ static int read_image(char* filename)
 			length = 256;
 		}
 
-		retry = 10;
+		retry = num_retries+1;
 		do {
 			result = SIO->ReadSector(drive_no, sec, buf, length, highspeed_mode);
 			retry--;
@@ -442,7 +444,7 @@ static int write_image(char *filename)
 
 		printf("\b\b\b\b\b%5d", sec); fflush(stdout);
 
-		retry = 10;
+		retry = num_retries+1;
 		do {
 			result = SIO->WriteSector(drive_no, sec, buf, length, highspeed_mode);
 			retry--;
@@ -633,7 +635,7 @@ int main(int argc, char** argv)
 
 	printf("atarixfer %s\n(c) 2002-2010 by Matthias Reichl <hias@horus.com>\n\n",VERSION_STRING);
 	while(!finished) {
-		c = getopt(argc, argv, "prw12345678def:sStx");
+		c = getopt(argc, argv, "prw12345678def:R:sStx");
 		if (c == -1) {
 			break;
 		}
@@ -678,6 +680,14 @@ int main(int argc, char** argv)
 		case '8':
 			drive_no=c - '0';
 			break;
+		case 'R':
+			{
+				num_retries = strtol(optarg, NULL, 0);
+				if (num_retries > 100) {
+					printf("invalid number of retries\n");
+					goto usage;
+				}
+			}
 		case 's':
 			use_highspeed = 1;
 			break;
@@ -764,6 +774,7 @@ usage:
 	printf("  -d            enable debugging\n");
 	printf("  -e            continue on errors\n");
 	printf("  -p            use APE prosystem cable (default: 1050-2-PC cable)\n");
+	printf("  -R num        retry failed sector I/O 'num' times (0..100)\n");
 	printf("  -s            enable Happy Warp/XF551 speeds\n");
 	printf("  -S            enable Ultra/Turbo/Happy Warp/XF551 speeds\n");
 	printf("  -t            enable relaxed data transmission\n");
