@@ -30,6 +30,7 @@ ComBlock::ComBlock(RCPtr<FileIO>& f)
 	: fData(0), fFileOffset(0)
 {
 	uint16_t endadr;
+	unsigned int blen;
 	Assert(f.IsNotNull());
 	Assert(f->IsOpen());
 
@@ -55,9 +56,9 @@ ComBlock::ComBlock(RCPtr<FileIO>& f)
 
 	fFileOffset = f->Tell();
 
-	if (!f->ReadBlock(fData, fLen)) {
+	if ((blen = f->ReadBlock(fData, fLen)) != fLen) {
 		ClearData();
-		throw ReadError();
+		throw ReadErrorLen(fLen, blen);
 	}
 }
 

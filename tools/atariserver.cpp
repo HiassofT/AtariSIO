@@ -30,6 +30,7 @@
 #include "Version.h"
 #include "RemoteControlHandler.h"
 
+#include <iostream>
 #include <signal.h>
 #include <sys/types.h>
 #include <unistd.h>
@@ -353,7 +354,7 @@ int main(int argc, char** argv)
 		manager = new DeviceManager(atarisioDevName);
 	}
 	catch (ErrorObject& err) {
-		fprintf(stderr,"%s\n", err.AsString());
+		std::cerr << err.AsString() << std::endl;
 		exit(1);
 	}
 
@@ -454,7 +455,7 @@ int main(int argc, char** argv)
 				SetDefaultTraceLevels(tracer);
 			}
 			catch (ErrorObject& err) {
-				AERROR("%s", err.AsString());
+				AERROR("%s", err.AsCString());
 			}
 		}
 	}

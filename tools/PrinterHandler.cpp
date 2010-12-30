@@ -98,7 +98,7 @@ bool PrinterHandler::SpawnProcess(const RCPtr<SIOWrapper>& wrapper)
 		fCoprocess = new Coprocess(fPrintCommand, &fd, 1);
 	}
 	catch (ErrorObject& err) {
-		AERROR("%s", err.AsString());
+		AERROR("%s", err.AsCString());
 		fPrinterStatus = eStatusError;
 		return false;
 	}

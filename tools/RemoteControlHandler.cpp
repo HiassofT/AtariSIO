@@ -983,7 +983,7 @@ pr_usage:
 				coprocess = new Coprocess(arg, &fd, 1);
 			}
 			catch (ErrorObject& err) {
-				AddResultString(err.AsString());
+				AddResultString(err.AsCString());
 				return false;
 			}
 			while (coprocess->ReadLine(buf, buflen, len, false)) {

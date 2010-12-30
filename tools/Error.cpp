@@ -23,72 +23,22 @@
 #include <string.h>
 
 ErrorObject::ErrorObject()
-	: fDescription(0)
+	: fDescription("unknown error")
 { }
 
-ErrorObject::ErrorObject(const char* string)
-	: fDescription(0)
-{
-	SetDescription(string);
-}
+ErrorObject::ErrorObject(const std::string str)
+	: fDescription(str)
+{ }
 
 ErrorObject::ErrorObject(const ErrorObject& other)
-	: fDescription(0)
-{
-	SetDescription(other.fDescription);
-}
+	: fDescription(other.fDescription)
+{ }
 
 ErrorObject::~ErrorObject()
-{
-	if (fDescription) {
-		delete [] fDescription;
-	}
-}
+{ }
 
-const char* ErrorObject::AsString() const
+void ErrorObject::SetDescription(const std::string str)
 {
-	if (fDescription) {
-		return fDescription;
-	} else {
-		return "unknown error";
-	}
-}
-
-void ErrorObject::SetDescription(const char* string)
-{
-	if (fDescription) {
-		delete [] fDescription;
-		fDescription = 0;
-	}
-	if (string) {
-		fDescription = new char[strlen(string)+1];
-		strcpy(fDescription, string);
-	}
-}
-
-void ErrorObject::SetDescription(const char* str1, const char* str2)
-{
-	if (fDescription) {
-		delete [] fDescription;
-		fDescription = 0;
-	}
-	if (str1 || str2) {
-		unsigned int l1 = 0;
-		unsigned int l2 = 0;
-		if (str1) {
-			l1 = strlen(str1);
-		}
-		if (str2) {
-			l2 = strlen(str2);
-		}
-		fDescription = new char[l1+l2+1];
-		fDescription[l1+l2] = 0;
-		if (l1) {
-			strcpy(fDescription, str1);
-		}
-		if (l2) {
-			strcpy(fDescription + l1, str2);
-		}
-	}
+	fDescription = str;
 }
 

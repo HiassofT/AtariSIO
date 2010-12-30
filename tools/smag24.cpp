@@ -18,6 +18,7 @@
    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
+#include <iostream>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -85,7 +86,7 @@ int main(int argc)
 		SIO = new SIOWrapper;
 	}
 	catch (ErrorObject& err) {
-		fprintf(stderr, "%s\n", err.AsString());
+		std::cerr << err.AsString() << std::endl;
 		exit (1);
 	}
 	set_realtime_scheduling(0);

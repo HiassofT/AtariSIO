@@ -487,7 +487,7 @@ int main(int argc, char**argv)
        		manager= new DeviceManager;
 	}
 	catch (ErrorObject& err) {
-		AERROR("%s", err.AsString());
+		AERROR("%s", err.AsCString());
 		sioTracer->RemoveAllTracers();
 		exit(1);
 	}

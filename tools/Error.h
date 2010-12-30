@@ -21,53 +21,67 @@
    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
+#include <string>
+#include <sstream>
+
 class ErrorObject {
 public:
 	ErrorObject();
 	ErrorObject(const ErrorObject& );
-	ErrorObject(const char* description);
+	ErrorObject(const std::string description);
 
 	virtual ~ErrorObject();
 
-	const char* AsString() const;
+	inline const std::string& AsString() const;
+	inline const char* AsCString() const;
 
 protected:
-	void SetDescription(const char* string);
-	void SetDescription(const char* str1, const char* str2);
+	void SetDescription(const std::string str);
 
 private:
-	char* fDescription;
+	std::string fDescription;
 };
+
+inline const std::string& ErrorObject::AsString() const
+{
+	return fDescription;
+}
+
+inline const char* ErrorObject::AsCString() const
+{
+	return fDescription.c_str();
+}
+
 
 class FileOpenError : public ErrorObject {
 public:
-	FileOpenError(const char* filename)
-		: ErrorObject()
-	{ SetDescription("error opening ", filename); }
+	FileOpenError(const std::string filename)
+		: ErrorObject("error opening " + filename)
+	{ }
 	virtual ~FileOpenError() {}
 };
 
 class FileCreateError : public ErrorObject {
 public:
-	FileCreateError(const char* filename)
-		: ErrorObject()
-	{ SetDescription("error creating ", filename); }
+	FileCreateError(const std::string filename)
+		: ErrorObject("error creating " + filename)
+	{ }
 	virtual ~FileCreateError() {}
 };
 
 class FileReadError : public ErrorObject {
 public:
-	FileReadError(const char* filename)
-		: ErrorObject()
-	{ SetDescription("error reading ", filename); }
+	FileReadError(const std::string filename)
+		: ErrorObject("error reading " + filename)
+	{ }
 	virtual ~FileReadError() {}
 };
 
 class FileWriteError : public ErrorObject {
 public:
-	FileWriteError(const char* filename)
-		: ErrorObject()
-	{ SetDescription("error writing ", filename); }
+	FileWriteError(const std::string filename)
+		: ErrorObject("error writing " + filename)
+	{ }
 	virtual ~FileWriteError() {}
 };
 
@@ -87,6 +101,17 @@ public:
 		: ErrorObject("read error")
 	{ }
 	virtual ~ReadError() {}
+};
+
+class ReadErrorLen : public ErrorObject {
+public:
+	ReadErrorLen(unsigned int total, unsigned int len)
+	{ 
+		std::ostringstream s;
+		s << "read error: got " << len << " of " << total << " bytes";
+		SetDescription(s.str());
+	}
+	virtual ~ReadErrorLen() {}
 };
 
 
