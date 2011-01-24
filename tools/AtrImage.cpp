@@ -194,24 +194,28 @@ bool AtrImage::SetFormatFromATRHeader(const uint8_t* hdr)
 
 	switch (density) {
 	case e128BytesPerSector:
+		if (imgSize % 128 != 0) {
+			goto failure;
+		}
 		numberOfSectors = imgSize / 128;
 		break;
 	case e256BytesPerSector:
 		if (imgSize <= 384) {
 			goto failure;
 		} else {
-			if (imgSize % 256 == 0x80) {
+			if (imgSize == 256*720) {
+				// workaround for SIO2PC DD ATRs having 384 extra bytes at the end
+				numberOfSectors = 720;
+			} else {
 				imgSize += 384;
-			} else if ((imgSize & 0xff) != 0) {
-				goto failure;
+				if ((imgSize & 0xff) != 0) {
+					goto failure;
+				}
+				numberOfSectors = imgSize / 256;
 			}
-			numberOfSectors = imgSize / 256;
 		}
 		break;
 	case e512BytesPerSector:
-		if (imgSize <= 1536) {
-			goto failure;
-		}
 		if (imgSize % 512 != 0) {
 			goto failure;
 		}
