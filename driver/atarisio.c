@@ -1,8 +1,8 @@
 /*
-   atarisio V1.05
+   atarisio V1.06
    a kernel module for handling the Atari 8bit SIO protocol
 
-   Copyright (C) 2002-2009 Matthias Reichl <hias@horus.com>
+   Copyright (C) 2002-2011 Matthias Reichl <hias@horus.com>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -3204,13 +3204,21 @@ static long ioctl_wrapper(struct atarisio_dev* dev, struct file* f, unsigned int
 #endif
 }
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,36)
+#define my_lock_kernel() lock_kernel()
+#define my_unlock_kernel() unlock_kernel()
+#else
+#define my_lock_kernel()
+#define my_unlock_kernel()
+#endif
+
 static int disable_serial_port(struct atarisio_dev* dev)
 {
 	mm_segment_t fs;
 	struct file* f;
 	struct serial_struct ss;
 
-	lock_kernel();
+	my_lock_kernel();
 
 	fs = get_fs();
 	set_fs(get_ds());
@@ -3289,7 +3297,7 @@ static int disable_serial_port(struct atarisio_dev* dev)
 		goto fail;
 	}
 	set_fs(fs);
-	unlock_kernel();
+	my_unlock_kernel();
 	return 0;
 
 fail_close:
@@ -3300,7 +3308,7 @@ fail_close:
 
 fail:
 	set_fs(fs);
-	unlock_kernel();
+	my_unlock_kernel();
 	return 1;
 }
 
@@ -3315,7 +3323,7 @@ static int reenable_serial_port(struct atarisio_dev* dev)
 		return 0;
 	}
 
-	lock_kernel();
+	my_lock_kernel();
 	fs = get_fs();
 	set_fs(get_ds());
 
@@ -3358,7 +3366,7 @@ static int reenable_serial_port(struct atarisio_dev* dev)
 		goto fail;
 	}
 	set_fs(fs);
-	unlock_kernel();
+	my_unlock_kernel();
 	return 0;
 
 fail_close:
@@ -3369,7 +3377,7 @@ fail_close:
 
 fail:
 	set_fs(fs);
-	unlock_kernel();
+	my_unlock_kernel();
 	return 1;
 }
 
@@ -3485,7 +3493,7 @@ static int atarisio_init_module(void)
 	int numtried = 0;
 	atarisio_is_initialized = 0;
 
-	printk("AtariSIO kernel driver V%d.%02d (c) 2002-2010 Matthias Reichl\n",
+	printk("AtariSIO kernel driver V%d.%02d (c) 2002-2011 Matthias Reichl\n",
 		ATARISIO_MAJOR_VERSION, ATARISIO_MINOR_VERSION);
 
 	for (i=0;i<ATARISIO_MAXDEV;i++) {
