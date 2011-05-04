@@ -105,40 +105,43 @@ bool AtrImage::SetFormat(ESectorLength density, uint32_t numberOfSectors)
 	fImageConfig.fNumberOfSectors = numberOfSectors;
 	fImageConfig.fDiskFormat = eUserDefDisk;
 
-	/*
-	 * try to figure out an appropriate disk mapping
-	 */
-	switch (numberOfSectors) {
-	case 720:
-		fImageConfig.fSectorsPerTrack = 18;
-		fImageConfig.fTracksPerSide = 40;
-		fImageConfig.fSides = 1;
-		break;
-	case 1040:
-		fImageConfig.fSectorsPerTrack = 26;
-		fImageConfig.fTracksPerSide = 40;
-		fImageConfig.fSides = 1;
-		break;
-	case 1440:
-		fImageConfig.fSectorsPerTrack = 18;
-		fImageConfig.fTracksPerSide = 40;
-		fImageConfig.fSides = 2;
-		break;
-	case 2880:
-		fImageConfig.fSectorsPerTrack = 18;
-		fImageConfig.fTracksPerSide = 80;
-		fImageConfig.fSides = 2;
-		break;
-	case 5760:
-		fImageConfig.fSectorsPerTrack = 36;
-		fImageConfig.fTracksPerSide = 80;
-		fImageConfig.fSides = 2;
-		break;
-	default:
-		fImageConfig.fSectorsPerTrack = numberOfSectors;
-		fImageConfig.fTracksPerSide = 1;
-		fImageConfig.fSides = 1;
-		break;
+	fImageConfig.fSectorsPerTrack = numberOfSectors;
+	fImageConfig.fTracksPerSide = 1;
+	fImageConfig.fSides = 1;
+
+	if (density == e128BytesPerSector || density == e256BytesPerSector) {
+		/*
+		 * try to figure out an appropriate disk mapping
+		 */
+		switch (numberOfSectors) {
+		case 720:
+			fImageConfig.fSectorsPerTrack = 18;
+			fImageConfig.fTracksPerSide = 40;
+			fImageConfig.fSides = 1;
+			break;
+		case 1040:
+			fImageConfig.fSectorsPerTrack = 26;
+			fImageConfig.fTracksPerSide = 40;
+			fImageConfig.fSides = 1;
+			break;
+		case 1440:
+			fImageConfig.fSectorsPerTrack = 18;
+			fImageConfig.fTracksPerSide = 40;
+			fImageConfig.fSides = 2;
+			break;
+		case 2880:
+			fImageConfig.fSectorsPerTrack = 18;
+			fImageConfig.fTracksPerSide = 80;
+			fImageConfig.fSides = 2;
+			break;
+		case 5760:
+			fImageConfig.fSectorsPerTrack = 36;
+			fImageConfig.fTracksPerSide = 80;
+			fImageConfig.fSides = 2;
+			break;
+		default:
+			break;
+		}
 	}
 	fImageConfig.DetermineDiskFormatFromLayout();
 	fImageConfig.CalculateImageSize();
