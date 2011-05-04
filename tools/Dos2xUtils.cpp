@@ -1152,9 +1152,15 @@ void Dos2xUtils::DumpRawDirectory(bool beQuiet) const
 
 bool Dos2xUtils::SetDosFormat(EDosFormat format)
 {
+	unsigned int seclen = fImage->GetSectorLength();
+
+	if (seclen != 128 && seclen != 256) {
+		AERROR("SetDosFormat: only SD and DD images supported");
+		return false;
+	}
 	if (fImage->GetNumberOfSectors() < 720) {
 		return false;
-	}       
+	}
 
 	fDosFormat = format;
 	if (fImage->GetNumberOfSectors() == 1040 &&
@@ -1179,9 +1185,15 @@ bool Dos2xUtils::SetDosFormat(EDosFormat format)
 bool Dos2xUtils::InitVTOC()
 {
 	uint8_t buf[256];
+	memset(buf, 0, 256);
+
 	unsigned int numsec = fImage->GetNumberOfSectors();
 	unsigned int seclen = fImage->GetSectorLength();
-	memset(buf, 0, 256);
+
+	if (seclen != 128 && seclen != 256) {
+		AERROR("InitVTOC: only SD and DD images supported");
+		return false;
+	}
 
 	if (numsec < 720) {
 		AERROR("image has less than 720 sectors, aborting VTOC creation");

@@ -1154,7 +1154,7 @@ int CursesFrontend::GetCh(bool ignoreResize)
 bool CursesFrontend::IsAbortChar(int ch)
 {
 	return (ch == ERR) || (ch == 27) || (ch == 7)
-		|| (ch == 'q');
+		|| (ch == 'q') || (ch == 'Q');
 }
 
 DeviceManager::EDriveNumber CursesFrontend::InputDriveNumber(EDriveInputType type)
@@ -1354,7 +1354,7 @@ void CursesFrontend::ShowCreateDriveHint(bool enableQD)
 	werase(fBottomLineWindow);
 	wmove(fBottomLineWindow, 0, 0);
 	if (enableQD) {
-		waddstr(fBottomLineWindow,"'1'=90k '2'=130k '3'=180k '4'=360k 's'=SD 'd'=DD 'Q'=QD '^G','q'=abort");
+		waddstr(fBottomLineWindow,"'1'=90k '2'=130k '3'=180k '4'=360k 's'=SD 'd'=DD 'f'=QD '^G','q'=abort");
 	} else {
 		waddstr(fBottomLineWindow,"'1'=90k '2'=130k '3'=180k '4'=360k 's'=SD 'd'=DD '^G','q'=abort");
 	}
@@ -1969,7 +1969,7 @@ bool CursesFrontend::InputCreateDriveDensity(int& densityNum, ESectorLength& sec
 	} while ( (!IsAbortChar(ch)) &&
 		  (ch != '1') && (ch != '2') && (ch != '3') && (ch != '4') &&
 		  (ch != 's') && (ch != 'S') && (ch != 'd') && (ch != 'D') &&
-		  !(enableQD && (ch = 'Q'))
+		  !( enableQD && ((ch == 'f') || (ch == 'F')) )
 		  );
 
 	if (IsAbortChar(ch)) {
@@ -1986,7 +1986,8 @@ bool CursesFrontend::InputCreateDriveDensity(int& densityNum, ESectorLength& sec
 	case 'd':
 	case 'S':
 	case 'D':
-	case 'Q':
+	case 'f':
+	case 'F':
 		densityNum = 0;
 		if (enableAutoSectors && (ch == 's' || ch == 'd')) {
 			densityNum = -1;
@@ -2006,7 +2007,7 @@ bool CursesFrontend::InputCreateDriveDensity(int& densityNum, ESectorLength& sec
 		}
 		return true;
 	default:
-		DPRINTF("unhandeled option %d in ProcessCreateImage", ch);
+		DPRINTF("unhandeled option %d in InputCreateDriveDensity", ch);
 		break;
 	}
 	return false;
@@ -2527,6 +2528,13 @@ void CursesFrontend::ProcessFormatDrive()
 		return;
 	}
 
+	unsigned int seclen = img->GetSectorLength();
+	if (seclen != 128 && seclen != 256) {
+		AERROR("Only SD and DD images are supported");
+		AbortInput();
+		return;
+	}
+
 	werase(fBottomLineWindow);
 	wmove(fBottomLineWindow, 0, 0);
 	waddstr(fBottomLineWindow, "'d' = DOS 2.x, 'm' = MyDOS 'q' = abort");
@@ -2548,19 +2556,23 @@ void CursesFrontend::ProcessFormatDrive()
 
 	RCPtr<Dos2xUtils> utils = new Dos2xUtils(img);
 
+	bool ok = true;
 	switch (ch) {
 	case 'd':
 	case 'D':
 		waddstr(fInputLineWindow,"DOS 2.x");
-		utils->SetDosFormat(Dos2xUtils::eDos2x);
+		ok = utils->SetDosFormat(Dos2xUtils::eDos2x);
 		break;
 	case 'm':
 	case 'M':
 		waddstr(fInputLineWindow,"MyDOS");
-		utils->SetDosFormat(Dos2xUtils::eMyDos);
+		ok = utils->SetDosFormat(Dos2xUtils::eMyDos);
 		break;
 	}
-	if (!utils->InitVTOC()) {
+	if (ok) {
+		ok = utils->InitVTOC();
+	}
+	if (!ok) {
 		AERROR("formatting drive failed");
 	}
 
@@ -2617,6 +2629,12 @@ void CursesFrontend::AddFilenameHistory(const char* string)
 bool CursesFrontend::ShowDos2Directory(const RCPtr<DiskImage>& image, bool beQuiet)
 {
 	if (image.IsNull()) {
+		return false;
+	}
+
+	unsigned int seclen = image->GetSectorLength();
+	if (seclen != 128 && seclen != 256) {
+		AERROR("Only SD and DD images are supported");
 		return false;
 	}
 
