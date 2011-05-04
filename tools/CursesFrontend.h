@@ -155,7 +155,7 @@ private:
 private:
 	void InternalProcessWriteProtectDrive(bool protect);
 	void InternalProcessActivateDrive(bool act);
-	bool InputCreateDriveDensity(int& densityNum, bool& isDD, bool enableAutoSectors);
+	bool InputCreateDriveDensity(int& densityNum, ESectorLength& seclen, bool enableQD, bool enableAutoSectors);
 	bool InputCreateDriveSectors(unsigned int& numSectors, int minimumSectors, bool haveDefault);
 
 	bool CalculateWindowPositions(
@@ -184,7 +184,7 @@ private:
 	void ShowPagerHint();
 	void ShowFileInputHint(bool enableVirtualDrive);
 	void ShowTraceLevelHint();
-	void ShowCreateDriveHint();
+	void ShowCreateDriveHint(bool enableQD);
 	void ShowImageSizeHint(int minimumSectors);
 	void ShowHighSpeedHint();
 	void ShowHighSpeedParametersHint();

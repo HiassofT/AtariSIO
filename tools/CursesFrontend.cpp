@@ -1154,7 +1154,7 @@ int CursesFrontend::GetCh(bool ignoreResize)
 bool CursesFrontend::IsAbortChar(int ch)
 {
 	return (ch == ERR) || (ch == 27) || (ch == 7)
-		|| (ch == 'q') || (ch == 'Q');
+		|| (ch == 'q');
 }
 
 DeviceManager::EDriveNumber CursesFrontend::InputDriveNumber(EDriveInputType type)
@@ -1349,11 +1349,15 @@ void CursesFrontend::ShowTraceLevelHint()
 	waddstr(fBottomLineWindow,"level '0'..'3', '^G','q'=abort");
 }
 
-void CursesFrontend::ShowCreateDriveHint()
+void CursesFrontend::ShowCreateDriveHint(bool enableQD)
 {
 	werase(fBottomLineWindow);
 	wmove(fBottomLineWindow, 0, 0);
-	waddstr(fBottomLineWindow,"'1'=90k '2'=130k '3'=180k '4'=360k 's'=custom SD 'd'=custom DD '^G','q'=abort");
+	if (enableQD) {
+		waddstr(fBottomLineWindow,"'1'=90k '2'=130k '3'=180k '4'=360k 's'=SD 'd'=DD 'Q'=QD '^G','q'=abort");
+	} else {
+		waddstr(fBottomLineWindow,"'1'=90k '2'=130k '3'=180k '4'=360k 's'=SD 'd'=DD '^G','q'=abort");
+	}
 }
 
 void CursesFrontend::ShowImageSizeHint(int minimumSectors)
@@ -1770,14 +1774,13 @@ void CursesFrontend::ProcessLoadDrive()
 		waddstr(fInputLineWindow, "virtual drive");
 
 		int densityNum;
-		bool isDD;
+		ESectorLength seclen = e128BytesPerSector;
 		unsigned int numSectors = 0;
 
-		if (!InputCreateDriveDensity(densityNum, isDD, true)) {
+		if (!InputCreateDriveDensity(densityNum, seclen, false, true)) {
 			AbortInput();
 			return;
 		}
-		ESectorLength seclen = SectorLength(isDD);
 		
 		bool haveDefault = false;
 		if (densityNum == -1) {
@@ -1953,11 +1956,11 @@ void CursesFrontend::ProcessReloadDrive()
 	UpdateScreen();
 }
 
-bool CursesFrontend::InputCreateDriveDensity(int& densityNum, bool& isDD, bool enableAutoSectors)
+bool CursesFrontend::InputCreateDriveDensity(int& densityNum, ESectorLength& seclen, bool enableQD, bool enableAutoSectors)
 {
 	int ch;
 
-	ShowCreateDriveHint();
+	ShowCreateDriveHint(enableQD);
 	waddstr(fInputLineWindow," size: ");
 	UpdateScreen();
 
@@ -1965,7 +1968,8 @@ bool CursesFrontend::InputCreateDriveDensity(int& densityNum, bool& isDD, bool e
 		ch = GetCh(true);
 	} while ( (!IsAbortChar(ch)) &&
 		  (ch != '1') && (ch != '2') && (ch != '3') && (ch != '4') &&
-		  (ch != 's') && (ch != 'S') && (ch != 'd') && (ch != 'D')
+		  (ch != 's') && (ch != 'S') && (ch != 'd') && (ch != 'D') &&
+		  !(enableQD && (ch = 'Q'))
 		  );
 
 	if (IsAbortChar(ch)) {
@@ -1982,6 +1986,7 @@ bool CursesFrontend::InputCreateDriveDensity(int& densityNum, bool& isDD, bool e
 	case 'd':
 	case 'S':
 	case 'D':
+	case 'Q':
 		densityNum = 0;
 		if (enableAutoSectors && (ch == 's' || ch == 'd')) {
 			densityNum = -1;
@@ -1989,12 +1994,15 @@ bool CursesFrontend::InputCreateDriveDensity(int& densityNum, bool& isDD, bool e
 		} else {
 			waddstr(fInputLineWindow,"custom ");
 		}
-		isDD = false;
 		if ((ch == 's') || (ch == 'S')) {
 			waddstr(fInputLineWindow,"SD");
-		} else {
+			seclen = e128BytesPerSector;
+		} else if ((ch == 'd') || (ch == 'D')) {
 			waddstr(fInputLineWindow,"DD");
-			isDD = true;
+			seclen = e256BytesPerSector;
+		} else {
+			waddstr(fInputLineWindow,"QD");
+			seclen = e512BytesPerSector;
 		}
 		return true;
 	default:
@@ -2064,10 +2072,10 @@ void CursesFrontend::ProcessCreateDrive()
 	ShowDriveNumber(d);
 
 	int densityNum;
-	bool isDD;
 	unsigned int numSectors;
+	ESectorLength seclen;
 
-	if (!InputCreateDriveDensity(densityNum, isDD, false)) {
+	if (!InputCreateDriveDensity(densityNum, seclen, true, false)) {
 		AbortInput();
 		return;
 	}
@@ -2095,11 +2103,7 @@ void CursesFrontend::ProcessCreateDrive()
 		fDeviceManager->CreateAtrMemoryImage(d, e360kDisk, true);
 		break;
 	default:
-		if (isDD) {
-			fDeviceManager->CreateAtrMemoryImage(d, e256BytesPerSector, numSectors, true);
-		} else {
-			fDeviceManager->CreateAtrMemoryImage(d, e128BytesPerSector, numSectors, true);
-		}
+		fDeviceManager->CreateAtrMemoryImage(d, seclen, numSectors, true);
 		break;
 	}
 
