@@ -142,6 +142,24 @@ bool AtrImage::SetFormat(ESectorLength density, uint32_t numberOfSectors)
 		default:
 			break;
 		}
+	} else if (density == e512BytesPerSector) {
+		switch (numberOfSectors) {
+		case 720:
+			fImageConfig.fSectorsPerTrack = 9;
+			fImageConfig.fTracksPerSide = 80;
+			fImageConfig.fSides = 1;
+			break;
+		case 1440:
+			fImageConfig.fSectorsPerTrack = 9;
+			fImageConfig.fTracksPerSide = 80;
+			fImageConfig.fSides = 2;
+			break;
+		case 2880:
+			fImageConfig.fSectorsPerTrack = 18;
+			fImageConfig.fTracksPerSide = 80;
+			fImageConfig.fSides = 2;
+			break;
+		}
 	}
 	fImageConfig.DetermineDiskFormatFromLayout();
 	fImageConfig.CalculateImageSize();

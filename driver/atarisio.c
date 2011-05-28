@@ -66,7 +66,15 @@
 #include <linux/ioport.h>
 #include <linux/interrupt.h>
 #include <linux/init.h>
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,36)
 #include <linux/smp_lock.h>
+#define my_lock_kernel() lock_kernel()
+#define my_unlock_kernel() unlock_kernel()
+#else
+#define my_lock_kernel()	do { } while (0)
+#define my_unlock_kernel()	do { } while (0)
+#endif
 
 #include <linux/poll.h>
 #include <linux/serial_reg.h>
@@ -3203,14 +3211,6 @@ static long ioctl_wrapper(struct atarisio_dev* dev, struct file* f, unsigned int
 	return -EINVAL;
 #endif
 }
-
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,36)
-#define my_lock_kernel() lock_kernel()
-#define my_unlock_kernel() unlock_kernel()
-#else
-#define my_lock_kernel()
-#define my_unlock_kernel()
-#endif
 
 static int disable_serial_port(struct atarisio_dev* dev)
 {

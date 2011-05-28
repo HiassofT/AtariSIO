@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE pkgmetadata SYSTEM "http://www.gentoo.org/dtd/metadata.dtd">
+<pkgmetadata>
+  <herd>games</herd>
+  <longdescription>
+About Atarisio
+==============
+
+AtariSIO basically consists of two parts:
+- a kernel module to handle the low-level part of the Atari SIO
+  protocol, and
+- a set of utilities (atarserver emulates Atari floppy disk
+  drives, atarixfer can read/write floppy disks from/to a
+  floppy drive connected to the PC)
+- a set of utilities to handle ATR (and other) disk images
+  (adir to list the directory of an image and dir2atr to
+  create a disk image from a directory of files on your PC)
+  </longdescription>
+</pkgmetadata>

@@ -160,3 +160,5 @@ AtariSIO changelog:
   - atarixfer: added option to retry failed sector I/Os
   - atarisio: removed lock_kernel for kernel >= 2.6.36
   - atariserver: support creation of QD images
+  - included Gentoo ebuild files in contrib/gentoo, thanks to Oliver Jaksch!
+  - atarisio: remove include file smp_lock.h for kernel >= 2.6.36, fix compilation on 2.6.39
