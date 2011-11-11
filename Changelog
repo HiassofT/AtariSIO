@@ -162,3 +162,4 @@ AtariSIO changelog:
   - atariserver: support creation of QD images
   - included Gentoo ebuild files in contrib/gentoo, thanks to Oliver Jaksch!
   - atarisio: remove include file smp_lock.h for kernel >= 2.6.36, fix compilation on 2.6.39
+  - atariserver: preliminary support for ATRs with 1/2/4/8k sector sizes

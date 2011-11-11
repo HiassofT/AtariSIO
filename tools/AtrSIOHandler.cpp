@@ -59,6 +59,8 @@
 #define SPEED_BYTE_70892 5
 #define SPEED_BYTE_76800 4
 
+uint8_t AtrSIOHandler::fBuffer[AtrSIOHandler::eBufferSize];
+
 AtrSIOHandler::AtrSIOHandler(const RCPtr<AtrImage>& image)
 	: fImage(image),
 	  fEnableHighSpeed(false),
@@ -134,7 +136,6 @@ int AtrSIOHandler::ProcessCommandFrame(SIO_command_frame& frame, const RCPtr<SIO
 		}
 
 		size_t buflen = 4;
-		uint8_t buf[buflen];
 
 		const char* description = 0;
 		switch (frame.command) {
@@ -142,32 +143,32 @@ int AtrSIOHandler::ProcessCommandFrame(SIO_command_frame& frame, const RCPtr<SIO
 		case 0xd3: description = "[ get status XF551 ]"; break;
 		}
 
-		buf[0] = 0x10; // motor on
+		fBuffer[0] = 0x10; // motor on
 		if (fFormatConfig.fSectorLength == e128BytesPerSector) {
 			if (fFormatConfig.fNumberOfSectors==1040) {
-				buf[0] |= 0x80; /* enhanced density */
+				fBuffer[0] |= 0x80; /* enhanced density */
 			}
 		} else {
-			buf[0] |= 0x20; /* double density */
+			fBuffer[0] |= 0x20; /* double density */
 			if (fFormatConfig.fNumberOfSectors == 1440) {
-				buf[0] |= 0x40; /* XF551 QD sets both DD bit and bit 6 (?) */
+				fBuffer[0] |= 0x40; /* XF551 QD sets both DD bit and bit 6 (?) */
 			}
 		}
-		buf[1] = fLastFDCStatus;
+		fBuffer[1] = fLastFDCStatus;
 		if (fEnableXF551Mode) {
-			buf[2] = 0xfe;
+			fBuffer[2] = 0xfe;
 		} else {
-			buf[2] = 0xe0;
+			fBuffer[2] = 0xe0;
 		}
-		buf[3] = 0;
+		fBuffer[3] = 0;
 
 		if (fImage->IsWriteProtected()) {
-			buf[0] |= 0x08;
+			fBuffer[0] |= 0x08;
 		}
 
 		fTracer->TraceCommandOK();
 		fTracer->TraceGetStatus(myDriveNo, hi_cmd);
-		fTracer->TraceDataBlock(buf, 4, description);
+		fTracer->TraceDataBlock(fBuffer, buflen, description);
 
 		if ((ret=wrapper->SendComplete())) {
 			LOG_SIO_COMPLETE_FAILED();
@@ -175,10 +176,10 @@ int AtrSIOHandler::ProcessCommandFrame(SIO_command_frame& frame, const RCPtr<SIO
 		}
 
 		if (hi_cmd) {
-			ret = wrapper->SendDataFrameXF551(buf, 4);
+			ret = wrapper->SendDataFrameXF551(fBuffer, 4);
 			reset_baudrate = false;
 		} else {
-			ret = wrapper->SendDataFrame(buf, 4);
+			ret = wrapper->SendDataFrame(fBuffer, 4);
 		}
 		if (ret) {
 			LOG_SIO_SEND_DATA_FAILED();
@@ -228,7 +229,6 @@ int AtrSIOHandler::ProcessCommandFrame(SIO_command_frame& frame, const RCPtr<SIO
 		}
 
 		size_t buflen = fImageConfig.GetSectorLength(sec);
-		uint8_t buf[buflen];
 
 		const char* description = 0;
 		switch (frame.command) {
@@ -236,13 +236,13 @@ int AtrSIOHandler::ProcessCommandFrame(SIO_command_frame& frame, const RCPtr<SIO
 		case 0xd2: description = "[ read sector XF551 ]"; break;
 		}
 
-		if (!fImage->ReadSector(sec, buf, buflen)) {
+		if (!fImage->ReadSector(sec, fBuffer, buflen)) {
 			fLastFDCStatus = 0xef; // record not found;
 			ret = AbstractSIOHandler::eImageError;
 
 			fTracer->TraceCommandError(ret);
 			fTracer->TraceReadSector(myDriveNo, sec, hi_cmd);
-			fTracer->TraceDataBlock(buf, buflen, description);
+			fTracer->TraceDataBlock(fBuffer, buflen, description);
 
 			if (wrapper->SendError()) {
 				LOG_SIO_ERROR_FAILED();
@@ -253,7 +253,7 @@ int AtrSIOHandler::ProcessCommandFrame(SIO_command_frame& frame, const RCPtr<SIO
 
 			fTracer->TraceCommandOK();
 			fTracer->TraceReadSector(myDriveNo, sec, hi_cmd);
-			fTracer->TraceDataBlock(buf, buflen, description);
+			fTracer->TraceDataBlock(fBuffer, buflen, description);
 
 			if ((ret=wrapper->SendComplete())) {
 				LOG_SIO_COMPLETE_FAILED();
@@ -262,10 +262,10 @@ int AtrSIOHandler::ProcessCommandFrame(SIO_command_frame& frame, const RCPtr<SIO
 		}
 
 		if (hi_cmd) {
-			ret2 = wrapper->SendDataFrameXF551(buf, buflen);
+			ret2 = wrapper->SendDataFrameXF551(fBuffer, buflen);
 			reset_baudrate = false;
 		} else {
-			ret2 = wrapper->SendDataFrame(buf, buflen);
+			ret2 = wrapper->SendDataFrame(fBuffer, buflen);
 		}
 		if (ret2) {
 			LOG_SIO_SEND_DATA_FAILED();
@@ -316,7 +316,6 @@ int AtrSIOHandler::ProcessCommandFrame(SIO_command_frame& frame, const RCPtr<SIO
 		}
 
 		size_t buflen = fImageConfig.GetSectorLength(sec);
-		uint8_t buf[buflen];
 
 		const char* description = 0;
 		switch (frame.command) {
@@ -326,7 +325,7 @@ int AtrSIOHandler::ProcessCommandFrame(SIO_command_frame& frame, const RCPtr<SIO
 		case 0xd7: description = "[ write sector XF551 ]"; break;
 		}
 
-		if ((ret=wrapper->ReceiveDataFrame(buf, buflen))) {
+		if ((ret=wrapper->ReceiveDataFrame(fBuffer, buflen))) {
 			fTracer->TraceCommandError(ret);
 			LOG_SIO_RECEIVE_DATA_FAILED();
 			break;
@@ -344,7 +343,7 @@ int AtrSIOHandler::ProcessCommandFrame(SIO_command_frame& frame, const RCPtr<SIO
 			} else {
 				fTracer->TraceWriteSectorVerify(myDriveNo, sec, hi_cmd);
 			}
-			fTracer->TraceDataBlock(buf, buflen, description);
+			fTracer->TraceDataBlock(fBuffer, buflen, description);
 
 			if (wrapper->SendError()) {
 				LOG_SIO_ERROR_FAILED();
@@ -355,7 +354,7 @@ int AtrSIOHandler::ProcessCommandFrame(SIO_command_frame& frame, const RCPtr<SIO
 			if (fVirtualImageObserver) {
 				fVirtualImageObserver->IndicateBeforeSectorWrite(sec);
 			}
-			if (!fImage->WriteSector(sec, buf, buflen)) {
+			if (!fImage->WriteSector(sec, fBuffer, buflen)) {
 				fLastFDCStatus = 0xb0; // write protected
 				ret = AbstractSIOHandler::eImageError;
 
@@ -365,7 +364,7 @@ int AtrSIOHandler::ProcessCommandFrame(SIO_command_frame& frame, const RCPtr<SIO
 				} else {
 					fTracer->TraceWriteSectorVerify(myDriveNo, sec, hi_cmd);
 				}
-				fTracer->TraceDataBlock(buf, buflen, description);
+				fTracer->TraceDataBlock(fBuffer, buflen, description);
 
 				if (wrapper->SendError()) {
 					LOG_SIO_ERROR_FAILED();
@@ -384,7 +383,7 @@ int AtrSIOHandler::ProcessCommandFrame(SIO_command_frame& frame, const RCPtr<SIO
 				} else {
 					fTracer->TraceWriteSectorVerify(myDriveNo, sec, hi_cmd);
 				}
-				fTracer->TraceDataBlock(buf, buflen, description);
+				fTracer->TraceDataBlock(fBuffer, buflen, description);
 
 				if (fVirtualImageObserver) {
 					fVirtualImageObserver->IndicateAfterSectorWrite(sec);
@@ -431,7 +430,7 @@ int AtrSIOHandler::ProcessCommandFrame(SIO_command_frame& frame, const RCPtr<SIO
 		}
 
 		size_t buflen = 12;
-		uint8_t buf[buflen];
+		unsigned int seclen;
 
 		const char* description = 0;
 		switch (frame.command) {
@@ -439,38 +438,31 @@ int AtrSIOHandler::ProcessCommandFrame(SIO_command_frame& frame, const RCPtr<SIO
 		case 0xce: description = "[ percom get XF551 ]"; break;
 		}
 
-		buf[0] = fFormatConfig.fTracksPerSide;
-		buf[1] = 0;
-		buf[2] = fFormatConfig.fSectorsPerTrack >> 8;
-		buf[3] = fFormatConfig.fSectorsPerTrack & 0xff;
+		fBuffer[0] = fFormatConfig.fTracksPerSide;
+		fBuffer[1] = 0;
+		fBuffer[2] = fFormatConfig.fSectorsPerTrack >> 8;
+		fBuffer[3] = fFormatConfig.fSectorsPerTrack & 0xff;
 		if (fFormatConfig.fSides) {
-			buf[4] = fFormatConfig.fSides - 1;
+			fBuffer[4] = fFormatConfig.fSides - 1;
 		} else {
-			buf[4] = 0;
+			fBuffer[4] = 0;
 		}
 		if (fFormatConfig.fDiskFormat == e90kDisk) {
-			buf[5] = 0;
+			fBuffer[5] = 0;
 		} else {
-			buf[5] = 4;
+			fBuffer[5] = 4;
 		}
-		if (fFormatConfig.fSectorLength == e512BytesPerSector) {
-			buf[6] = 2;
-			buf[7] = 0;
-		} else if (fFormatConfig.fSectorLength == e256BytesPerSector) {
-			buf[6] = 1;
-			buf[7] = 0;
-		} else {
-			buf[6] = 0;
-			buf[7] = 128;
-		}
-		buf[8] = 1;
-		buf[9] = 1;
-		buf[10] = 0;
-		buf[11] = 0;
+		seclen = fFormatConfig.GetSectorLength();
+		fBuffer[6] = seclen >> 8;
+		fBuffer[7] = seclen & 0xff;
+		fBuffer[8] = 1;
+		fBuffer[9] = 1;
+		fBuffer[10] = 0;
+		fBuffer[11] = 0;
 
 		fTracer->TraceCommandOK();
-		fTracer->TraceDecodedPercomBlock(myDriveNo, buf, true, hi_cmd);
-		fTracer->TraceDataBlock(buf, buflen, description);
+		fTracer->TraceDecodedPercomBlock(myDriveNo, fBuffer, true, hi_cmd);
+		fTracer->TraceDataBlock(fBuffer, buflen, description);
 
 		if ((ret=wrapper->SendComplete())) {
 			LOG_SIO_COMPLETE_FAILED();
@@ -478,10 +470,10 @@ int AtrSIOHandler::ProcessCommandFrame(SIO_command_frame& frame, const RCPtr<SIO
 		}
 
 		if (hi_cmd) {
-			ret = wrapper->SendDataFrameXF551(buf, 12);
+			ret = wrapper->SendDataFrameXF551(fBuffer, 12);
 			reset_baudrate = false;
 		} else {
-			ret = wrapper->SendDataFrame(buf, 12);
+			ret = wrapper->SendDataFrame(fBuffer, 12);
 		}
 		if (ret) {
 			LOG_SIO_SEND_DATA_FAILED();
@@ -517,7 +509,6 @@ int AtrSIOHandler::ProcessCommandFrame(SIO_command_frame& frame, const RCPtr<SIO
 		}
 
 		size_t buflen = 12;
-		uint8_t buf[buflen];
 
 		const char* description = 0;
 		switch (frame.command) {
@@ -525,7 +516,7 @@ int AtrSIOHandler::ProcessCommandFrame(SIO_command_frame& frame, const RCPtr<SIO
 		case 0xcf: description = "[ percom put XF551 ]"; break;
 		}
 
-		if ((ret=wrapper->ReceiveDataFrame(buf, 12)) ) {
+		if ((ret=wrapper->ReceiveDataFrame(fBuffer, 12)) ) {
 			fTracer->TraceCommandError(ret);
 			LOG_SIO_RECEIVE_DATA_FAILED();
 			break;
@@ -535,30 +526,35 @@ int AtrSIOHandler::ProcessCommandFrame(SIO_command_frame& frame, const RCPtr<SIO
 		uint16_t sec, secLen;
 		uint32_t total;
 
-		tracks = buf[0];
-		sec = buf[3] + (buf[2] << 8);
-		sides = buf[4] + 1;
-		secLen = buf[7] + (buf[6]<<8);
+		tracks = fBuffer[0];
+		sec = fBuffer[3] + (fBuffer[2] << 8);
+		sides = fBuffer[4] + 1;
+		secLen = fBuffer[7] + (fBuffer[6]<<8);
 
 		total = tracks * sec * sides;
 		if (VerifyPercomFormat(tracks, sides, sec, secLen, total)) {
 			fFormatConfig.fTracksPerSide = tracks;
 			fFormatConfig.fSectorsPerTrack = sec;
 			fFormatConfig.fSides = sides;
-			if (secLen == 512) {
-				fFormatConfig.fSectorLength = e512BytesPerSector;
-			} else if (secLen == 256) {
-				fFormatConfig.fSectorLength = e256BytesPerSector;
-			} else {
-				fFormatConfig.fSectorLength = e128BytesPerSector;
+
+			switch (secLen) {
+			case 256: fFormatConfig.fSectorLength = e256BytesPerSector; break;
+			case 512: fFormatConfig.fSectorLength = e512BytesPerSector; break;
+			case 1024: fFormatConfig.fSectorLength = e1kPerSector; break;
+			case 2048: fFormatConfig.fSectorLength = e2kPerSector; break;
+			case 4096: fFormatConfig.fSectorLength = e4kPerSector; break;
+			case 8192: fFormatConfig.fSectorLength = e8kPerSector; break;
+			case 128:
+			default:
+				fFormatConfig.fSectorLength = e128BytesPerSector; break;
 			}
 
 			fFormatConfig.fNumberOfSectors = total;
 			fFormatConfig.DetermineDiskFormatFromLayout();
 
 			fTracer->TraceCommandOK();
-			fTracer->TraceDecodedPercomBlock(myDriveNo, buf, false, hi_cmd);
-			fTracer->TraceDataBlock(buf, buflen, description);
+			fTracer->TraceDecodedPercomBlock(myDriveNo, fBuffer, false, hi_cmd);
+			fTracer->TraceDataBlock(fBuffer, buflen, description);
 
 			if (hi_cmd) {
 				ret = wrapper->SendCompleteXF551();
@@ -575,8 +571,8 @@ int AtrSIOHandler::ProcessCommandFrame(SIO_command_frame& frame, const RCPtr<SIO
 
 			fTracer->TraceCommandError(ret);
 			LOG_SIO_MISC("invalid config: %d sectors, %d bytes per sector",total,secLen);
-			fTracer->TraceDecodedPercomBlock(myDriveNo, buf, false, hi_cmd);
-			fTracer->TraceDataBlock(buf, buflen, description);
+			fTracer->TraceDecodedPercomBlock(myDriveNo, fBuffer, false, hi_cmd);
+			fTracer->TraceDataBlock(fBuffer, buflen, description);
 
 			if (wrapper->SendError()) {
 				LOG_SIO_ERROR_FAILED();
@@ -674,7 +670,6 @@ int AtrSIOHandler::ProcessCommandFrame(SIO_command_frame& frame, const RCPtr<SIO
 		}
 
 		size_t buflen = fFormatConfig.fSectorLength;
-		uint8_t buf[buflen];
 
 		const char* description = 0;
 		switch (frame.command) {
@@ -685,11 +680,11 @@ int AtrSIOHandler::ProcessCommandFrame(SIO_command_frame& frame, const RCPtr<SIO
 		if (fImage->IsWriteProtected() || IsVirtualImage() ) {
 			fLastFDCStatus = 0xbf; // write protected
 			ret = AbstractSIOHandler::eWriteProtected;
-			memset(buf,0,buflen);
+			memset(fBuffer,0,buflen);
 
 			fTracer->TraceCommandError(ret);
 			fTracer->TraceFormatDisk(myDriveNo, hi_cmd);
-			fTracer->TraceDataBlock(buf, buflen, description);
+			fTracer->TraceDataBlock(fBuffer, buflen, description);
 
 			if (wrapper->SendError()) {
 				LOG_SIO_ERROR_FAILED();
@@ -704,11 +699,11 @@ int AtrSIOHandler::ProcessCommandFrame(SIO_command_frame& frame, const RCPtr<SIO
 						fFormatConfig.fSides)) {
 				fLastFDCStatus = 0xbf; // write protected
 				ret = AbstractSIOHandler::eImageError;
-				memset(buf,0,buflen);
+				memset(fBuffer,0,buflen);
 
 				fTracer->TraceCommandError(ret);
 				fTracer->TraceFormatDisk(myDriveNo, hi_cmd);
-				fTracer->TraceDataBlock(buf, buflen, description);
+				fTracer->TraceDataBlock(fBuffer, buflen, description);
 
 				DPRINTF("create image failed [%d %d]",
 					fFormatConfig.fSectorLength, fFormatConfig.fNumberOfSectors);
@@ -720,7 +715,7 @@ int AtrSIOHandler::ProcessCommandFrame(SIO_command_frame& frame, const RCPtr<SIO
 				fLastFDCStatus = 0xff;
 				fImageConfig = fImage->GetImageConfig();
 				fFormatConfig = fImageConfig;
-				memset(buf,255,buflen);
+				memset(fBuffer,255,buflen);
 
 				if ((lastChanged == false) && fImage->Changed()) {
 					fTracer->IndicateDriveChanged(myDriveNo);
@@ -729,7 +724,7 @@ int AtrSIOHandler::ProcessCommandFrame(SIO_command_frame& frame, const RCPtr<SIO
 
 				fTracer->TraceCommandOK();
 				fTracer->TraceFormatDisk(myDriveNo, hi_cmd);
-				fTracer->TraceDataBlock(buf, buflen, description);
+				fTracer->TraceDataBlock(fBuffer, buflen, description);
 
 				if ((ret=wrapper->SendComplete())) {
 					LOG_SIO_COMPLETE_FAILED();
@@ -738,7 +733,7 @@ int AtrSIOHandler::ProcessCommandFrame(SIO_command_frame& frame, const RCPtr<SIO
 			}
 		}
 
-		if ((ret2=wrapper->SendDataFrame(buf, buflen))) {
+		if ((ret2=wrapper->SendDataFrame(fBuffer, buflen))) {
 			LOG_SIO_SEND_DATA_FAILED();
 			if (ret==0) ret=ret2;
 			break;
@@ -768,7 +763,6 @@ int AtrSIOHandler::ProcessCommandFrame(SIO_command_frame& frame, const RCPtr<SIO
 		}
 
 		size_t buflen = 128;
-		uint8_t buf[buflen];
 
 		const char* description = 0;
 		switch (frame.command) {
@@ -779,11 +773,11 @@ int AtrSIOHandler::ProcessCommandFrame(SIO_command_frame& frame, const RCPtr<SIO
 		if ( fImage->IsWriteProtected() || IsVirtualImage() ) {
 			fLastFDCStatus = 0xbf; // write protected
 			ret = AbstractSIOHandler::eWriteProtected;
-			memset(buf,0,128);
+			memset(fBuffer,0,128);
 
 			fTracer->TraceCommandError(ret);
 			fTracer->TraceFormatEnhanced(myDriveNo, hi_cmd);
-			fTracer->TraceDataBlock(buf, buflen, description);
+			fTracer->TraceDataBlock(fBuffer, buflen, description);
 
 			if (wrapper->SendError()) {
 				LOG_SIO_ERROR_FAILED();
@@ -795,11 +789,11 @@ int AtrSIOHandler::ProcessCommandFrame(SIO_command_frame& frame, const RCPtr<SIO
 			if (!fImage->CreateImage(e130kDisk)) {
 				fLastFDCStatus = 0xbf; // write protected
 				ret = AbstractSIOHandler::eImageError;
-				memset(buf,0,128);
+				memset(fBuffer,0,128);
 
 				fTracer->TraceCommandError(ret);
 				fTracer->TraceFormatEnhanced(myDriveNo, hi_cmd);
-				fTracer->TraceDataBlock(buf, buflen, description);
+				fTracer->TraceDataBlock(fBuffer, buflen, description);
 
 				if (wrapper->SendError()) {
 					LOG_SIO_ERROR_FAILED();
@@ -809,7 +803,7 @@ int AtrSIOHandler::ProcessCommandFrame(SIO_command_frame& frame, const RCPtr<SIO
 				fLastFDCStatus = 0xff;
 				fImageConfig = fImage->GetImageConfig();
 				fFormatConfig = fImageConfig;
-				memset(buf,255,128);
+				memset(fBuffer,255,128);
 
 				if ((lastChanged == false) && fImage->Changed()) {
 					fTracer->IndicateDriveChanged(myDriveNo);
@@ -818,7 +812,7 @@ int AtrSIOHandler::ProcessCommandFrame(SIO_command_frame& frame, const RCPtr<SIO
 
 				fTracer->TraceCommandOK();
 				fTracer->TraceFormatEnhanced(myDriveNo, hi_cmd);
-				fTracer->TraceDataBlock(buf, buflen, description);
+				fTracer->TraceDataBlock(fBuffer, buflen, description);
 
 				if ((ret=wrapper->SendComplete())) {
 					LOG_SIO_COMPLETE_FAILED();
@@ -827,7 +821,7 @@ int AtrSIOHandler::ProcessCommandFrame(SIO_command_frame& frame, const RCPtr<SIO
 			}
 		}
 
-		if ((ret2=wrapper->SendDataFrame(buf, 128))) {
+		if ((ret2=wrapper->SendDataFrame(fBuffer, 128))) {
 			LOG_SIO_SEND_DATA_FAILED();
 			if (ret==0) ret=ret2;
 			break;
@@ -842,10 +836,9 @@ int AtrSIOHandler::ProcessCommandFrame(SIO_command_frame& frame, const RCPtr<SIO
 		if (fEnableHighSpeed) {
 
 			size_t buflen = 1;
-			uint8_t buf[buflen];
 			const char* description = "[ get speed byte ]";
 
-			buf[0] = fSpeedByte;
+			fBuffer[0] = fSpeedByte;
 
 			if ((ret=wrapper->SendCommandACK())) {
 				fTracer->TraceCommandError(ret);
@@ -855,14 +848,14 @@ int AtrSIOHandler::ProcessCommandFrame(SIO_command_frame& frame, const RCPtr<SIO
 
 			fTracer->TraceCommandOK();
 			fTracer->TraceGetSpeedByte(myDriveNo);
-			fTracer->TraceDataBlock(buf, buflen, description);
+			fTracer->TraceDataBlock(fBuffer, buflen, description);
 	
 			if ((ret=wrapper->SendComplete())) {
 				LOG_SIO_COMPLETE_FAILED();
 				break;
 			}
 
-			if ((ret=wrapper->SendDataFrame(buf, 1))) {
+			if ((ret=wrapper->SendDataFrame(fBuffer, 1))) {
 				LOG_SIO_SEND_DATA_FAILED();
 				break;
 			}
@@ -888,7 +881,6 @@ int AtrSIOHandler::ProcessCommandFrame(SIO_command_frame& frame, const RCPtr<SIO
 		if (fEnableHighSpeed) {
 
 			size_t buflen = 2;
-			uint8_t buf[buflen];
 			const char * description = "[ get SIO length ]";
 
 			if ((ret=wrapper->SendCommandACK())) {
@@ -899,19 +891,19 @@ int AtrSIOHandler::ProcessCommandFrame(SIO_command_frame& frame, const RCPtr<SIO
 	
 			size_t codelen = HighSpeedSIOCode::GetInstance()->GetCodeSize();
 
-			buf[0] = codelen & 0xff;
-			buf[1] = codelen >> 8;
+			fBuffer[0] = codelen & 0xff;
+			fBuffer[1] = codelen >> 8;
 
 			fTracer->TraceCommandOK(),
 			fTracer->TraceGetSioCodeLength(myDriveNo);
-			fTracer->TraceDataBlock(buf, buflen, description);
+			fTracer->TraceDataBlock(fBuffer, buflen, description);
 
 			if ((ret=wrapper->SendComplete())) {
 				LOG_SIO_COMPLETE_FAILED();
 				break;
 			}
 
-			if ((ret=wrapper->SendDataFrame(buf, 2))) {
+			if ((ret=wrapper->SendDataFrame(fBuffer, 2))) {
 				LOG_SIO_SEND_DATA_FAILED();
 				break;
 			}
@@ -932,7 +924,12 @@ int AtrSIOHandler::ProcessCommandFrame(SIO_command_frame& frame, const RCPtr<SIO
 		if (fEnableHighSpeed) {
 
 			size_t buflen = HighSpeedSIOCode::GetInstance()->GetCodeSize();
-			uint8_t buf[buflen];
+			if (buflen > eBufferSize) {
+				DPRINTF("internal error, buffer for highspeed code too small!");
+				ret = wrapper->SendCommandNAK();
+				break;
+			}
+
 			const char* description = "[ get SIO code ]";
 
 			if ((ret=wrapper->SendCommandACK())) {
@@ -943,18 +940,18 @@ int AtrSIOHandler::ProcessCommandFrame(SIO_command_frame& frame, const RCPtr<SIO
 	
 			uint16_t relocadr = frame.aux1 + (frame.aux2<<8);
 
-			HighSpeedSIOCode::GetInstance()->RelocateCode(buf, relocadr);
+			HighSpeedSIOCode::GetInstance()->RelocateCode(fBuffer, relocadr);
 
 			fTracer->TraceCommandOK();
 			fTracer->TraceGetSioCode(myDriveNo);
-			fTracer->TraceDataBlock(buf, buflen, description);
+			fTracer->TraceDataBlock(fBuffer, buflen, description);
 
 			if ((ret=wrapper->SendComplete())) {
 				LOG_SIO_COMPLETE_FAILED();
 				break;
 			}
 
-			if ((ret=wrapper->SendDataFrame(buf, buflen))) {
+			if ((ret=wrapper->SendDataFrame(fBuffer, buflen))) {
 				LOG_SIO_SEND_DATA_FAILED();
 				break;
 			}
@@ -1023,16 +1020,15 @@ int AtrSIOHandler::ProcessCommandFrame(SIO_command_frame& frame, const RCPtr<SIO
 		}
 
 		size_t buflen = 128;
-		uint8_t buf[buflen];
 		const char* description = "[ read MyPicoDos ]";
 		MyPicoDosCode* mypdos = MyPicoDosCode::GetInstance();
 
-		if (!mypdos->GetMyPicoDosSector(sec, buf, buflen)) {
+		if (!mypdos->GetMyPicoDosSector(sec, fBuffer, buflen)) {
 			ret = AbstractSIOHandler::eImageError;
 
 			fTracer->TraceCommandError(ret);
 			fTracer->TraceReadMyPicoDos(myDriveNo, sec);
-			fTracer->TraceDataBlock(buf, buflen, description);
+			fTracer->TraceDataBlock(fBuffer, buflen, description);
 
 			if (wrapper->SendError()) {
 				LOG_SIO_ERROR_FAILED();
@@ -1041,7 +1037,7 @@ int AtrSIOHandler::ProcessCommandFrame(SIO_command_frame& frame, const RCPtr<SIO
 		} else {
 			fTracer->TraceCommandOK();
 			fTracer->TraceReadMyPicoDos(myDriveNo, sec);
-			fTracer->TraceDataBlock(buf, buflen, description);
+			fTracer->TraceDataBlock(fBuffer, buflen, description);
 
 			if ((ret=wrapper->SendComplete())) {
 				LOG_SIO_COMPLETE_FAILED();
@@ -1049,7 +1045,7 @@ int AtrSIOHandler::ProcessCommandFrame(SIO_command_frame& frame, const RCPtr<SIO
 			}
 		}
 
-		if ((ret2=wrapper->SendDataFrame(buf, buflen))) {
+		if ((ret2=wrapper->SendDataFrame(fBuffer, buflen))) {
 			LOG_SIO_SEND_DATA_FAILED();
 			if (ret==0) ret=ret2;
 			break;
@@ -1070,7 +1066,6 @@ int AtrSIOHandler::ProcessCommandFrame(SIO_command_frame& frame, const RCPtr<SIO
 			// ape time
 
 			size_t buflen = 6;
-			uint8_t buf[buflen];
 			const char* shortdesc = "get time";
 			const char* description = "[ get APE time ]";
 
@@ -1085,23 +1080,23 @@ int AtrSIOHandler::ProcessCommandFrame(SIO_command_frame& frame, const RCPtr<SIO
 			time(&current_time);
 			ltime = localtime(&current_time);
 
-			buf[0] = ltime->tm_mday;
-			buf[1] = ltime->tm_mon+1;
-			buf[2] = ltime->tm_year % 100;
-			buf[3] = ltime->tm_hour;
-			buf[4] = ltime->tm_min;
-			buf[5] = ltime->tm_sec;
+			fBuffer[0] = ltime->tm_mday;
+			fBuffer[1] = ltime->tm_mon+1;
+			fBuffer[2] = ltime->tm_year % 100;
+			fBuffer[3] = ltime->tm_hour;
+			fBuffer[4] = ltime->tm_min;
+			fBuffer[5] = ltime->tm_sec;
 
 			fTracer->TraceCommandOK();
 			fTracer->TraceApeSpecial(myDriveNo, shortdesc);
-			fTracer->TraceDataBlock(buf, buflen, description);
+			fTracer->TraceDataBlock(fBuffer, buflen, description);
 	
 			if ((ret=wrapper->SendComplete())) {
 				LOG_SIO_COMPLETE_FAILED();
 				break;
 			}
 
-			if ((ret=wrapper->SendDataFrame(buf, buflen))) {
+			if ((ret=wrapper->SendDataFrame(fBuffer, buflen))) {
 				LOG_SIO_SEND_DATA_FAILED();
 				break;
 			}
@@ -1110,7 +1105,6 @@ int AtrSIOHandler::ProcessCommandFrame(SIO_command_frame& frame, const RCPtr<SIO
 
 		case 0xf0: { // get image filename
 			size_t buflen = 256;
-			uint8_t buf[buflen];
 			const char* shortdesc = "get image name";
 			const char* description = "[ get APE image name ]";
 
@@ -1120,28 +1114,28 @@ int AtrSIOHandler::ProcessCommandFrame(SIO_command_frame& frame, const RCPtr<SIO
 				break;
 			}
 
-			memset(buf, 0, buflen);
+			memset(fBuffer, 0, buflen);
 			char* fn = MiscUtils::ShortenFilename(fImage->GetFilename(), buflen - 2);
 			if (fn) {
-				snprintf((char*)buf, buflen-1, "%s", fn);
+				snprintf((char*)fBuffer, buflen-1, "%s", fn);
 				delete[] fn;
 			}
 			if (fImage->IsVirtualImage()) {
-				buf[255] = 'M';
+				fBuffer[255] = 'M';
 			} else {
-				buf[255] = 'A';
+				fBuffer[255] = 'A';
 			}
 
 			fTracer->TraceCommandOK();
 			fTracer->TraceApeSpecial(myDriveNo, shortdesc);
-			fTracer->TraceDataBlock(buf, buflen, description);
+			fTracer->TraceDataBlock(fBuffer, buflen, description);
 	
 			if ((ret=wrapper->SendComplete())) {
 				LOG_SIO_COMPLETE_FAILED();
 				break;
 			}
 
-			if ((ret=wrapper->SendDataFrame(buf, buflen))) {
+			if ((ret=wrapper->SendDataFrame(fBuffer, buflen))) {
 				LOG_SIO_SEND_DATA_FAILED();
 				break;
 			}
@@ -1149,7 +1143,6 @@ int AtrSIOHandler::ProcessCommandFrame(SIO_command_frame& frame, const RCPtr<SIO
 		}
 		case 0xf1: { // get version
 			size_t buflen = 256;
-			uint8_t buf[buflen];
 			const char* shortdesc = "get version";
 			const char* description = "[ get APE version ]";
 
@@ -1159,20 +1152,20 @@ int AtrSIOHandler::ProcessCommandFrame(SIO_command_frame& frame, const RCPtr<SIO
 				break;
 			}
 
-			memset(buf, 0, buflen);
-			snprintf((char*)buf, buflen - 1, "AtariSIO for Linux" VERSION_STRING "\233"
+			memset(fBuffer, 0, buflen);
+			snprintf((char*)fBuffer, buflen - 1, "AtariSIO for Linux" VERSION_STRING "\233"
 					"(c) 2003-2008 Matthias Reichl\233");
 
 			fTracer->TraceCommandOK();
 			fTracer->TraceApeSpecial(myDriveNo, shortdesc);
-			fTracer->TraceDataBlock(buf, buflen, description);
+			fTracer->TraceDataBlock(fBuffer, buflen, description);
 	
 			if ((ret=wrapper->SendComplete())) {
 				LOG_SIO_COMPLETE_FAILED();
 				break;
 			}
 
-			if ((ret=wrapper->SendDataFrame(buf, buflen))) {
+			if ((ret=wrapper->SendDataFrame(fBuffer, buflen))) {
 				LOG_SIO_SEND_DATA_FAILED();
 				break;
 			}
@@ -1225,17 +1218,16 @@ int AtrSIOHandler::ProcessCommandFrame(SIO_command_frame& frame, const RCPtr<SIO
 			}
 
 			size_t buflen = 3;
-			uint8_t buf[buflen];
 			const char* description = "[ add command ]";
 
-			if ((ret=wrapper->ReceiveDataFrame(buf, buflen)) ) {
+			if ((ret=wrapper->ReceiveDataFrame(fBuffer, buflen)) ) {
 				fTracer->TraceCommandError(ret);
 				LOG_SIO_RECEIVE_DATA_FAILED();
 				break;
 			}
 
 			fTracer->TraceCommandOK();
-			fTracer->TraceDataBlock(buf, buflen, description);
+			fTracer->TraceDataBlock(fBuffer, buflen, description);
 
 			if ((ret=wrapper->SendComplete()) ) {
 				LOG_SIO_COMPLETE_FAILED();
@@ -1315,7 +1307,8 @@ bool AtrSIOHandler::VerifyPercomFormat(uint8_t tracks, uint8_t sides, uint16_t s
 	if (total_sectors == 0 or total_sectors >= 65536) {
 		return false;
 	}
-	if (seclen != 128 && seclen != 256 && seclen != 512) {
+	if (seclen != 128 && seclen != 256 && seclen != 512 &&
+	    seclen != 1024 && seclen != 2048 && seclen != 4096 && seclen != 8192) {
 		return false;
 	}
 	if (fStrictFormatChecking) {

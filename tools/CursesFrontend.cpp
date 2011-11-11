@@ -652,6 +652,18 @@ void CursesFrontend::DisplayDriveDensity(DeviceManager::EDriveNumber drive)
 				case e512BytesPerSector:
 					waddch(fDriveStatusWindow, 'Q');
 					break;
+				case e1kPerSector:
+					waddch(fDriveStatusWindow, '1');
+					break;
+				case e2kPerSector:
+					waddch(fDriveStatusWindow, '2');
+					break;
+				case e4kPerSector:
+					waddch(fDriveStatusWindow, '4');
+					break;
+				case e8kPerSector:
+					waddch(fDriveStatusWindow, '8');
+					break;
 				default:
 					waddch(fDriveStatusWindow, '?');
 					break;
@@ -1969,7 +1981,9 @@ bool CursesFrontend::InputCreateDriveDensity(int& densityNum, ESectorLength& sec
 	} while ( (!IsAbortChar(ch)) &&
 		  (ch != '1') && (ch != '2') && (ch != '3') && (ch != '4') &&
 		  (ch != 's') && (ch != 'S') && (ch != 'd') && (ch != 'D') &&
-		  !( enableQD && ((ch == 'f') || (ch == 'F')) )
+		  !( enableQD && ((ch == 'f') || (ch == 'F') ||
+                     (ch == '5') || (ch == '6') || (ch == '7') || (ch == '8') )
+                   )
 		  );
 
 	if (IsAbortChar(ch)) {
@@ -1988,6 +2002,10 @@ bool CursesFrontend::InputCreateDriveDensity(int& densityNum, ESectorLength& sec
 	case 'D':
 	case 'f':
 	case 'F':
+	case '5':
+	case '6':
+	case '7':
+	case '8':
 		densityNum = 0;
 		if (enableAutoSectors && (ch == 's' || ch == 'd')) {
 			densityNum = -1;
@@ -1995,15 +2013,41 @@ bool CursesFrontend::InputCreateDriveDensity(int& densityNum, ESectorLength& sec
 		} else {
 			waddstr(fInputLineWindow,"custom ");
 		}
-		if ((ch == 's') || (ch == 'S')) {
+		switch (ch) {
+		case 's':
+		case 'S':
 			waddstr(fInputLineWindow,"SD");
 			seclen = e128BytesPerSector;
-		} else if ((ch == 'd') || (ch == 'D')) {
+			break;
+		case 'd':
+		case 'D':
 			waddstr(fInputLineWindow,"DD");
 			seclen = e256BytesPerSector;
-		} else {
+			break;
+		case 'f':
+		case 'F':
 			waddstr(fInputLineWindow,"QD");
 			seclen = e512BytesPerSector;
+			break;
+		case '5':
+			waddstr(fInputLineWindow,"1k");
+			seclen = e1kPerSector;
+			break;
+		case '6':
+			waddstr(fInputLineWindow,"2k");
+			seclen = e2kPerSector;
+			break;
+		case '7':
+			waddstr(fInputLineWindow,"4k");
+			seclen = e4kPerSector;
+			break;
+		case '8':
+			waddstr(fInputLineWindow,"8k");
+			seclen = e8kPerSector;
+			break;
+		default:
+			DPRINTF("unhandeled density %d in InputCreateDriveDensity", ch);
+			return false;
 		}
 		return true;
 	default:

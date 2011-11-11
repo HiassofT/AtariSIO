@@ -39,6 +39,7 @@ public:
 	void DetermineDiskFormatFromLayout();
 	void CalculateImageSize();
 
+	unsigned int GetSectorLength() const;
 	unsigned int GetSectorLength(unsigned int sector) const;
 
 	EDiskFormat fDiskFormat;
@@ -116,19 +117,15 @@ inline ssize_t AtrImage::CalculateOffset(unsigned int sector) const
 	if ( (sector == 0) || (sector > fImageConfig.fNumberOfSectors) ) {
 		return -1;
 	}
-	switch (fImageConfig.fSectorLength) {
-	case e128BytesPerSector:
-		return (sector-1)*128;
-	case e256BytesPerSector:
+	if (fImageConfig.fSectorLength == e256BytesPerSector) {
 		if (sector <= 3) {
 			return (sector-1)*128;
 		} else {
 			return 384 + (sector-4)*256;
 		}
-	case e512BytesPerSector:
-		return (sector-1)*512;
+	} else {
+		return fImageConfig.GetSectorLength(sector) * (sector - 1);
 	}
-	return -1;
 }
 
 inline AtrImageConfig::AtrImageConfig()
@@ -183,18 +180,32 @@ inline bool AtrImageConfig::operator!=(const AtrImageConfig& other) const
 inline AtrImageConfig::~AtrImageConfig()
 { }
 
+inline unsigned int AtrImageConfig::GetSectorLength() const
+{
+	switch (fSectorLength) {
+	case e128BytesPerSector: return 128;
+	case e256BytesPerSector: return 256;
+	case e512BytesPerSector: return 512;
+	case e1kPerSector: return 1024;
+	case e2kPerSector: return 2048;
+	case e4kPerSector: return 4096;
+	case e8kPerSector: return 8192;
+	default: return 0;
+	}
+}
 inline unsigned int AtrImageConfig::GetSectorLength(unsigned int sector) const
 {
 	if (sector == 0 || sector > fNumberOfSectors) {
 		return 0;
 	}
-	if (fSectorLength == e512BytesPerSector) {
-		return 512;
-	}
-	if (fSectorLength == e256BytesPerSector && sector > 3) {
-		return 256;
+	if (fSectorLength == e256BytesPerSector) {
+		if (sector <= 3) {
+			return 128;
+		} else {
+			return 256;
+		}
 	} else {
-		return 128;
+		return GetSectorLength();
 	}
 }
 
@@ -219,14 +230,10 @@ inline void AtrImageConfig::DetermineDiskFormatFromLayout()
 
 inline void AtrImageConfig::CalculateImageSize()
 {
-	if (fSectorLength == e512BytesPerSector) {
-		fImageSize = fNumberOfSectors * 512;
+	if (fSectorLength == e256BytesPerSector) {
+		fImageSize = fNumberOfSectors * 256 - 384;
 	} else {
-		if (fSectorLength == e256BytesPerSector && fNumberOfSectors >3) {
-			fImageSize = fNumberOfSectors * 256 - 384;
-		} else {
-			fImageSize = fNumberOfSectors * 128;
-		}
+		fImageSize = fNumberOfSectors * GetSectorLength(1);
 	}
 }
 

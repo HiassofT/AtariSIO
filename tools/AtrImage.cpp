@@ -109,7 +109,9 @@ bool AtrImage::SetFormat(ESectorLength density, uint32_t numberOfSectors)
 	fImageConfig.fTracksPerSide = 1;
 	fImageConfig.fSides = 1;
 
-	if (density == e128BytesPerSector || density == e256BytesPerSector) {
+	switch (density) {
+	case e128BytesPerSector:
+	case e256BytesPerSector:
 		/*
 		 * try to figure out an appropriate disk mapping
 		 */
@@ -142,7 +144,8 @@ bool AtrImage::SetFormat(ESectorLength density, uint32_t numberOfSectors)
 		default:
 			break;
 		}
-	} else if (density == e512BytesPerSector) {
+		break;
+	case e512BytesPerSector:
 		switch (numberOfSectors) {
 		case 720:
 			fImageConfig.fSectorsPerTrack = 9;
@@ -160,6 +163,8 @@ bool AtrImage::SetFormat(ESectorLength density, uint32_t numberOfSectors)
 			fImageConfig.fSides = 2;
 			break;
 		}
+		break;
+	default: break;
 	}
 	fImageConfig.DetermineDiskFormatFromLayout();
 	fImageConfig.CalculateImageSize();
@@ -201,20 +206,35 @@ bool AtrImage::SetFormatFromATRHeader(const uint8_t* hdr)
 	}
 	sectSize = hdr[4] | (hdr[5] << 8);
 
-	if (sectSize == 128) {
+	switch (sectSize) {
+	case 128:
 		density = e128BytesPerSector;
-	} else if (sectSize == 256) {
+		break;
+	case 256:
 		density = e256BytesPerSector;
-	} else if (sectSize == 512) {
+		break;
+	case 512:
 		density = e512BytesPerSector;
-	} else {
+		break;
+	case 1024:
+		density = e1kPerSector;
+		break;
+	case 2048:
+		density = e2kPerSector;
+		break;
+	case 4096:
+		density = e4kPerSector;
+		break;
+	case 8192:
+		density = e8kPerSector;
+		break;
+	default:
 		goto failure;
 	}
 	
 	imgSize = (hdr[2] | (hdr[3] << 8) | (hdr[6] << 16) | (hdr[7] << 24)) << 4;
 
 	switch (density) {
-	case e128BytesPerSector:
 		if (imgSize % 128 != 0) {
 			goto failure;
 		}
@@ -236,11 +256,16 @@ bool AtrImage::SetFormatFromATRHeader(const uint8_t* hdr)
 			}
 		}
 		break;
+	case e128BytesPerSector:
 	case e512BytesPerSector:
-		if (imgSize % 512 != 0) {
+	case e1kPerSector:
+	case e2kPerSector:
+	case e4kPerSector:
+	case e8kPerSector:
+		if (imgSize % sectSize != 0) {
 			goto failure;
 		}
-		numberOfSectors = imgSize / 512;
+		numberOfSectors = imgSize / sectSize;
 		break;
 	default:
 		numberOfSectors = 0;
@@ -292,6 +317,22 @@ bool AtrImage::CreateATRHeaderFromFormat(uint8_t* hdr) const
 	case e512BytesPerSector:
 		hdr[4] = 0;
 		hdr[5] = 2;
+		break;
+	case e1kPerSector:
+		hdr[4] = 0;
+		hdr[5] = 4;
+		break;
+	case e2kPerSector:
+		hdr[4] = 0;
+		hdr[5] = 8;
+		break;
+	case e4kPerSector:
+		hdr[4] = 0;
+		hdr[5] = 16;
+		break;
+	case e8kPerSector:
+		hdr[4] = 0;
+		hdr[5] = 32;
 		break;
 	}
 

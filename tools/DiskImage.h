@@ -29,7 +29,15 @@
 
 
 typedef enum { eNoDisk=0, e90kDisk=1, e130kDisk=2, e180kDisk=3, e360kDisk=4, eUserDefDisk=5} EDiskFormat;
-typedef enum { e128BytesPerSector=128, e256BytesPerSector=256, e512BytesPerSector=512 } ESectorLength;
+typedef enum {
+	e128BytesPerSector=128,
+	e256BytesPerSector=256,
+	e512BytesPerSector=512,
+	e1kPerSector=1024,
+	e2kPerSector=2048,
+	e4kPerSector=4096,
+	e8kPerSector=8192
+} ESectorLength;
 
 inline ESectorLength SectorLength(bool isDD) { if (isDD) { return e256BytesPerSector; } else { return e128BytesPerSector; } }
 

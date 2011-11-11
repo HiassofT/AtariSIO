@@ -81,6 +81,10 @@ private:
 	inline bool IsVirtualImage() const;
 
 	bool VerifyPercomFormat(uint8_t tracks, uint8_t sides, uint16_t sectors, uint16_t seclen, uint32_t total_sectors) const;
+
+	// static temporary (sector-) buffer, for all instances
+	enum { eBufferSize = 8192 };
+	static uint8_t fBuffer[eBufferSize];
 };
 
 inline RCPtr<DiskImage> AtrSIOHandler::GetDiskImage()
