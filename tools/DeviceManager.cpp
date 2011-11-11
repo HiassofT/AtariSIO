@@ -44,13 +44,13 @@
 #include "AtariDebug.h"
 
 DeviceManager::DeviceManager(const char* devname)
-	: fSIOWrapper(new SIOWrapper(devname)),
-	  fSIOManager(new SIOManager(fSIOWrapper)),
-          fHighSpeedBaudrate(ATARISIO_HIGHSPEED_BAUDRATE),
+        : fHighSpeedBaudrate(ATARISIO_HIGHSPEED_BAUDRATE),
 	  fPokeyDivisor(8),
 	  fUseStrictFormatChecking(false),
 	  fTapeSpeedPercent(100)
 {
+	fSIOWrapper = SIOWrapper::CreateSIOWrapper(devname);
+	fSIOManager = new SIOManager(fSIOWrapper);
 	if (!SetSioServerMode(SIOWrapper::eCommandLine_RI)) {
 		throw ErrorObject("unable to activate SIO server mode");
 	}

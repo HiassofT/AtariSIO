@@ -2,9 +2,9 @@
 #define SIOWRAPPER_H
 
 /*
-   SIOWrapper.h - a simple wrapper around the IOCTLs offered by atarisio
+   SIOWrapper.h - base class for kernel and userspace wrappers
 
-   Copyright (C) 2002-2005 Matthias Reichl <hias@horus.com>
+   Copyright (C) 2002-2011 Matthias Reichl <hias@horus.com>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -32,17 +32,19 @@
 
 class SIOWrapper : public RefCounted {
 public:
-	SIOWrapper(const char* devName = 0);
+	static SIOWrapper* CreateSIOWrapper(const char* devicename = 0);
+
 	virtual ~SIOWrapper();
+
+	virtual bool IsKernelWrapper() const;
+	virtual bool IsUserspaceWrapper() const;
 
 	/*
 	 * configuration stuff
 	 */
 
-	int GetKernelDriverVersion();
-
-	int SetCableType_1050_2_PC();
-	int SetCableType_APE_Prosystem();
+	virtual int SetCableType_1050_2_PC() = 0;
+	virtual int SetCableType_APE_Prosystem() = 0;
 	
 	enum ESIOServerCommandLine {
 		eCommandLine_RI = 0,
@@ -51,12 +53,13 @@ public:
 	};
 	// false sets default cable type (command connected to RI),
 	// true sets alternative type (command connected to DSR).
-	int SetSIOServerMode(ESIOServerCommandLine cmdLine = eCommandLine_RI);
+	virtual int SetSIOServerMode(ESIOServerCommandLine cmdLine = eCommandLine_RI) = 0;
 
 	/*
 	 * get status code of last operation
 	 */
-	int GetLastStatus();
+	inline int GetLastStatus();
+	inline int GetDeviceFD() const;
 
 	/*
 	 * disk drive methods
@@ -100,18 +103,18 @@ public:
 	/*
 	 * generic SIO method (old)
 	 */
-	int DirectSIO(SIO_parameters& params);
+	virtual int DirectSIO(SIO_parameters& params) = 0;
 
 	/*
 	 * extended SIO method (new)
 	 */
-	int ExtSIO(Ext_SIO_parameters& params);
+	virtual int ExtSIO(Ext_SIO_parameters& params) = 0;
 
 	/*
 	 * SIO server methods
 	 */
 
-	int WaitForCommandFrame(int otherReadPollDevice=-1);
+	virtual int WaitForCommandFrame(int otherReadPollDevice=-1) = 0;
 	/*
 	 * return values:
 	 * -1 = timeout
@@ -120,81 +123,56 @@ public:
 	 *  2 = error in select (or caught signal)
 	 */
 
-	int GetCommandFrame(SIO_command_frame& frame);
-	int SendCommandACK();
-	int SendCommandNAK();
-	int SendDataACK();
-	int SendDataNAK();
-	int SendComplete();
-	int SendError();
+	virtual int GetCommandFrame(SIO_command_frame& frame) = 0;
+	virtual int SendCommandACK() = 0;
+	virtual int SendCommandNAK() = 0;
+	virtual int SendDataACK() = 0;
+	virtual int SendDataNAK() = 0;
+	virtual int SendComplete() = 0;
+	virtual int SendError() = 0;
 
-	int SendDataFrame(uint8_t* buf, unsigned int length);
-	int ReceiveDataFrame(uint8_t* buf, unsigned int length);
+	virtual int SendDataFrame(uint8_t* buf, unsigned int length) = 0;
+	virtual int ReceiveDataFrame(uint8_t* buf, unsigned int length) = 0;
 
-	int SendRawFrame(uint8_t* buf, unsigned int length);
-	int ReceiveRawFrame(uint8_t* buf, unsigned int length);
+	virtual int SendRawFrame(uint8_t* buf, unsigned int length) = 0;
+	virtual int ReceiveRawFrame(uint8_t* buf, unsigned int length) = 0;
 
-	int SendCommandACKXF551();
-	int SendCompleteXF551();
-	int SendDataFrameXF551(uint8_t* buf, unsigned int length);
+	virtual int SendCommandACKXF551() = 0;
+	virtual int SendCompleteXF551() = 0;
+	virtual int SendDataFrameXF551(uint8_t* buf, unsigned int length) = 0;
 
-	int SetBaudrate(unsigned int baudrate);
-	int SetHighSpeedBaudrate(unsigned int baudrate);
-	int SetAutobaud(unsigned int on);
-	int SetHighSpeedPause(unsigned int on);
+	virtual int SetBaudrate(unsigned int baudrate) = 0;
+	virtual int SetHighSpeedBaudrate(unsigned int baudrate) = 0;
+	virtual int SetAutobaud(unsigned int on) = 0;
+	virtual int SetHighSpeedPause(unsigned int on) = 0;
 
-	int SetTapeBaudrate(unsigned int baudrate);
-	int SendTapeBlock(uint8_t* buf, unsigned int length);
+	virtual int SetTapeBaudrate(unsigned int baudrate) = 0;
+	virtual int SendTapeBlock(uint8_t* buf, unsigned int length) = 0;
 
 	/* new TapeBlock methods */
 
-	int StartTapeMode();
-	int EndTapeMode();
-	int SendRawDataNoWait(uint8_t* buf, unsigned int length);
-	int FlushWriteBuffer();
+	virtual int StartTapeMode() = 0;
+	virtual int EndTapeMode() = 0;
+	virtual int SendRawDataNoWait(uint8_t* buf, unsigned int length) = 0;
+	virtual int FlushWriteBuffer() = 0;
 
-	int SendFskData(uint16_t* bit_delays, unsigned int num_bits);
+	virtual int SendFskData(uint16_t* bit_delays, unsigned int num_bits) = 0;
 
-	int GetBaudrate();
-	int GetExactBaudrate();
+	virtual int GetBaudrate() = 0;
+	virtual int GetExactBaudrate() = 0;
 
-	int DebugKernelStatus();
+	virtual int DebugKernelStatus() = 0;
 
-	inline int GetDeviceFD() const;
 
-	int EnableTimestampRecording(unsigned int on);
-	int GetTimestamps(SIO_timestamps& timestamps);
+	virtual int EnableTimestampRecording(unsigned int on) = 0;
+	virtual int GetTimestamps(SIO_timestamps& timestamps) = 0;
 
-private:
+protected:
+	SIOWrapper(int fileno);
+
 	int fDeviceFileNo;
 	int fLastResult;
 };
-
-inline int SIOWrapper::DirectSIO(SIO_parameters& params)
-{
-	if (fDeviceFileNo<0) {
-		fLastResult = ENODEV;
-	} else {
-		fLastResult = ioctl(fDeviceFileNo, ATARISIO_IOC_DO_SIO, &params);
-		if (fLastResult == -1) {
-			fLastResult = errno;
-		}
-	}
-	return fLastResult;
-}
-
-inline int SIOWrapper::ExtSIO(Ext_SIO_parameters& params)
-{
-	if (fDeviceFileNo<0) {
-		fLastResult = ENODEV;
-	} else {
-		fLastResult = ioctl(fDeviceFileNo, ATARISIO_IOC_DO_EXT_SIO, &params);
-		if (fLastResult == -1) {
-			fLastResult = errno;
-		}
-	}
-	return fLastResult;
-}
 
 inline int SIOWrapper::GetLastStatus()
 {

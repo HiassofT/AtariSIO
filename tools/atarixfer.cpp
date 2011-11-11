@@ -719,7 +719,7 @@ int main(int argc, char** argv)
 
 	if (mode == 0 || mode == 1) {
 		try {
-			SIO = new SIOWrapper(atarisioDevName);
+			SIO = SIOWrapper::CreateSIOWrapper(atarisioDevName);
 		}
 		catch (ErrorObject& err) {
 			std::cerr << err.AsString() << std::endl;

@@ -192,7 +192,7 @@ int PrinterHandler::ProcessCommandFrame(SIO_command_frame& frame, const RCPtr<SI
 
 		buf[0] = 0;
 		buf[1] = 0;
-		buf[2] = 0;
+		buf[2] = 20;	// timeout
 		buf[3] = 0;
 
 		fTracer->TraceCommandOK();

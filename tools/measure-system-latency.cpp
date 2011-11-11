@@ -32,6 +32,7 @@
 
 #include "AtrMemoryImage.h"
 #include "SIOWrapper.h"
+#include "KernelSIOWrapper.h"
 #include "SIOTracer.h"
 #include "FileTracer.h"
 #include "Error.h"
@@ -255,9 +256,14 @@ static unsigned long measure_latency(int blocksize, unsigned int count,  EOutput
 		if (blocksize >= 0) {
 			ret = SIO->SendRawFrame(buf, blocksize);
 		} else {
-			ret = SIO->GetKernelDriverVersion();
-			if (ret > 0) {
-				ret = 0;
+			if (SIO->IsKernelWrapper()) {
+				RCPtr<KernelSIOWrapper> ksio = RCPtrStaticCast<KernelSIOWrapper>(SIO);
+				ret = ksio->GetKernelDriverVersion();
+				if (ret > 0) {
+					ret = 0;
+				}
+			} else {
+				ret = -EINVAL;
 			}
 		}
 		if (ret) {
@@ -413,7 +419,7 @@ int main(int argc, char** argv)
 	}
 
 	try {
-		SIO = new SIOWrapper(siodev);
+		SIO = SIOWrapper::CreateSIOWrapper(siodev);
 	}
 	catch (ErrorObject& err) {
 		std::cerr << err.AsString() << std::endl;

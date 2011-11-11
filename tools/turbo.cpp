@@ -104,7 +104,7 @@ int main(int argc, char** argv)
 	}
 
 	try {
-		SIO = new SIOWrapper;
+		SIO = SIOWrapper::CreateSIOWrapper();
 	}
 	catch (ErrorObject& err) {
 		std::cerr << err.AsString() << std::endl;

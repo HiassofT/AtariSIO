@@ -61,6 +61,7 @@ void my_signal_handler(int sig)
 bool OpenSerial(const char* device)
 {
 	serial_fd = open(device, O_RDWR | O_NOCTTY | O_NDELAY);
+	//serial_fd = open(device, O_RDWR | O_NOCTTY);
 	if (serial_fd < 0) {
 		printf("cannot open %s\n", device);
 		return false;
@@ -68,6 +69,7 @@ bool OpenSerial(const char* device)
 	
 	struct termios tio;
 	tcgetattr(serial_fd, &tio);
+	cfmakeraw(&tio);
 
 	/* set flow control to NONE */
 	tio.c_cflag &= ~(CRTSCTS);
@@ -86,14 +88,20 @@ bool OpenSerial(const char* device)
 	tio.c_lflag &= ~ICANON; /* turn off line by line mode */
 	tio.c_lflag &= ~ECHO; /* no echo of TX characters */
 	tio.c_lflag &= ~ISIG; /* no input ctrl char checking */
+	tio.c_lflag &= ~IEXTEN; /* no extended input processing */
 	
 	tio.c_iflag &= ~ICRNL; /* do not map CR to NL on in */
 	tio.c_iflag &= ~IGNCR; /* allow CR characters */
+	tio.c_iflag &= ~INLCR; /* do not map NL to CR on in */
+	tio.c_iflag &= ~(IGNBRK | BRKINT | PARMRK) ; /* report breaks as '0' */
+	tio.c_iflag &= ~ISTRIP; /* don't strip 8th bit */
+	tio.c_iflag &= ~INPCK; /* no input parity checking */
 	
 	tio.c_oflag &= ~OCRNL; /* do not map CR to NL on out */
 	tio.c_oflag &= ~OPOST; /* no output ctrl char checking*/
 
-	tio.c_cc[VMIN] = 0; /* read can return with no chars */
+	//tio.c_cc[VMIN] = 0; /* read can return with no chars */
+	tio.c_cc[VMIN] = 0; /* read at least one character */
 	tio.c_cc[VTIME] = 0; /* read may return immediately */
 
 	if (tcsetattr(serial_fd, TCSANOW, &tio) != 0) {
@@ -122,33 +130,37 @@ bool OpenSerial(const char* device)
 		DPRINTF("set serial info failed");
 		return false;
 	}
+	tcflush(serial_fd, TCIOFLUSH);	/* flush input and output buffer */
 
 	//write(serial_fd,"12345", 5);
 
 	return true;
 }
 
-static void print_timestamp()
+static void print_timestamp(bool timestamp_printed)
 {
-	static uint64_t start_time;
-	static uint64_t last_timestamp;
-	static bool first=true;
+	if (timestamp_printed) {
+		printf("                           ");
+	} else {
+		static uint64_t start_time;
+		static uint64_t last_timestamp;
+		static bool first=true;
 
-	uint64_t current_timestamp = GetCurrentTime();
-	if (first) {
-		start_time = current_timestamp;
+		uint64_t current_timestamp = GetCurrentTime();
+		if (first) {
+			start_time = current_timestamp;
+			last_timestamp = current_timestamp;
+			first = false;
+		}
+		printf("%10llu [ +%10llu ] ", current_timestamp - start_time,
+				current_timestamp - last_timestamp);
 		last_timestamp = current_timestamp;
-		first = false;
 	}
-	printf("%10llu [ +%10llu ]: ", current_timestamp - start_time,
-			current_timestamp - last_timestamp);
-	last_timestamp = current_timestamp;
+	timestamp_printed = true;
 }
 
 static void print_linechange(int new_value)
 {
-	print_timestamp();
-
 	printf("line = [ ");
 	if (new_value & TIOCM_CTS) {
 		printf("CTS ");
@@ -170,8 +182,8 @@ static void print_linechange(int new_value)
 	printf("]\n");
 }
 
-const unsigned int maxsize = 1024;
-//const unsigned int maxsize = 1;
+//const unsigned int maxsize = 16;
+const unsigned int maxsize = 1;
 
 uint8_t buf[maxsize];
 
@@ -203,30 +215,24 @@ int main(int argc, char** argv)
 	signal(SIGINT, my_signal_handler);
 	signal(SIGTERM, my_signal_handler);
 
-	while (1) {
-		if (ioctl(serial_fd, TIOCMGET, &new_msr)) {
-			DPRINTF("failed to get modem info");
-		} else {
-			if (old_msr != new_msr) {
-				print_linechange(new_msr);
-			}
+	bool timestamp_printed;
 
-			old_msr = new_msr;
-		}
+	while (1) {
+		ioctl(serial_fd, TIOCMGET, &new_msr);
 		ssize_t count = read(serial_fd, buf, maxsize);
-		if (count>0) {
-			print_timestamp();
-			printf("got %d bytes:\n", count);
-			for (ssize_t i=0;i<count;i++) {
-				if (i % 16 == 0) {
-					printf("           %04x: ",i);
-				}
-				printf("%02x ", buf[i]);
-				if (i % 16 == 15) {
-					printf("\n");
-				}
+		timestamp_printed = false;
+		if ((count>0) || (old_msr != new_msr) ) {
+			if (old_msr != new_msr) {
+				print_timestamp(timestamp_printed);
+				print_linechange(new_msr);
+				old_msr = new_msr;
 			}
-			if (count % 16) {
+			if (count > 0) {
+				print_timestamp(timestamp_printed);
+				printf("got %d bytes: ", count);
+				for (ssize_t i=0; i<count; i++) {
+					printf("%02x ", buf[i]);
+				}
 				printf("\n");
 			}
 		}

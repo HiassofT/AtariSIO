@@ -56,10 +56,12 @@ char* MiscUtils::ShortenFilename(const char* filename, unsigned int maxlen, bool
 	unsigned int len = strlen(filename);
 	char * s = new char[maxlen+1];
 
-	char * tmpstr = NULL;
+	const char *p = NULL;
+	const char *pd = NULL;
+
+	char * tmpstr = strdup(filename);
+
 	if (stripExtension) {
-		tmpstr = strdup(filename);
-		filename = tmpstr;
 		char * dotpos = strrchr(tmpstr, '.');
 		if (dotpos) {
 			unsigned int dotidx = dotpos - tmpstr;
@@ -68,36 +70,49 @@ char* MiscUtils::ShortenFilename(const char* filename, unsigned int maxlen, bool
 			}
 		}
 	}
+	len = strlen(tmpstr);
 
 	if (len<=maxlen) {
-		strcpy(s, filename);
-		return s;
-	} else {
-		if (maxlen > 3) {
-			const char *p=filename+len-maxlen+3;
-			while (*p && *p!= DIR_SEPARATOR) {
-				p++;
-			}
-			if (*p) {
-				strncpy(s, "...", 3);
-				strncpy(s + 3, p, maxlen - 2);
-				return s;
-			}
-		} else {
-			const char *fn = strrchr(filename, DIR_SEPARATOR);
-			if (fn == NULL) {
-				strncpy(s, filename, maxlen);
-			} else {
-				strncpy(s, fn + 1, maxlen);
-			}
-			s[maxlen] = 0;
-			return s;
-		}
-	}
-	if (tmpstr) {
+		strcpy(s, tmpstr);
 		free(tmpstr);
+		return s;
 	}
-	return 0;
+	if (maxlen <= 3) {
+		const char *fn = strrchr(tmpstr, DIR_SEPARATOR);
+		if (fn == NULL) {
+			strncpy(s, tmpstr, maxlen);
+		} else {
+			strncpy(s, fn + 1, maxlen);
+		}
+		s[maxlen] = 0;
+		free(tmpstr);
+		return s;
+	}
+	p = tmpstr+len-maxlen+3;
+	pd = p;
+	pd = strchr(p, DIR_SEPARATOR);
+
+	// TODO: correctly display directories with trailing slash
+
+	if ((pd != NULL) && (pd != tmpstr+len-1) ) {
+		strncpy(s, "...", 3);
+		strncpy(s + 3, pd, maxlen - 2);
+		free(tmpstr);
+		return s;
+	}
+	while (len && (tmpstr[len-1] == DIR_SEPARATOR)) {
+		tmpstr[--len] = 0;
+	}
+	pd = strrchr(tmpstr, DIR_SEPARATOR);
+	if (pd) {
+		p = pd+1;
+	} else {
+		p = tmpstr;
+	}
+	strncpy(s, p, maxlen);
+	s[maxlen] = 0;
+	free(tmpstr);
+	return s;
 }
 
 // pokey divisor to baudrate table
