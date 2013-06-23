@@ -1,6 +1,6 @@
 ########################################################################
 # AtariSIO tools Makefile
-# (c) 2002-2004 by Matthias Reichl <hias@horus.com>
+# (c) 2002-2013 by Matthias Reichl <hias@horus.com>
 # http://www.horus.com/~hias/atari/
 ########################################################################
 
@@ -116,7 +116,8 @@ CASINFO_OBJS = $(COMMON_OBJS) CasImage.o CasBlock.o CasDataBlock.o CasFskBlock.o
 ATARICOM_OBJS = ComBlock.o Error.o AtariComMemory.o FileIO.o \
 	ataricom.o
 
-ALL_IN_ONE_OBJS = atarisio.o $(ATARISERVER_OBJS) atarixfer.o adir.o dir2atr.o
+ALL_IN_ONE_OBJS = atarisio.o $(ATARISERVER_OBJS) atarixfer.o adir.o dir2atr.o \
+	ComBlock.o AtariComMemory.o ataricom.o
 
 ifdef ENABLE_ATP
 ALL_IN_ONE_OBJS += atr2atp.o atpdump.o

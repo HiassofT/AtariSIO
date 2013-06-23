@@ -131,7 +131,11 @@ static bool write_block(RCPtr<ComBlock>& block, RCPtr<FileIO>& f,
 	return ok;
 }
 
+#ifdef ALL_IN_ONE
+int ataricom_main(int argc, char** argv)
+#else
 int main(int argc, char** argv)
+#endif
 {
 	RCPtr<FileIO> f;
 	RCPtr<FileIO> of;

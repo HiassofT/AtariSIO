@@ -31,6 +31,7 @@ extern int atariserver_main(int argc, char** argv);
 extern int atarixfer_main(int argc, char** argv);
 extern int adir_main(int argc, char** argv);
 extern int dir2atr_main(int argc, char** argv);
+extern int ataricom_main(int argc, char** argv);
 
 #ifdef ENABLE_ATP
 extern int atpdump_main(int argc, char** argv);
@@ -54,6 +55,9 @@ static main_type find_main(char* name, bool& drop_root)
 	}
 	if (strcmp(name,"dir2atr") == 0) {
 		return dir2atr_main;
+	}
+	if (strcmp(name,"ataricom") == 0) {
+		return ataricom_main;
 	}
 #ifdef ENABLE_ATP
 	if (strcmp(name,"atpdump") == 0) {
@@ -100,10 +104,10 @@ int main(int argc, char** argv)
 
 usage:
 	printf("AtariSIO %s all-in-one package (c) 2005 Matthias Reichl\n", VERSION_STRING);
-	printf("usage: atarisio atariserver|atarixfer|adir|dir2atr");
+	printf("usage: atarisio atariserver|atarixfer|adir|dir2atr|ataricom");
 #ifdef ENABLE_ATP
 	printf("|atpdump|atr2atp");
 #endif
-	printf("...\n");
+	printf(" [...]\n");
 	return 0;
 }

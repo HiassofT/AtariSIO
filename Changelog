@@ -164,3 +164,5 @@ AtariSIO changelog:
   - atarisio: remove include file smp_lock.h for kernel >= 2.6.36, fix compilation on 2.6.39
   - atariserver: preliminary support for ATRs with 1/2/4/8k sector sizes
   - atarisio: fix compilation issue with kernel 3.4
+  - fix compilation issues with gcc 2.95, static build and without debugging
+  - include ataricom in all-in-one version

@@ -22,6 +22,6 @@
 */
 
 //#define VERSION_STRING "0.30-pre3"
-#define VERSION_STRING "0.30-111111"
+#define VERSION_STRING "0.30-130623"
 
 #endif
