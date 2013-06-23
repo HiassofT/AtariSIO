@@ -75,9 +75,9 @@ ATARISERVER_OBJS = atariserver.o CursesFrontend.o StringInput.o \
 	Dos2xUtils.o VirtualImageObserver.o \
 	CasHandler.o
 
-COMMON_LIBS = $(ZLIB_LDFLAGS) $(NCURSES_LDFLAGS)
+COMMON_LIBS = $(ZLIB_LDFLAGS)
 
-ATARISERVER_LIBS = $(COMMON_LIBS) -lpanel
+ATARISERVER_LIBS = $(COMMON_LIBS) -lpanel $(NCURSES_LDFLAGS)
 
 ATARISERVER_NOCURSES_OBJS = atariserver-nocurses.o \
 	$(COMMON_OBJS) $(ATRIMAGE_OBJS) \

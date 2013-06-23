@@ -1304,7 +1304,7 @@ bool AtrSIOHandler::EnableStrictFormatChecking(bool on)
 
 bool AtrSIOHandler::VerifyPercomFormat(uint8_t tracks, uint8_t sides, uint16_t sectors, uint16_t seclen, uint32_t total_sectors) const
 {
-	if (total_sectors == 0 or total_sectors >= 65536) {
+	if (total_sectors == 0 || total_sectors >= 65536) {
 		return false;
 	}
 	if (seclen != 128 && seclen != 256 && seclen != 512 &&

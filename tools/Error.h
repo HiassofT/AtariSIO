@@ -22,7 +22,13 @@
 */
 
 #include <string>
+
+#if defined __GNUC__ && __GNUC__ < 3
+#include <strstream>
+typedef ostrstream ostringstream;
+#else
 #include <sstream>
+#endif
 
 class ErrorObject {
 public:

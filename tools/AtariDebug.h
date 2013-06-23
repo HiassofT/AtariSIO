@@ -23,10 +23,9 @@
 
 #include <stdio.h>
 #include <assert.h>
-
-#ifdef ATARISIO_DEBUG
 #include "SIOTracer.h"
 
+#ifdef ATARISIO_DEBUG
 #define DPRINTF(x...) do { SIOTracer::GetInstance()->TraceString(SIOTracer::eTraceDebug, x); } while(0)
 #define Assert(expr) assert(expr)
 #define AssertMsg(expr,msg) \

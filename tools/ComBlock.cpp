@@ -18,7 +18,13 @@
    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
+#if defined __GNUC__ && __GNUC__ < 3
+#include <strstream>
+typedef ostrstream ostringstream;
+#else
 #include <sstream>
+#endif
+
 #include <iostream>
 #include <iomanip>
 #include "string.h"

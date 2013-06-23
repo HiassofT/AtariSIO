@@ -235,11 +235,6 @@ bool AtrImage::SetFormatFromATRHeader(const uint8_t* hdr)
 	imgSize = (hdr[2] | (hdr[3] << 8) | (hdr[6] << 16) | (hdr[7] << 24)) << 4;
 
 	switch (density) {
-		if (imgSize % 128 != 0) {
-			goto failure;
-		}
-		numberOfSectors = imgSize / 128;
-		break;
 	case e256BytesPerSector:
 		if (imgSize <= 384) {
 			goto failure;
