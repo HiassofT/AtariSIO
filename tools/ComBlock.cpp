@@ -18,19 +18,25 @@
    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-#if defined __GNUC__ && __GNUC__ < 3
-#include <strstream>
-typedef ostrstream ostringstream;
-#else
-#include <sstream>
-#endif
-
 #include <iostream>
 #include <iomanip>
 #include "string.h"
 #include "ComBlock.h"
 #include "Error.h"
 #include "AtariDebug.h"
+
+class ReadErrorLen : public ErrorObject {
+public:
+	ReadErrorLen(unsigned int total, unsigned int len)
+	{
+		char tmpstr[80];
+		snprintf(tmpstr, 80, "read error: got %d of %d bytes",
+			len, total);
+		SetDescription(tmpstr);
+	}
+	virtual ~ReadErrorLen() {}
+};
+
 
 ComBlock::ComBlock(RCPtr<FileIO>& f)
 	: fData(0), fFileOffset(0)
@@ -131,33 +137,16 @@ bool ComBlock::WriteRawToFile(RCPtr<FileIO>& f) const
 
 std::string ComBlock::GetDescription(bool offsetInDecimal) const
 {
-	std::ostringstream s;
+	char tmpstr[80];
 
-	s << std::hex
-	  << std::setw(4) << std::setfill('0')
-	  << fStartAddress
-	  << '-'
-	  << std::setw(4)
-	  << (fStartAddress + fLen - 1)
-	  << " (bytes: " 
-	;
 	if (offsetInDecimal) {
-		s << std::dec;
+		snprintf(tmpstr, 80, "%04x-%04x (bytes: %5d, offset: %6ld)",
+			fStartAddress, fStartAddress + fLen - 1,
+			fLen, fFileOffset);
 	} else {
-		s << std::hex;
+		snprintf(tmpstr, 80, "%04x-%04x (bytes: %4x, offset: %6lx)",
+			fStartAddress, fStartAddress + fLen - 1,
+			fLen, fFileOffset);
 	}
-
-	s << std::setfill(' ')
-          << std::setw(5)
-          << fLen
-	;
-
-	if (fFileOffset > 0) {
-		s << ", offset: "
-		  << std::setw(6)
-		  << fFileOffset
-		;
-	}
-	s << ")";
-	return s.str();
+	return tmpstr;
 }

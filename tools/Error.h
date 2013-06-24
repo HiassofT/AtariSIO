@@ -23,13 +23,6 @@
 
 #include <string>
 
-#if defined __GNUC__ && __GNUC__ < 3
-#include <strstream>
-typedef ostrstream ostringstream;
-#else
-#include <sstream>
-#endif
-
 class ErrorObject {
 public:
 	ErrorObject();
@@ -108,17 +101,5 @@ public:
 	{ }
 	virtual ~ReadError() {}
 };
-
-class ReadErrorLen : public ErrorObject {
-public:
-	ReadErrorLen(unsigned int total, unsigned int len)
-	{ 
-		std::ostringstream s;
-		s << "read error: got " << len << " of " << total << " bytes";
-		SetDescription(s.str());
-	}
-	virtual ~ReadErrorLen() {}
-};
-
 
 #endif

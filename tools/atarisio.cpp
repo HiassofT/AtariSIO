@@ -103,7 +103,8 @@ int main(int argc, char** argv)
 	}
 
 usage:
-	printf("AtariSIO %s all-in-one package (c) 2005 Matthias Reichl\n", VERSION_STRING);
+	printf("AtariSIO %s all-in-one package\n", VERSION_STRING);
+	printf("(c) 2005-2013 Matthias Reichl <hias@horus.com>\n");
 	printf("usage: atarisio atariserver|atarixfer|adir|dir2atr|ataricom");
 #ifdef ENABLE_ATP
 	printf("|atpdump|atr2atp");
