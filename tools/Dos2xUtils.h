@@ -241,6 +241,8 @@ private:
 	// returns index in DosBootTable
 	static unsigned int FindDosBootTableIdx(EBootType type);
 
+	bool IsLegalAtariCharacter(char c, bool firstChar) const;
+
 	void BuildAtariName(const char* name, char* atariname);
 
 	char* GetOrigName(unsigned int entryNum, const char* atariname);

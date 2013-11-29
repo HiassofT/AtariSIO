@@ -25,6 +25,7 @@
 #include <string.h>
 
 #include "AtariDebug.h"
+#include "SIOTracer.h"
 
 AtrImage::AtrImage()
 {
@@ -229,6 +230,7 @@ bool AtrImage::SetFormatFromATRHeader(const uint8_t* hdr)
 		density = e8kPerSector;
 		break;
 	default:
+		AERROR("unsupported sector size %d", sectSize);
 		goto failure;
 	}
 	
@@ -245,6 +247,7 @@ bool AtrImage::SetFormatFromATRHeader(const uint8_t* hdr)
 			} else {
 				imgSize += 384;
 				if ((imgSize & 0xff) != 0) {
+					AERROR("illegal DD image size %ld", (imgSize - 384));
 					goto failure;
 				}
 				numberOfSectors = imgSize / 256;
@@ -258,6 +261,7 @@ bool AtrImage::SetFormatFromATRHeader(const uint8_t* hdr)
 	case e4kPerSector:
 	case e8kPerSector:
 		if (imgSize % sectSize != 0) {
+			AERROR("illegal DD image size %ld", imgSize);
 			goto failure;
 		}
 		numberOfSectors = imgSize / sectSize;

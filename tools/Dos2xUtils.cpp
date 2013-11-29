@@ -168,6 +168,7 @@ void Dos2xUtils::AddFiles(EPicoNameType piconametype)
 	unsigned int dirsec;
 	for (i=fEntryCount ; (fEntryCount < eMaxEntries) && (!fDiskFull) && i<num ; i++) {
 		DirEntry* e = dir->Get(i);
+		//DPRINTF("AddFiles(%s): processing %s", fDirectory, e->fName);
 		switch (e->fType) {
 		case DirEntry::eFile:
 			AddFile(e->fName);
@@ -196,7 +197,7 @@ void Dos2xUtils::AddFiles(EPicoNameType piconametype)
 			//DPRINTF("skipping link \"%s\"", e->fName);
 			break;
 		default:
-			//DPRINTF("skipping \"%s\" - invalid type %d", e->fName, e->fType);
+			DPRINTF("skipping \"%s\" - invalid type %d", e->fName, e->fType);
 			break;
 		}
 	}
@@ -547,6 +548,29 @@ bool Dos2xUtils::AddEntry(const char* atariname, bool allowNameChange, unsigned 
 	return true;
 }
 
+bool Dos2xUtils::IsLegalAtariCharacter(char c, bool firstChar) const
+{
+	if (c >= 'A' && c <= 'Z') {
+		return true;
+	}
+
+	if (fDosFormat == eMyDos) {
+		// MyDos allows underscore but not digit at start
+		if (c >= '0' && c <= '9' && !firstChar) {
+			return true;
+		}
+		if (c == '_') {
+			return true;
+		}
+	} else {
+		// DOS 2.x allows digits everywhere
+		if (c >= '0' && c <='9') {
+			return true;
+		}
+	}
+	return false;
+}
+
 void Dos2xUtils::BuildAtariName(const char* name, char* atariname)
 {
 	memset(atariname, ' ', 11);
@@ -563,8 +587,7 @@ void Dos2xUtils::BuildAtariName(const char* name, char* atariname)
 		i++;
 		while ( i < len && p < 3) {
 			c = toupper(name[i]);
-			if ( ( c >= '0' && c <='9') ||
-			     ( c >= 'A' && c <='Z') ) {
+			if (IsLegalAtariCharacter(c, false)) {
 				atariname[8+p++] = c;
 			}
 			i++;
@@ -575,11 +598,13 @@ void Dos2xUtils::BuildAtariName(const char* name, char* atariname)
 	i = 0;
 	while ( i < len && p < 8) {
 		c = toupper(name[i]);
-		if ( ( c >= '0' && c <='9') ||
-		     ( c >= 'A' && c <='Z') ) {
+		if (IsLegalAtariCharacter(c, (p==0))) {
 			atariname[p++] = c;
 		}
 		i++;
+	}
+	if (p == 0) {
+		memcpy(atariname, "NONAME", 6);
 	}
 	//DPRINTF("short name of \"%s\" is \"%s\"", name, atariname);
 }
