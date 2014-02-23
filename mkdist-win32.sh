@@ -23,3 +23,4 @@ zip ../../dist/${NAME}.zip *
 
 cd ..
 rm -rf "${NAME}"
+cp -a ../README-tools ../dist
