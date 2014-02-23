@@ -21,6 +21,7 @@ cp -a tools/6502/Makefile tools/6502/*.src tools/6502/*.inc \
       tools/6502/remote.com tmp/"${NAME}"/tools/6502
 cp -a driver/Makefile driver/*.c driver/*.h tmp/"${NAME}"/driver
 cp -a contrib/gentoo/* tmp/"${NAME}"/contrib/gentoo/
+mv tmp/"${NAME}"/contrib/gentoo/atarisio.ebuild tmp/"${NAME}"/contrib/gentoo/atarisio-"${VER}".ebuild
 cd tmp
 tar zcf ../dist/${NAME}.tar.gz "${NAME}"
 cp -a ../Changelog ../README ../dist

@@ -1,6 +1,6 @@
-# Copyright 1999-2011 Gentoo Foundation
+# Copyright 1999-2013 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
-# $Header: /var/cvsroot/gentoo-x86/net-misc/dahdi/dahdi-2.4.1.ebuild,v 1.3 2011/04/28 21:37:53 tomka Exp $
+# $Header: /var/cvsroot/gentoo-x86/games-emulation/atarisio/atarisio-120801.ebuild,v 120801 2013/01/03 16:21:15 ojaksch Exp $
 
 EAPI=3
 
@@ -20,6 +20,8 @@ DEPEND=""
 RDEPEND=""
 
 src_prepare() {
+	sed -i -e "s/KDIR = \/lib\/modules/#KDIR = \/lib\/modules/" Makefile
+	sed -i -e "s/#KDIR = \/usr\/src\/linux/KDIR = \/usr\/src\/linux/" Makefile
 	sed -i -e "s/#ALL_IN_ONE=1/ALL_IN_ONE=1/" Makefile
 	sed -i -e "s/#ENABLE_ATP=1/ENABLE_ATP=1/" Makefile
 	base_src_prepare
@@ -31,7 +33,7 @@ src_compile() {
 }
 
 src_install() {
-	insinto "/etc/udev/rules.d"
+	insinto "/lib/udev/rules.d"
 	doins atarisio-udev.rules
 
 	insinto "/etc/modprobe.d"
@@ -40,16 +42,19 @@ src_install() {
 	insinto "/lib/modules/${KV}/misc"
 	doins driver/atarisio.ko
 
+	insinto "/usr/include"
+	doins driver/atarisio.h
+
 	insinto "/usr/games/bin"
 	insopts -m0750
 	doins tools/atarisio
 	fowners root:games /usr/games/bin/atarisio
 
 	dodoc README README-tools Changelog
+}
 
-	echo
-	einfo "Updating module informations"
-	update-modules -v
+pkg_postinst() {
+	linux-mod_pkg_postinst
 
 	echo
 	elog "A new kernel module (atarisio.ko) has been installed."
