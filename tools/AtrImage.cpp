@@ -247,7 +247,7 @@ bool AtrImage::SetFormatFromATRHeader(const uint8_t* hdr)
 			} else {
 				imgSize += 384;
 				if ((imgSize & 0xff) != 0) {
-					AERROR("illegal DD image size %ld", (imgSize - 384));
+					AERROR("illegal DD image size %ld", (unsigned long) (imgSize - 384));
 					goto failure;
 				}
 				numberOfSectors = imgSize / 256;
@@ -261,7 +261,7 @@ bool AtrImage::SetFormatFromATRHeader(const uint8_t* hdr)
 	case e4kPerSector:
 	case e8kPerSector:
 		if (imgSize % sectSize != 0) {
-			AERROR("illegal DD image size %ld", imgSize);
+			AERROR("illegal DD image size %ld", (unsigned long) imgSize);
 			goto failure;
 		}
 		numberOfSectors = imgSize / sectSize;
