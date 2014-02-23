@@ -1,7 +1,7 @@
 /*
    atarisio.cpp - all tools linked together into a single executable
 
-   Copyright (C) 2005-2007 Matthias Reichl <hias@horus.com>
+   Copyright (C) 2005-2014 Matthias Reichl <hias@horus.com>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -104,7 +104,7 @@ int main(int argc, char** argv)
 
 usage:
 	printf("AtariSIO %s all-in-one package\n", VERSION_STRING);
-	printf("(c) 2005-2013 Matthias Reichl <hias@horus.com>\n");
+	printf("(c) 2005-2014 Matthias Reichl <hias@horus.com>\n");
 	printf("usage: atarisio atariserver|atarixfer|adir|dir2atr|ataricom");
 #ifdef ENABLE_ATP
 	printf("|atpdump|atr2atp");
