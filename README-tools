@@ -55,6 +55,11 @@ Note: in MyDOS format dir2atr also descends into subdirectories.
 
 Options:
 
+-a  enable MyPicoDos 4.04/4.05 autorun mode
+    Note: only a single file may be present on disk
+    (in addition to PICODOS.SYS and, optionally, PICONAME.TXT)
+    which will then be automatically loaded on boot.
+
 -d  create a double density (256 bytes per sector) image
     (default is single density, 128 byte per sector).
 
@@ -95,10 +100,9 @@ XDos243F        XDOS 2.43F ("fast" version / ultra-speed support)
 XDos243N        XDOS 2.43N ("normal speed" version)
 
 Supported MyPicoDos variants:
-Currently the old 4.03, the last official release 4.04
-and the 4.05 beta version of MyPicoDos are supported, in several
-different configurations. I recommend using version 4.05 because
-it comes with improved highspeed SIO support.
+Currently the old 4.03, 4.04 and the current 4.05 version of MyPicoDos
+are supported, in several different configurations. I recommend using
+version 4.05 because it comes with improved highspeed SIO support.
 
 MyPicoDos 4.03 variants:
 MyPicoDos403    standard SIO speed only

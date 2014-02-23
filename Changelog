@@ -166,3 +166,9 @@ AtariSIO changelog:
   - atarisio: fix compilation issue with kernel 3.4
   - fix compilation issues with gcc 2.95, static build and without debugging
   - include ataricom in all-in-one version
+
+2014-02-23:
+  - atariserver, dir2atr: fix MyDos allowed characters, allow underscore
+    but forbid digit at beginning
+  - dir2atr: add MyPicoDos 4.04/4.05 autorun flag
+

@@ -1,7 +1,7 @@
 /*
    dir2atr - create ATR image from directory
 
-   Copyright (C) 2004-2013 Matthias Reichl <hias@horus.com>
+   Copyright (C) 2004-2014 Matthias Reichl <hias@horus.com>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -37,10 +37,16 @@
 struct BootEntry {
 	const char* name;
 	Dos2xUtils::EBootType bootType;
+	bool autorun;
 };
 
+// standard boot entry, without MyPicoDos autorun
 #define BOOT_ENTRY(name) \
-{ #name, Dos2xUtils::eBoot##name },
+{ #name, Dos2xUtils::eBoot##name, false },
+
+// MyPicoDos boot entry supporting autorun mode
+#define BOOT_ENTRY_A(name) \
+{ #name, Dos2xUtils::eBoot##name, true },
 
 struct BootEntry BootTypeTable[] = {
 BOOT_ENTRY(Dos20)
@@ -55,24 +61,24 @@ BOOT_ENTRY(XDos243N)
 BOOT_ENTRY(MyPicoDos403)
 BOOT_ENTRY(MyPicoDos403HS)
 
-BOOT_ENTRY(MyPicoDos404)
-BOOT_ENTRY(MyPicoDos404N)
-BOOT_ENTRY(MyPicoDos404R)
-BOOT_ENTRY(MyPicoDos404RN)
-BOOT_ENTRY(MyPicoDos404B)
+BOOT_ENTRY_A(MyPicoDos404)
+BOOT_ENTRY_A(MyPicoDos404N)
+BOOT_ENTRY_A(MyPicoDos404R)
+BOOT_ENTRY_A(MyPicoDos404RN)
+BOOT_ENTRY_A(MyPicoDos404B)
 
-BOOT_ENTRY(MyPicoDos405)
-BOOT_ENTRY(MyPicoDos405A)
-BOOT_ENTRY(MyPicoDos405N)
-BOOT_ENTRY(MyPicoDos405R)
-BOOT_ENTRY(MyPicoDos405RA)
-BOOT_ENTRY(MyPicoDos405RN)
-BOOT_ENTRY(MyPicoDos405B)
-BOOT_ENTRY(MyPicoDos405S0)
-BOOT_ENTRY(MyPicoDos405S1)
+BOOT_ENTRY_A(MyPicoDos405)
+BOOT_ENTRY_A(MyPicoDos405A)
+BOOT_ENTRY_A(MyPicoDos405N)
+BOOT_ENTRY_A(MyPicoDos405R)
+BOOT_ENTRY_A(MyPicoDos405RA)
+BOOT_ENTRY_A(MyPicoDos405RN)
+BOOT_ENTRY_A(MyPicoDos405B)
+BOOT_ENTRY_A(MyPicoDos405S0)
+BOOT_ENTRY_A(MyPicoDos405S1)
 
-{ "PicoBoot405", Dos2xUtils::ePicoBoot405 },
-{ NULL, Dos2xUtils::eBootDefault }
+{ "PicoBoot405", Dos2xUtils::ePicoBoot405, false },
+{ NULL, Dos2xUtils::eBootDefault, false }
 };
 
 #undef BOOT_ENTRY
@@ -100,6 +106,7 @@ int main(int argc, char**argv)
 
 	bool dd = false;
 	bool mydos = false;
+	bool autorun = false;
 	Dos2xUtils::EPicoNameType piconametype = Dos2xUtils::eNoPicoName;
 	bool autoSectors = false;
 	int sectors;
@@ -113,8 +120,9 @@ int main(int argc, char**argv)
 	Dos2xUtils::EBootType bootType = Dos2xUtils::eBootDefault;
 
 	char c;
-	while ( (c = getopt(argc, argv, "dmpPb:")) != -1) {
+	while ( (c = getopt(argc, argv, "admpPb:")) != -1) {
 		switch(c) {
+		case 'a': autorun = true; break;
 		case 'd': dd = true; printf("using double density sectors\n"); break;
 		case 'm': mydos = true; printf("using mydos format\n"); break;
 		case 'p': piconametype = Dos2xUtils::ePicoName; printf("creating PICONAME.TXT\n"); break;
@@ -130,6 +138,16 @@ int main(int argc, char**argv)
 				printf("unknown boot sector type \"%s\"\n", optarg);
 				goto usage;
 			}
+		}
+	}
+
+	if (autorun) {
+		if (BootTypeTable[idx].autorun == false) {
+			printf("autorun not supported for %s boot sectors\n",
+				BootTypeTable[idx].name);
+			goto usage;
+		} else {
+			printf("enabled MyPicoDos autorun mode\n");
 		}
 	}
 
@@ -222,7 +240,7 @@ int main(int argc, char**argv)
 	}
 	dos2xutils->AddFiles(piconametype);
 
-	if (!dos2xutils->WriteBootSectors(bootType)) {
+	if (!dos2xutils->WriteBootSectors(bootType, autorun)) {
 		printf("writing boot sectors failed\n");
 	}
 
@@ -237,12 +255,13 @@ int main(int argc, char**argv)
 	return 0;
 usage:
 	printf("dir2atr %s\n", VERSION_STRING);
-	printf("(c) 2004-2013 Matthias Reichl <hias@horus.com>\n");
-	printf("usage: dir2atr [-d] [-m] [-p] [-b <DOS>] [sectors] atrfile directory\n");
+	printf("(c) 2004-2014 Matthias Reichl <hias@horus.com>\n");
+	printf("usage: dir2atr [-admpP] [-b <DOS>] [sectors] atrfile directory\n");
 	printf("  -d        create double density image (default: single density)\n");
 	printf("  -m        create MyDOS image (default: DOS 2.x)\n");
 	printf("  -p        create PICONAME.TXT (long filename description)\n");
 	printf("  -P        create PICONAME.TXT (with file extensions stripped)\n");
+	printf("  -a        enable MyPicoDos autorun mode\n");
 	printf("  -b <DOS>  create bootable disk for specified DOS\n");
 	printf("            Supported DOS are: Dos20, Dos25, MyDos4533, MyDos4534,\n");
 	printf("            TurboDos21, TurboDos21HS, XDos243F, XDos243N,\n");

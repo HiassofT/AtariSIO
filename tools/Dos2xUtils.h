@@ -96,7 +96,7 @@ public:
 		eBootDefault = eBootAtariSIOMyPicoDos
 	};
 
-	bool WriteBootSectors(EBootType type);
+	bool WriteBootSectors(EBootType type, bool autorunMyPicoDos = false);
 	static unsigned int GetBootFileLength(EBootType type);
 	bool AddBootFile(EBootType type);
 

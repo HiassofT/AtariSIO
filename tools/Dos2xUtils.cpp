@@ -1350,7 +1350,7 @@ unsigned int Dos2xUtils::FindDosBootTableIdx(EBootType type)
 	return i;
 }
 
-bool Dos2xUtils::WriteBootSectors(EBootType type)
+bool Dos2xUtils::WriteBootSectors(EBootType type, bool autorunMyPicoDos)
 {
 	int s;
 	uint8_t buf[384];
@@ -1433,44 +1433,92 @@ bool Dos2xUtils::WriteBootSectors(EBootType type)
 
 	case eBootMyPicoDos404:
 		buf[0x0f]=1;
+		if (autorunMyPicoDos) {
+			buf[0x10]=1;
+		}
 		break;
 	case eBootMyPicoDos404N:
 		buf[0x0f]=0;
+		if (autorunMyPicoDos) {
+			buf[0x10]=1;
+		}
 		break;
 
 	case eBootMyPicoDos404R:
 		buf[0x0f]=1;
+		if (autorunMyPicoDos) {
+			buf[0x10]=1;
+		}
 		break;
 	case eBootMyPicoDos404RN:
 		buf[0x0f]=0;
+		if (autorunMyPicoDos) {
+			buf[0x10]=1;
+		}
+		break;
+
+	case eBootMyPicoDos404B:
+		if (autorunMyPicoDos) {
+			buf[0x0f]=1;
+		}
+		break;
+
+	case eBootMyPicoDos405B:
+		if (autorunMyPicoDos) {
+			buf[0x0f]=1;
+		}
 		break;
 
 	case eBootMyPicoDos405:
 		buf[0x0f]=0x81;
+		if (autorunMyPicoDos) {
+			buf[0x10]=1;
+		}
 		break;
 	case eBootMyPicoDos405A:
 		buf[0x0f]=0x01;
+		if (autorunMyPicoDos) {
+			buf[0x10]=1;
+		}
 		break;
 	case eBootMyPicoDos405N:
 		buf[0x0f]=0;
+		if (autorunMyPicoDos) {
+			buf[0x10]=1;
+		}
 		break;
 
 	case eBootMyPicoDos405R:
 		buf[0x0f]=0x81;
+		if (autorunMyPicoDos) {
+			buf[0x10]=1;
+		}
 		break;
 	case eBootMyPicoDos405RA:
 		buf[0x0f]=0x01;
+		if (autorunMyPicoDos) {
+			buf[0x10]=1;
+		}
 		break;
 	case eBootMyPicoDos405RN:
 		buf[0x0f]=0;
+		if (autorunMyPicoDos) {
+			buf[0x10]=1;
+		}
 		break;
 
 	case eBootMyPicoDos405S0:
 		buf[0x0f]=0x81;
+		if (autorunMyPicoDos) {
+			buf[0x10]=1;
+		}
 		buf[0x11]=0;
 		break;
 	case eBootMyPicoDos405S1:
 		buf[0x0f]=0x81;
+		if (autorunMyPicoDos) {
+			buf[0x10]=1;
+		}
 		buf[0x11]=1;
 		break;
 
