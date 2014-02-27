@@ -75,6 +75,8 @@ Options:
 
 -b <dostype> create a bootable image. 
 
+-B <filename> load boot sector data (384 bytes) from file.
+
 Bootable Images:
 
 If you use one of the MyPicoDos modes, dir2atr will include the
@@ -156,6 +158,16 @@ MyPicoDos405S1  Like 405, set SDrive to Pokey divisor 1
 MyPicoDos405B   barebone version: no highspeed SIO, no remote console
 PicoBoot405     minimal boot-sector only version
 
+
+User defined boot sectors:
+
+The '-B' option can be used to load the boot sector contents
+from a file. The first 384 bytes from the file are written to
+the 3 boot sectors.
+
+If the '-b' and '-B' options are used at the same time, '-B' has
+priority.
+
 Examples:
 
 dir2atr -d -b MyPicoDos405 -P games.atr my_games_dir
@@ -164,6 +176,11 @@ This creates a double-density MyDOS image named 'games.atr' from
 the directory 'my_games_dir' (including subdirectories) with
 MyPicoDos 4.05 (highspeed SIO enabled during booting) and with
 MyPicoDos long filenames ('PICONAME.TXT').
+
+dir2atr -B xboot256.obx -d 720 xbios_test.atr xbios_dir
+
+This creates a 180k DD disk with the xBIOS boot sectors loaded
+from xboot256.obx in the current directory.
 
 
 ataricom

@@ -118,9 +118,11 @@ int main(int argc, char**argv)
 	struct stat statbuf;
 
 	Dos2xUtils::EBootType bootType = Dos2xUtils::eBootDefault;
+	bool userDefBoot = false;
+	unsigned char userDefBootData[384];
 
 	char c;
-	while ( (c = getopt(argc, argv, "admpPb:")) != -1) {
+	while ( (c = getopt(argc, argv, "admpPb:B:")) != -1) {
 		switch(c) {
 		case 'a': autorun = true; break;
 		case 'd': dd = true; printf("using double density sectors\n"); break;
@@ -138,6 +140,23 @@ int main(int argc, char**argv)
 				printf("unknown boot sector type \"%s\"\n", optarg);
 				goto usage;
 			}
+			break;
+		case 'B':
+			FILE* bootfile = fopen(optarg, "rb");
+			if (bootfile == NULL) {
+				printf("cannot open boot sector file \"%s\"\n", optarg);
+				goto usage;
+			}
+			if (fread(userDefBootData, 1, 384, bootfile) != 384) {
+				printf("error reading boot sector data from \"%s\"\n", optarg);
+				fclose(bootfile);
+				goto usage;
+			} else {
+				printf("loaded boot sector data from \"%s\"\n", optarg);
+			}
+			fclose(bootfile);
+			userDefBoot = true;
+			break;
 		}
 	}
 
@@ -240,8 +259,14 @@ int main(int argc, char**argv)
 	}
 	dos2xutils->AddFiles(piconametype);
 
-	if (!dos2xutils->WriteBootSectors(bootType, autorun)) {
-		printf("writing boot sectors failed\n");
+	if (userDefBoot) {
+		for (int i = 0; i < 3; i++) {
+			image->WriteSector(i+1, userDefBootData+i*128, 128);
+		}
+	} else {
+		if (!dos2xutils->WriteBootSectors(bootType, autorun)) {
+			printf("writing boot sectors failed\n");
+		}
 	}
 
 	if (!image->WriteImageToFile(atrfilename)) {
@@ -256,7 +281,7 @@ int main(int argc, char**argv)
 usage:
 	printf("dir2atr %s\n", VERSION_STRING);
 	printf("(c) 2004-2014 Matthias Reichl <hias@horus.com>\n");
-	printf("usage: dir2atr [-admpP] [-b <DOS>] [sectors] atrfile directory\n");
+	printf("usage: dir2atr [-admpP] [-b <DOS>] [-B file] [sectors] atrfile directory\n");
 	printf("  -d        create double density image (default: single density)\n");
 	printf("  -m        create MyDOS image (default: DOS 2.x)\n");
 	printf("  -p        create PICONAME.TXT (long filename description)\n");
@@ -271,6 +296,7 @@ usage:
 	printf("            MyPicoDos405, MyPicoDos405A, MyPicoDos405N, MyPicoDos405R\n");
 	printf("            MyPicoDos405RA, MyPicoDos405RN, MyPicoDos405B,\n");
 	printf("            MyPicoDos405S0, MyPicoDos405S1, PicoBoot405\n");
+	printf("  -B <FILE> load boot sector data from <FILE>\n");
 
 	SIOTracer::GetInstance()->RemoveAllTracers();
 	return 1;

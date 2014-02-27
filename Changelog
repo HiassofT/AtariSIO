@@ -172,3 +172,5 @@ AtariSIO changelog:
     but forbid digit at beginning
   - dir2atr: add MyPicoDos 4.04/4.05 autorun flag
 
+2014-02-27:
+  - dir2atr: add support for loading boot sector data from file
