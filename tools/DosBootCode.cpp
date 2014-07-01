@@ -301,84 +301,84 @@ static uint8_t BootSectorsXDos243N[] = {
 };
 
 static uint8_t BootSectorsMyPicoDos403[] = {
-#include "6502/bootstd403.c"
+#include "6502/mypdos/bootstd403.c"
 };
 
 static uint8_t BootSectorsMyPicoDos403HS[] = {
-#include "6502/booths403.c"
+#include "6502/mypdos/booths403.c"
 };
 
 
 static uint8_t BootSectorsMyPicoDos404[] = {
-#include "6502/bootstd404.c"
+#include "6502/mypdos/bootstd404.c"
 };
 
 static uint8_t BootSectorsMyPicoDos404R[] = {
-#include "6502/bootrem404.c"
+#include "6502/mypdos/bootrem404.c"
 };
 
 static uint8_t BootSectorsMyPicoDos404B[] = {
-#include "6502/bootbare404.c"
+#include "6502/mypdos/bootbare404.c"
 };
 
 
 static uint8_t BootSectorsMyPicoDos405[] = {
-#include "6502/bootstd405.c"
+#include "6502/mypdos/bootstd405.c"
 };
 
 static uint8_t BootSectorsMyPicoDos405R[] = {
-#include "6502/bootrem405.c"
+#include "6502/mypdos/bootrem405.c"
 };
 
 static uint8_t BootSectorsMyPicoDos405B[] = {
-#include "6502/bootbare405.c"
+#include "6502/mypdos/bootbare405.c"
 };
 
 static uint8_t BootSectorsMyPicoDos405S[] = {
-#include "6502/bootsd405.c"
+#include "6502/mypdos/bootsd405.c"
 };
 
 static uint8_t BootSectorsPicoBoot405[] = {
-#include "6502/picoboot405.c"
+#include "6502/mypdos/picoboot405.c"
 };
 
 
 
 static uint8_t PicoDosSys403[] = {
-#include "6502/picostd403.c"
+#include "6502/mypdos/picostd403.c"
 };
 
 static uint8_t PicoDosSys403HS[] = {
-#include "6502/picohs403.c"
+#include "6502/mypdos/picohs403.c"
 };
 
 static uint8_t PicoDosSys404[] = {
-#include "6502/picostd404.c"
+#include "6502/mypdos/picostd404.c"
 };
 
 static uint8_t PicoDosSys404R[] = {
-#include "6502/picorem404.c"
+#include "6502/mypdos/picorem404.c"
 };
 
 static uint8_t PicoDosSys404B[] = {
-#include "6502/picobare404.c"
+#include "6502/mypdos/picobare404.c"
 };
 
 
 static uint8_t PicoDosSys405[] = {
-#include "6502/picostd405.c"
+#include "6502/mypdos/picostd405.c"
 };
 
 static uint8_t PicoDosSys405R[] = {
-#include "6502/picorem405.c"
+#include "6502/mypdos/picorem405.c"
 };
 
 static uint8_t PicoDosSys405B[] = {
-#include "6502/picobare405.c"
+#include "6502/mypdos/picobare405.c"
 };
 
 static uint8_t PicoDosSys405S[] = {
-#include "6502/picosd405.c"
+#include "6502/mypdos/picosd405.c"
 };
 
 struct DosBootEntry {
