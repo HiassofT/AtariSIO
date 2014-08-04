@@ -78,6 +78,20 @@ BOOT_ENTRY_A(MyPicoDos405S0)
 BOOT_ENTRY_A(MyPicoDos405S1)
 
 { "PicoBoot405", Dos2xUtils::ePicoBoot405, false },
+
+BOOT_ENTRY_A(MyPicoDos4dev)
+BOOT_ENTRY_A(MyPicoDos4devA)
+BOOT_ENTRY_A(MyPicoDos4devN)
+BOOT_ENTRY_A(MyPicoDos4devR)
+BOOT_ENTRY_A(MyPicoDos4devRA)
+BOOT_ENTRY_A(MyPicoDos4devRN)
+BOOT_ENTRY_A(MyPicoDos4devB)
+BOOT_ENTRY_A(MyPicoDos4devS0)
+BOOT_ENTRY_A(MyPicoDos4devS1)
+
+
+{ "PicoBoot4dev", Dos2xUtils::ePicoBoot4dev, false },
+
 { NULL, Dos2xUtils::eBootDefault, false }
 };
 

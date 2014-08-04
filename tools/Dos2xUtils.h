@@ -93,6 +93,18 @@ public:
 
 		ePicoBoot405,
 
+		eBootMyPicoDos4dev,
+		eBootMyPicoDos4devA,
+		eBootMyPicoDos4devN,
+		eBootMyPicoDos4devR,
+		eBootMyPicoDos4devRA,
+		eBootMyPicoDos4devRN,
+		eBootMyPicoDos4devB,
+		eBootMyPicoDos4devS0,
+		eBootMyPicoDos4devS1,
+
+		ePicoBoot4dev,
+
 		eBootDefault = eBootAtariSIOMyPicoDos
 	};
 

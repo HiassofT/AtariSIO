@@ -343,6 +343,27 @@ static uint8_t BootSectorsPicoBoot405[] = {
 };
 
 
+static uint8_t BootSectorsMyPicoDos4dev[] = {
+#include "6502/mypdos/bootstd4dev.c"
+};
+
+static uint8_t BootSectorsMyPicoDos4devR[] = {
+#include "6502/mypdos/bootrem4dev.c"
+};
+
+static uint8_t BootSectorsMyPicoDos4devB[] = {
+#include "6502/mypdos/bootbare4dev.c"
+};
+
+static uint8_t BootSectorsMyPicoDos4devS[] = {
+#include "6502/mypdos/bootsd4dev.c"
+};
+
+static uint8_t BootSectorsPicoBoot4dev[] = {
+#include "6502/mypdos/picoboot4dev.c"
+};
+
+
 
 static uint8_t PicoDosSys403[] = {
 #include "6502/mypdos/picostd403.c"
@@ -380,6 +401,24 @@ static uint8_t PicoDosSys405B[] = {
 static uint8_t PicoDosSys405S[] = {
 #include "6502/mypdos/picosd405.c"
 };
+
+
+static uint8_t PicoDosSys4dev[] = {
+#include "6502/mypdos/picostd4dev.c"
+};
+
+static uint8_t PicoDosSys4devR[] = {
+#include "6502/mypdos/picorem4dev.c"
+};
+
+static uint8_t PicoDosSys4devB[] = {
+#include "6502/mypdos/picobare4dev.c"
+};
+
+static uint8_t PicoDosSys4devS[] = {
+#include "6502/mypdos/picosd4dev.c"
+};
+
 
 struct DosBootEntry {
 	Dos2xUtils::EBootType bootType;
@@ -433,7 +472,19 @@ MYPDOS_ENTRY(405B, 405B)
 MYPDOS_ENTRY(405S0, 405S)
 MYPDOS_ENTRY(405S1, 405S)
 
+MYPDOS_ENTRY(4dev, 4dev)
+MYPDOS_ENTRY(4devA, 4dev)
+MYPDOS_ENTRY(4devN, 4dev)
+MYPDOS_ENTRY(4devR, 4devR)
+MYPDOS_ENTRY(4devRA, 4devR)
+MYPDOS_ENTRY(4devRN, 4devR)
+MYPDOS_ENTRY(4devB, 4devB)
+MYPDOS_ENTRY(4devS0, 4devS)
+MYPDOS_ENTRY(4devS1, 4devS)
+
 BOOTONLY_ENTRY(Dos2xUtils::ePicoBoot405, BootSectorsPicoBoot405)
+
+BOOTONLY_ENTRY(Dos2xUtils::ePicoBoot4dev, BootSectorsPicoBoot4dev)
 
 { Dos2xUtils::eBootNone, NULL, NULL, NULL, NULL, 0, 0, 0, false }
 
