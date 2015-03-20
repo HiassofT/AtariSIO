@@ -3240,7 +3240,7 @@ static int disable_serial_port(struct atarisio_dev* dev)
 #else
 	if (f->f_op && f->f_op->ioctl) {
 #endif
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,0,0)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,19,0)
 		de = f->f_dentry;
 #else
 		de = f->f_path.dentry;
@@ -3350,7 +3350,7 @@ static int reenable_serial_port(struct atarisio_dev* dev)
 #else
 	if (f->f_op && f->f_op->ioctl) {
 #endif
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,0,0)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,19,0)
 		de = f->f_dentry;
 #else
 		de = f->f_path.dentry;
