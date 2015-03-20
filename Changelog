@@ -174,3 +174,6 @@ AtariSIO changelog:
 
 2014-02-27:
   - dir2atr: add support for loading boot sector data from file
+
+2015-03-20:
+  - atarisio: fix compilation on kernel 3.19
