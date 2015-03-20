@@ -2,7 +2,7 @@
    atarisio V1.06
    a kernel module for handling the Atari 8bit SIO protocol
 
-   Copyright (C) 2002-2014 Matthias Reichl <hias@horus.com>
+   Copyright (C) 2002-2015 Matthias Reichl <hias@horus.com>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -3218,6 +3218,7 @@ static int disable_serial_port(struct atarisio_dev* dev)
 {
 	mm_segment_t fs;
 	struct file* f;
+	struct dentry* de;
 	struct serial_struct ss;
 
 	my_lock_kernel();
@@ -3239,7 +3240,12 @@ static int disable_serial_port(struct atarisio_dev* dev)
 #else
 	if (f->f_op && f->f_op->ioctl) {
 #endif
-		if (f->f_dentry && f->f_dentry->d_inode) {
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,0,0)
+		de = f->f_dentry;
+#else
+		de = f->f_path.dentry;
+#endif
+		if (de && de->d_inode) {
 			if (ioctl_wrapper(dev, f, TIOCGSERIAL, (unsigned long) &ss)) {
 				DBG_PRINTK(DEBUG_STANDARD, "TIOCGSERIAL failed\n");
 				goto fail_close;
@@ -3318,6 +3324,7 @@ static int reenable_serial_port(struct atarisio_dev* dev)
 {
 	mm_segment_t fs;
 	struct file* f;
+	struct dentry* de;
 	struct serial_struct ss;
 
 	if (!dev->need_reenable) {
@@ -3343,7 +3350,12 @@ static int reenable_serial_port(struct atarisio_dev* dev)
 #else
 	if (f->f_op && f->f_op->ioctl) {
 #endif
-		if (f->f_dentry && f->f_dentry->d_inode) {
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,0,0)
+		de = f->f_dentry;
+#else
+		de = f->f_path.dentry;
+#endif
+		if (de && de->d_inode) {
 			if (ioctl_wrapper(dev, f, TIOCGSERIAL, (unsigned long) &ss)) {
 				DBG_PRINTK(DEBUG_STANDARD, "TIOCGSERIAL failed\n");
 				goto fail_close;
@@ -3495,7 +3507,7 @@ static int atarisio_init_module(void)
 	int numtried = 0;
 	atarisio_is_initialized = 0;
 
-	printk("AtariSIO kernel driver V%d.%02d (c) 2002-2014 Matthias Reichl\n",
+	printk("AtariSIO kernel driver V%d.%02d (c) 2002-2015 Matthias Reichl\n",
 		ATARISIO_MAJOR_VERSION, ATARISIO_MINOR_VERSION);
 
 	for (i=0;i<ATARISIO_MAXDEV;i++) {
