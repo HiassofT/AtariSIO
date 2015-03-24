@@ -1,7 +1,7 @@
 /*
    dir2atr - create ATR image from directory
 
-   Copyright (C) 2004-2014 Matthias Reichl <hias@horus.com>
+   Copyright (C) 2004-2015 Matthias Reichl <hias@horus.com>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -294,7 +294,7 @@ int main(int argc, char**argv)
 	return 0;
 usage:
 	printf("dir2atr %s\n", VERSION_STRING);
-	printf("(c) 2004-2014 Matthias Reichl <hias@horus.com>\n");
+	printf("(c) 2004-2015 Matthias Reichl <hias@horus.com>\n");
 	printf("usage: dir2atr [-admpP] [-b <DOS>] [-B file] [sectors] atrfile directory\n");
 	printf("  -d        create double density image (default: single density)\n");
 	printf("  -m        create MyDOS image (default: DOS 2.x)\n");

@@ -177,3 +177,6 @@ AtariSIO changelog:
 
 2015-03-20:
   - atarisio: fix compilation on kernel 3.19
+
+2015-03-24:
+  - ataricom: fix format error printing file offset on win32
