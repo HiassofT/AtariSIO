@@ -26,6 +26,11 @@ EXECUTABLES = atariserver atarixfer adir dir2atr measure-system-latency casinfo 
 #	turbo
 #	serialwatcher
 
+#MINGW_CXX=i586-mingw32msvc-g++
+MINGW_CXX=i686-w64-mingw32-g++
+#MINGW_STRIP=i586-mingw32msvc-strip
+MINGW_STRIP=i686-w64-mingw32-strip
+
 ifdef ENABLE_ATP
 EXECUTABLES += atr2atp atpdump
 endif
@@ -158,8 +163,8 @@ adir.exe: adir.cpp DiskImage.cpp FileIO.cpp SIOTracer.cpp FileTracer.cpp Error.c
 	AtrImage.cpp AtrMemoryImage.cpp DCMCodec.cpp CasBlock.cpp CasDataBlock.cpp CasFskBlock.cpp CasImage.cpp \
 	Dos2xUtils.cpp VirtualImageObserver.cpp Directory.cpp MiscUtils.cpp MyPicoDosCode.cpp \
 	winver.cpp
-	i586-mingw32msvc-g++ -W -Wall -DATARISIO_DEBUG -DWINVER -o $@ $^
-	i586-mingw32msvc-strip $@
+	$(MINGW_CXX) -W -Wall -DATARISIO_DEBUG -DWINVER -static -o $@ $^
+	$(MINGW_STRIP) $@
 
 dir2atr: $(DIR2ATR_OBJS)
 	$(CXX) $(LDFLAGS) -o $@ $(DIR2ATR_OBJS) $(COMMON_LIBS)
@@ -177,8 +182,8 @@ dir2atr.exe: dir2atr.cpp DiskImage.cpp FileIO.cpp SIOTracer.cpp FileTracer.cpp E
 	AtrImage.cpp AtrMemoryImage.cpp DCMCodec.cpp CasBlock.cpp CasDataBlock.cpp CasFskBlock.cpp CasImage.cpp \
 	Dos2xUtils.cpp VirtualImageObserver.cpp Directory.cpp MiscUtils.cpp MyPicoDosCode.cpp \
 	winver.cpp
-	i586-mingw32msvc-g++ -W -Wall -DATARISIO_DEBUG -DWINVER -o $@ $^
-	i586-mingw32msvc-strip $@
+	$(MINGW_CXX) -W -Wall -DATARISIO_DEBUG -DWINVER -static -o $@ $^
+	$(MINGW_STRIP) $@
 
 serialwatcher: $(SERIALWATCHER_OBJS)
 	$(CXX) $(LDFLAGS) -o $@ $(SERIALWATCHER_OBJS)
@@ -190,8 +195,8 @@ ataricom: $(ATARICOM_OBJS)
 	$(CXX) $(LDFLAGS) -o $@ $(ATARICOM_OBJS) $(COMMON_LIBS)
 
 ataricom.exe: ataricom.cpp Error.cpp AtariComMemory.cpp ComBlock.cpp FileIO.cpp
-	i586-mingw32msvc-g++ -W -Wall -DATARISIO_DEBUG -DWINVER -o $@ $^
-	i586-mingw32msvc-strip $@
+	$(MINGW_CXX) -W -Wall -DATARISIO_DEBUG -DWINVER -static -o $@ $^
+	$(MINGW_STRIP) $@
 
 turbo: $(TURBO_OBJS)
 	$(CXX) $(LDFLAGS) -o $@ $(TURBO_OBJS) $(ATARISERVER_LIBS)
