@@ -42,6 +42,8 @@ using namespace MiscUtils;
 
 #include "DosBootCode.cpp"
 
+#define MAX_FILE_LEN (16*1024*1024)
+
 Dos2xUtils::Dos2xUtils(RCPtr<DiskImage> img,
 		const char* directory,
 		RCPtr<VirtualImageObserver> observer)
@@ -251,9 +253,21 @@ bool Dos2xUtils::AddFile(const char* name)
 		AERROR("cannot open file \"%s\"", p);
 		return false;
 	}
-	fseek(f, 0, SEEK_END);
+	if(fseek(f, 0, SEEK_END)) {
+		AERROR("cannot seek to end of \"%s\"", p);
+		fclose(f);
+		return false;
+	}
 	filelen = ftell(f);
-	fseek(f, 0, SEEK_SET);
+	if (filelen > MAX_FILE_LEN) {
+		filelen = MAX_FILE_LEN;
+		AWARN("\"%s\" is too large, truncating to %ld bytes", p, filelen);
+	}
+	if (fseek(f, 0, SEEK_SET)) {
+		AERROR("cannot seek to start of \"%s\"", p);
+		fclose(f);
+		return false;
+	}
 
 	if (filelen > 0) {
 		buffer = new uint8_t[filelen];
