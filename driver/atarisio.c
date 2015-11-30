@@ -3481,9 +3481,7 @@ static void atarisio_cleanup_module(void)
 
 	for (i=0;i<ATARISIO_MAXDEV;i++) {
 		if ((dev=atarisio_devices[i])) {
-			if (misc_deregister(dev->miscdev)) {
-				PRINTK("cannot unregister device\n");
-			}
+			misc_deregister(dev->miscdev);
 
 			release_region(dev->io,8);
 			if (dev->need_reenable) {

@@ -180,3 +180,7 @@ AtariSIO changelog:
 
 2015-03-25:
   - tools-win32: use newer mingw to fix snprintf bug in ataricom
+
+2015-11-30:
+  - atarisio: fix compilation on kernel 4.3
+
