@@ -1,6 +1,6 @@
 AtariSIO tools V0.30
 
-Copyright (C) 2003-2014 Matthias Reichl <hias@horus.com>
+Copyright (C) 2003-2016 Matthias Reichl <hias@horus.com>
 
 This program is proteced under the terms of the GNU General Public
 License, version 2. Please read LICENSE for further details.
@@ -102,9 +102,9 @@ XDos243F        XDOS 2.43F ("fast" version / ultra-speed support)
 XDos243N        XDOS 2.43N ("normal speed" version)
 
 Supported MyPicoDos variants:
-Currently the old 4.03, 4.04 and the current 4.05 version of MyPicoDos
+Currently the old 4.03, 4.04, 4.05 and the current 4.0 version of MyPicoDos
 are supported, in several different configurations. I recommend using
-version 4.05 because it comes with improved highspeed SIO support.
+version 4.06 because it comes with improved highspeed SIO support.
 
 MyPicoDos 4.03 variants:
 MyPicoDos403    standard SIO speed only
@@ -158,6 +158,21 @@ MyPicoDos405S1  Like 405, set SDrive to Pokey divisor 1
 MyPicoDos405B   barebone version: no highspeed SIO, no remote console
 PicoBoot405     minimal boot-sector only version
 
+MyPicoDos 4.06 variants:
+This version comes with improved joystick support and fixes a few
+minor issues present in 4.05. The variants are the same as for
+4.05:
+
+MyPicoDos406    HS enabled while booting   remote console: no
+MyPicoDos406A   HS default: on after boot  remote console: no
+MyPicoDos406N   HS default: off            remote console: no
+MyPicoDos406R   HS enabled while booting   remote console: yes
+MyPicoDos406RA  HS default: on after boot  remote console: yes
+MyPicoDos406RN  HS default: off            remote console: yes
+MyPicoDos406S0  Like 406, set SDrive to Pokey divisor 0
+MyPicoDos406S1  Like 406, set SDrive to Pokey divisor 1
+MyPicoDos406B   barebone version: no highspeed SIO, no remote console
+PicoBoot406     minimal boot-sector only version
 
 User defined boot sectors:
 

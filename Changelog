@@ -184,3 +184,5 @@ AtariSIO changelog:
 2015-11-30:
   - atarisio: fix compilation on kernel 4.3
 
+2016-03-12:
+  - atariserver, dir2atr: updated MyPicoDos to 4.06

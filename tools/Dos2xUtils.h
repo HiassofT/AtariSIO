@@ -93,17 +93,17 @@ public:
 
 		ePicoBoot405,
 
-		eBootMyPicoDos4dev,
-		eBootMyPicoDos4devA,
-		eBootMyPicoDos4devN,
-		eBootMyPicoDos4devR,
-		eBootMyPicoDos4devRA,
-		eBootMyPicoDos4devRN,
-		eBootMyPicoDos4devB,
-		eBootMyPicoDos4devS0,
-		eBootMyPicoDos4devS1,
+		eBootMyPicoDos406,
+		eBootMyPicoDos406A,
+		eBootMyPicoDos406N,
+		eBootMyPicoDos406R,
+		eBootMyPicoDos406RA,
+		eBootMyPicoDos406RN,
+		eBootMyPicoDos406B,
+		eBootMyPicoDos406S0,
+		eBootMyPicoDos406S1,
 
-		ePicoBoot4dev,
+		ePicoBoot406,
 
 		eBootDefault = eBootAtariSIOMyPicoDos
 	};

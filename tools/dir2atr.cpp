@@ -1,7 +1,7 @@
 /*
    dir2atr - create ATR image from directory
 
-   Copyright (C) 2004-2015 Matthias Reichl <hias@horus.com>
+   Copyright (C) 2004-2016 Matthias Reichl <hias@horus.com>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -79,18 +79,18 @@ BOOT_ENTRY_A(MyPicoDos405S1)
 
 { "PicoBoot405", Dos2xUtils::ePicoBoot405, false },
 
-BOOT_ENTRY_A(MyPicoDos4dev)
-BOOT_ENTRY_A(MyPicoDos4devA)
-BOOT_ENTRY_A(MyPicoDos4devN)
-BOOT_ENTRY_A(MyPicoDos4devR)
-BOOT_ENTRY_A(MyPicoDos4devRA)
-BOOT_ENTRY_A(MyPicoDos4devRN)
-BOOT_ENTRY_A(MyPicoDos4devB)
-BOOT_ENTRY_A(MyPicoDos4devS0)
-BOOT_ENTRY_A(MyPicoDos4devS1)
+BOOT_ENTRY_A(MyPicoDos406)
+BOOT_ENTRY_A(MyPicoDos406A)
+BOOT_ENTRY_A(MyPicoDos406N)
+BOOT_ENTRY_A(MyPicoDos406R)
+BOOT_ENTRY_A(MyPicoDos406RA)
+BOOT_ENTRY_A(MyPicoDos406RN)
+BOOT_ENTRY_A(MyPicoDos406B)
+BOOT_ENTRY_A(MyPicoDos406S0)
+BOOT_ENTRY_A(MyPicoDos406S1)
 
 
-{ "PicoBoot4dev", Dos2xUtils::ePicoBoot4dev, false },
+{ "PicoBoot406", Dos2xUtils::ePicoBoot406, false },
 
 { NULL, Dos2xUtils::eBootDefault, false }
 };
@@ -294,7 +294,7 @@ int main(int argc, char**argv)
 	return 0;
 usage:
 	printf("dir2atr %s\n", VERSION_STRING);
-	printf("(c) 2004-2015 Matthias Reichl <hias@horus.com>\n");
+	printf("(c) 2004-2016 Matthias Reichl <hias@horus.com>\n");
 	printf("usage: dir2atr [-admpP] [-b <DOS>] [-B file] [sectors] atrfile directory\n");
 	printf("  -d        create double density image (default: single density)\n");
 	printf("  -m        create MyDOS image (default: DOS 2.x)\n");
@@ -307,9 +307,12 @@ usage:
 	printf("            MyPicoDos403, MyPicoDos403HS,\n");
 	printf("            MyPicoDos404, MyPicoDos404N, MyPicoDos404R, MyPicoDos404RN,\n");
 	printf("            MyPicoDos404B,\n");
-	printf("            MyPicoDos405, MyPicoDos405A, MyPicoDos405N, MyPicoDos405R\n");
-	printf("            MyPicoDos405RA, MyPicoDos405RN, MyPicoDos405B,\n");
-	printf("            MyPicoDos405S0, MyPicoDos405S1, PicoBoot405\n");
+	printf("            MyPicoDos405, MyPicoDos405A, MyPicoDos405N,\n");
+	printf("            MyPicoDos405R, MyPicoDos405RA, MyPicoDos405RN,\n");
+	printf("            MyPicoDos405B, MyPicoDos405S0, MyPicoDos405S1, PicoBoot405\n");
+	printf("            MyPicoDos406, MyPicoDos406A, MyPicoDos406N\n");
+	printf("            MyPicoDos406R, MyPicoDos406RA, MyPicoDos406RN\n");
+	printf("            MyPicoDos406B, MyPicoDos406S0, MyPicoDos406S1, PicoBoot406\n");
 	printf("  -B <FILE> load boot sector data from <FILE>\n");
 
 	SIOTracer::GetInstance()->RemoveAllTracers();

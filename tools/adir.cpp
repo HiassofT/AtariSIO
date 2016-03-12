@@ -1,7 +1,7 @@
 /*
    adir.cpp - list directory of ATR image
 
-   Copyright (C) 2002-2015 Matthias Reichl <hias@horus.com>
+   Copyright (C) 2002-2016 Matthias Reichl <hias@horus.com>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -179,7 +179,7 @@ int main(int argc, char**argv)
 	return 0;
 usage:
 	printf("adir %s\n", VERSION_STRING);
-	printf("(c) 2003-2015 Matthias Reichl <hias@horus.com>\n");
+	printf("(c) 2003-2016 Matthias Reichl <hias@horus.com>\n");
 	printf("usage: adir [-<columns>] [-r] [-t] filename...\n");
 	SIOTracer::GetInstance()->RemoveAllTracers();
 	return 1;

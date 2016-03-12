@@ -343,24 +343,24 @@ static uint8_t BootSectorsPicoBoot405[] = {
 };
 
 
-static uint8_t BootSectorsMyPicoDos4dev[] = {
-#include "6502/mypdos/bootstd4dev.c"
+static uint8_t BootSectorsMyPicoDos406[] = {
+#include "6502/mypdos/bootstd406.c"
 };
 
-static uint8_t BootSectorsMyPicoDos4devR[] = {
-#include "6502/mypdos/bootrem4dev.c"
+static uint8_t BootSectorsMyPicoDos406R[] = {
+#include "6502/mypdos/bootrem406.c"
 };
 
-static uint8_t BootSectorsMyPicoDos4devB[] = {
-#include "6502/mypdos/bootbare4dev.c"
+static uint8_t BootSectorsMyPicoDos406B[] = {
+#include "6502/mypdos/bootbare406.c"
 };
 
-static uint8_t BootSectorsMyPicoDos4devS[] = {
-#include "6502/mypdos/bootsd4dev.c"
+static uint8_t BootSectorsMyPicoDos406S[] = {
+#include "6502/mypdos/bootsd406.c"
 };
 
-static uint8_t BootSectorsPicoBoot4dev[] = {
-#include "6502/mypdos/picoboot4dev.c"
+static uint8_t BootSectorsPicoBoot406[] = {
+#include "6502/mypdos/picoboot406.c"
 };
 
 
@@ -403,20 +403,20 @@ static uint8_t PicoDosSys405S[] = {
 };
 
 
-static uint8_t PicoDosSys4dev[] = {
-#include "6502/mypdos/picostd4dev.c"
+static uint8_t PicoDosSys406[] = {
+#include "6502/mypdos/picostd406.c"
 };
 
-static uint8_t PicoDosSys4devR[] = {
-#include "6502/mypdos/picorem4dev.c"
+static uint8_t PicoDosSys406R[] = {
+#include "6502/mypdos/picorem406.c"
 };
 
-static uint8_t PicoDosSys4devB[] = {
-#include "6502/mypdos/picobare4dev.c"
+static uint8_t PicoDosSys406B[] = {
+#include "6502/mypdos/picobare406.c"
 };
 
-static uint8_t PicoDosSys4devS[] = {
-#include "6502/mypdos/picosd4dev.c"
+static uint8_t PicoDosSys406S[] = {
+#include "6502/mypdos/picosd406.c"
 };
 
 
@@ -472,19 +472,19 @@ MYPDOS_ENTRY(405B, 405B)
 MYPDOS_ENTRY(405S0, 405S)
 MYPDOS_ENTRY(405S1, 405S)
 
-MYPDOS_ENTRY(4dev, 4dev)
-MYPDOS_ENTRY(4devA, 4dev)
-MYPDOS_ENTRY(4devN, 4dev)
-MYPDOS_ENTRY(4devR, 4devR)
-MYPDOS_ENTRY(4devRA, 4devR)
-MYPDOS_ENTRY(4devRN, 4devR)
-MYPDOS_ENTRY(4devB, 4devB)
-MYPDOS_ENTRY(4devS0, 4devS)
-MYPDOS_ENTRY(4devS1, 4devS)
+MYPDOS_ENTRY(406, 406)
+MYPDOS_ENTRY(406A, 406)
+MYPDOS_ENTRY(406N, 406)
+MYPDOS_ENTRY(406R, 406R)
+MYPDOS_ENTRY(406RA, 406R)
+MYPDOS_ENTRY(406RN, 406R)
+MYPDOS_ENTRY(406B, 406B)
+MYPDOS_ENTRY(406S0, 406S)
+MYPDOS_ENTRY(406S1, 406S)
 
 BOOTONLY_ENTRY(Dos2xUtils::ePicoBoot405, BootSectorsPicoBoot405)
 
-BOOTONLY_ENTRY(Dos2xUtils::ePicoBoot4dev, BootSectorsPicoBoot4dev)
+BOOTONLY_ENTRY(Dos2xUtils::ePicoBoot406, BootSectorsPicoBoot406)
 
 { Dos2xUtils::eBootNone, NULL, NULL, NULL, NULL, 0, 0, 0, false }
 
