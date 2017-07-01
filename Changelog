@@ -186,3 +186,9 @@ AtariSIO changelog:
 
 2016-03-12:
   - atariserver, dir2atr: updated MyPicoDos to 4.06
+
+2017-07-01:
+  - atarisio: fix compilation on kernel 4.11
+  - atariserver: use pkg-config to get curses paths, fall back to ncursesw
+    if ncurses is not available
+  - adir: refactor option parsing

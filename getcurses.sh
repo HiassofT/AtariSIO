@@ -7,22 +7,25 @@ if [ $# -ne 1 ] ; then
 	exit 1
 fi
 
-CURSES_CONFIG=ncurses5-config
-
-which $CURSES_CONFIG 2>&1 >/dev/null
-
+CFLAGS=$(pkg-config $1 ncurses panel)
 if [ $? -eq 0 ] ; then
-	$CURSES_CONFIG "$@"
-else
-	case "$1" in
-	  "--cflags")
-	    ;;
-	  "--libs")
-	    echo "-L/usr/lib -lncurses"
-	    ;;
-	  *)
-	    exit 1
-	    ;;
-	esac
+	echo "$CFLAGS"
+	exit 0
 fi
 
+CFLAGS=$(pkg-config $1 ncursesw panelw)
+if [ $? -eq 0 ] ; then
+	echo "$CFLAGS"
+	exit 0
+fi
+
+case "$1" in
+  "--cflags")
+    ;;
+  "--libs")
+    echo "-L/usr/lib -lncurses -lpanel"
+    ;;
+  *)
+    exit 1
+    ;;
+esac

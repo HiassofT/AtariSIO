@@ -48,8 +48,8 @@ INST_DIR = /usr/local
 # the wrapper script uses "ncurses5-config" if available
 ########################################################################
 
-NCURSES_CFLAGS=$(shell ./getcurses.sh --cflags)
-NCURSES_LDFLAGS=$(shell ./getcurses.sh --libs)
+NCURSES_CFLAGS	?=	$(shell ./getcurses.sh --cflags)
+NCURSES_LDFLAGS	?=	$(shell ./getcurses.sh --libs)
 
 
 ########################################################################
