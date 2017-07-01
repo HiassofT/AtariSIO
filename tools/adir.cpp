@@ -137,22 +137,33 @@ int main(int argc, char**argv)
 		goto usage;
 	}
 
-	if (argv[idx][0]=='-') {
-		if (argv[idx][1] == 'r') {
+	for (idx = 1; idx < argc && argv[idx][0] == '-'; idx++) {
+		switch (argv[idx][1]) {
+		case 'r':
 			dumpraw = true;
-		} else if (argv[idx][1] == 't') {
+			break;
+		case 't':
 			dumptree = true;
-		} else {
+			break;
+		case '1':
+		case '2':
+		case '3':
+		case '4':
+		case '5':
+		case '6':
+		case '7':
+		case '8':
+		case '9':
 			columns = atoi(argv[idx]+1);
 			if (columns < 1 || columns > 64) {
 				printf("illegal number of columns\n");
 				goto usage;
 			}
+			break;
+		default:
+			printf("unknown option %s\n", argv[idx]);
+			goto usage;
 		}
-		idx++;
-	}
-	if (argc <= idx) {
-		goto usage;
 	}
 
 	image = new AtrMemoryImage;
