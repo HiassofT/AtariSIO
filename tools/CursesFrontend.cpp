@@ -1188,6 +1188,7 @@ DeviceManager::EDriveNumber CursesFrontend::InputDriveNumber(EDriveInputType typ
 			if ( (ch == 'r') || (ch == 'R')) {
 				return DeviceManager::eRemoteControl;
 			}
+			// fallthrough
 		case eDriveInputAll:
 			if ((ch == 'a') || (ch == 'A')) {
 				return DeviceManager::eAllDrives;

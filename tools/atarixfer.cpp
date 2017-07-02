@@ -690,6 +690,7 @@ int main(int argc, char** argv)
 					goto usage;
 				}
 			}
+			break;
 		case 's':
 			use_highspeed = 1;
 			break;

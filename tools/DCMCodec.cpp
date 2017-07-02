@@ -223,7 +223,7 @@ bool DCMCodec::DecodeRec41(bool beQuiet)
 		DDPRINTF("%d: 41", fCurrentSector);
 	}
 	uint8_t iOffset;
-	uint8_t* pbt = fCurrentBuffer + iOffset;
+	uint8_t* pbt;
        	if (!fFileIO->ReadByte(iOffset)) {
 		goto failure_EOF;
 	}

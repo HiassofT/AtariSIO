@@ -230,6 +230,7 @@ static unsigned long measure_latency(int blocksize, unsigned int count,  EOutput
 	switch (outputMode) {
 	case eOutputFull:
 		printf("\n");
+		// fallthrough
 	case eOutputSummary:
 		if (blocksize >= 0) {
 			printf("%4d bytes:", blocksize);
@@ -322,6 +323,7 @@ static unsigned long measure_latency(int blocksize, unsigned int count,  EOutput
 		break;
 	case eOutputFull:
 		printf("\navg. xmit time:");
+		// fallthrough
 	case eOutputSummary:
 		printf(" %7" PRIu64 " usec", realTransmissionTime);
 		//printf(" %7" PRIu64 " usec", realEndTime);
