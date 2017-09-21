@@ -192,3 +192,7 @@ AtariSIO changelog:
   - atariserver: use pkg-config to get curses paths, fall back to ncursesw
     if ncurses is not available
   - adir: refactor option parsing
+
+2017-09-21:
+  - atarisio: fix compilation on kernel 4.13
+

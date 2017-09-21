@@ -1328,7 +1328,11 @@ static inline void initiate_send(struct atarisio_dev* dev)
 
 static inline int wait_send(struct atarisio_dev* dev, unsigned int len, unsigned int wait_mode)
 {
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,13,0)
+	wait_queue_entry_t wait;
+#else
 	wait_queue_t wait;
+#endif
 	signed long timeout_jiffies;
 	signed long expire;
 	unsigned long max_jiffies;
@@ -1426,7 +1430,11 @@ static int wait_receive(struct atarisio_dev* dev, int len, int additional_timeou
 {
 	unsigned long flags;
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,13,0)
+	wait_queue_entry_t wait;
+#else
 	wait_queue_t wait;
+#endif
 
 	int no_received_chars=0;
 	long timeout;
@@ -2503,7 +2511,11 @@ static inline void reset_tx_buf(struct atarisio_dev* dev)
 
 static int get_command_frame(struct atarisio_dev* dev, unsigned long arg)
 {
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,13,0)
+	wait_queue_entry_t wait;
+#else
 	wait_queue_t wait;
+#endif
 	SIO_command_frame frame;
 	signed long expire = HZ;
 	signed long end_time = jiffies + HZ;
