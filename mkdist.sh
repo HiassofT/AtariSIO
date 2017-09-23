@@ -1,5 +1,7 @@
 #!/bin/sh
 
+set -e
+
 VER=`date '+%y%m%d'`
 
 if [ $# -ge 1 ] ; then
@@ -25,6 +27,6 @@ cp -a driver/Makefile driver/*.c driver/*.h tmp/"${NAME}"/driver
 cp -a contrib/gentoo/* tmp/"${NAME}"/contrib/gentoo/
 mv tmp/"${NAME}"/contrib/gentoo/atarisio.ebuild tmp/"${NAME}"/contrib/gentoo/atarisio-"${VER}".ebuild
 cd tmp
-tar zcf ../dist/${NAME}.tar.gz "${NAME}"
-cp -a ../Changelog ../README ../dist
+tar zcf ../../dist/${NAME}.tar.gz "${NAME}"
+cp -a ../Changelog ../README ../../dist
 rm -rf "${NAME}"

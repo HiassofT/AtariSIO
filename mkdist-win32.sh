@@ -1,5 +1,7 @@
 #!/bin/sh
 
+set -e
+
 VER=`date '+%y%m%d'`
 
 if [ $# -ge 1 ] ; then
@@ -19,8 +21,8 @@ todos tmp/"${NAME}"/LICENSE
 cp -a tools/adir.exe tools/ataricom.exe tools/dir2atr.exe tmp/"${NAME}"
 
 cd tmp/"${NAME}"
-zip ../../dist/${NAME}.zip *
+zip ../../../dist/${NAME}.zip *
 
 cd ..
 rm -rf "${NAME}"
-cp -a ../README-tools ../dist
+cp -a ../README-tools ../../dist
