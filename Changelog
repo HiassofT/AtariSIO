@@ -193,6 +193,7 @@ AtariSIO changelog:
     if ncurses is not available
   - adir: refactor option parsing
 
-2017-09-21:
+2017-09-24:
   - atarisio: fix compilation on kernel 4.13
+  - tools: update MyPicoDos to 4.06 release version
 
