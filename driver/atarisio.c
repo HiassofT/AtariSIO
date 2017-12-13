@@ -52,14 +52,6 @@
 #include <linux/fs.h>
 #include <linux/serial.h>
 
-#include <asm/atomic.h>
-#include <asm/uaccess.h>
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,4,0)
-#include <asm/system.h>
-#endif
-#include <asm/io.h>
-#include <asm/ioctls.h>
-
 #include <linux/module.h>
 #include <linux/types.h>
 #include <linux/kernel.h>
@@ -87,6 +79,14 @@
 #include <linux/delay.h>
 #include <linux/string.h>
 #include <linux/slab.h>
+
+#include <asm/atomic.h>
+#include <asm/uaccess.h>
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,4,0)
+#include <asm/system.h>
+#endif
+#include <asm/io.h>
+#include <asm/ioctls.h>
 
 #include "atarisio.h"
 

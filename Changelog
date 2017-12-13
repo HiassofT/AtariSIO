@@ -197,3 +197,5 @@ AtariSIO changelog:
   - atarisio: fix compilation on kernel 4.13
   - tools: update MyPicoDos to 4.06 release version
 
+2017-12-13:
+  - atarisio: fix compilation on kernel 4.14
