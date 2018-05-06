@@ -30,7 +30,7 @@
 #include "AtariDebug.h"
 #include "Directory.h"
 
-#ifndef WINVER
+#if !defined(WINVER) && !defined(POSIXVER)
 #include <sched.h>
 #include <sys/wait.h>
 #include <errno.h>
@@ -195,7 +195,7 @@ bool MiscUtils::ParseHighSpeedParameters(const char* string, uint8_t& divisor, u
 	return true;
 }
 
-#ifndef WINVER
+#if !defined(WINVER) && !defined(POSIXVER)
 static void reserve_stack_memory()
 {
 #define RESERVE_STACK_SIZE 100000

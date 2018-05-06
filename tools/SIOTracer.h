@@ -24,7 +24,7 @@
 #include <stdio.h>
 #include <stdint.h>
 
-#ifndef WINVER
+#if !defined(WINVER) && !defined(POSIXVER)
 #include <sys/types.h>
 #include "../driver/atarisio.h"
 #endif
@@ -73,7 +73,7 @@ public:
 
 	void SetTraceGroup(ETraceGroup group, bool on, const RCPtr<AbstractTracer>& tracer = RCPtr<AbstractTracer>());
 
-#ifndef WINVER
+#if !defined(WINVER) && !defined(POSIXVER)
 	void TraceCommandFrame(const SIO_command_frame &frame,
 		const char *prefix = 0);
 

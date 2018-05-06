@@ -2,6 +2,7 @@
 **/*.bin
 **/*.com
 **/*.exe
+**/*-posix
 
 driver/.atarisio.*
 driver/.tmp_versions

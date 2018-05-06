@@ -33,7 +33,8 @@
 namespace MiscUtils {
 	char* ShortenFilename(const char* filename, unsigned int maxlen, bool stripExtension = false);
 
-#ifndef WINVER
+#if !defined(WINVER) && !defined(POSIXVER)
+
 	bool drop_root_privileges();
 	bool set_realtime_scheduling(int priority);
 	bool drop_realtime_scheduling();

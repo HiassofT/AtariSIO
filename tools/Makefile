@@ -4,6 +4,8 @@
 # http://www.horus.com/~hias/atari/
 ########################################################################
 
+STRIP?=strip
+
 ifdef ENABLE_ATP
 ATPIMAGE_OBJS = AtpImage.o AtpTrack.o AtpSector.o \
 	Atari1050Model.o \
@@ -132,6 +134,8 @@ all: asmcode $(EXECUTABLES)
 
 win32: ataricom.exe dir2atr.exe adir.exe
 
+posix: ataricom-posix dir2atr-posix adir-posix
+
 asmcode:
 	$(MAKE) -C 6502
 
@@ -166,6 +170,13 @@ adir.exe: adir.cpp DiskImage.cpp FileIO.cpp SIOTracer.cpp FileTracer.cpp Error.c
 	$(MINGW_CXX) -W -Wall -DATARISIO_DEBUG -DWINVER -static -o $@ $^
 	$(MINGW_STRIP) $@
 
+adir-posix: adir.cpp DiskImage.cpp FileIO.cpp SIOTracer.cpp FileTracer.cpp Error.cpp \
+	AtrImage.cpp AtrMemoryImage.cpp DCMCodec.cpp CasBlock.cpp CasDataBlock.cpp CasFskBlock.cpp CasImage.cpp \
+	Dos2xUtils.cpp VirtualImageObserver.cpp Directory.cpp MiscUtils.cpp MyPicoDosCode.cpp \
+	winver.cpp
+	$(CXX) -W -Wall -DATARISIO_DEBUG -DPOSIXVER -static -o $@ $^
+	$(STRIP) $@
+
 dir2atr: $(DIR2ATR_OBJS)
 	$(CXX) $(LDFLAGS) -o $@ $(DIR2ATR_OBJS) $(COMMON_LIBS)
 
@@ -185,6 +196,13 @@ dir2atr.exe: dir2atr.cpp DiskImage.cpp FileIO.cpp SIOTracer.cpp FileTracer.cpp E
 	$(MINGW_CXX) -W -Wall -DATARISIO_DEBUG -DWINVER -static -o $@ $^
 	$(MINGW_STRIP) $@
 
+dir2atr-posix: dir2atr.cpp DiskImage.cpp FileIO.cpp SIOTracer.cpp FileTracer.cpp Error.cpp \
+	AtrImage.cpp AtrMemoryImage.cpp DCMCodec.cpp CasBlock.cpp CasDataBlock.cpp CasFskBlock.cpp CasImage.cpp \
+	Dos2xUtils.cpp VirtualImageObserver.cpp Directory.cpp MiscUtils.cpp MyPicoDosCode.cpp \
+	winver.cpp
+	$(CXX) -W -Wall -DATARISIO_DEBUG -DPOSIXVER -static -o $@ $^
+	$(STRIP) $@
+
 serialwatcher: $(SERIALWATCHER_OBJS)
 	$(CXX) $(LDFLAGS) -o $@ $(SERIALWATCHER_OBJS)
 
@@ -197,6 +215,10 @@ ataricom: $(ATARICOM_OBJS)
 ataricom.exe: ataricom.cpp Error.cpp AtariComMemory.cpp ComBlock.cpp FileIO.cpp
 	$(MINGW_CXX) -W -Wall -DATARISIO_DEBUG -DWINVER -static -o $@ $^
 	$(MINGW_STRIP) $@
+
+ataricom-posix: ataricom.cpp Error.cpp AtariComMemory.cpp ComBlock.cpp FileIO.cpp
+	$(CXX) -W -Wall -DATARISIO_DEBUG -DPOSIXVER -static -o $@ $^
+	$(STRIP) $@
 
 turbo: $(TURBO_OBJS)
 	$(CXX) $(LDFLAGS) -o $@ $(TURBO_OBJS) $(ATARISERVER_LIBS)

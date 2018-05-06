@@ -23,7 +23,7 @@
 
 #include "SIOTracer.h"
 
-#ifndef WINVER
+#if !defined(WINVER) && !defined(POSIXVER)
 #include "AbstractSIOHandler.h"
 #endif
 
@@ -205,7 +205,7 @@ void SIOTracer::IterTraceErrorString(ETraceGroup group, const char* string)
 	}
 }
 
-#ifndef WINVER
+#if !defined(WINVER) && !defined(POSIXVER)
 
 void SIOTracer::TraceCommandFrame(
 	const SIO_command_frame &frame,

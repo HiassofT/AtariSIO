@@ -76,6 +76,7 @@ ZLIB_LDFLAGS=-lz
 
 CC ?= gcc
 CXX ?= g++
+STRIP ?= strip
 #CC = gcc-3.3
 #CXX = g++-3.3
 #CC = /usr/local/gcc-3.2.2/bin/gcc
@@ -117,7 +118,7 @@ LDFLAGS = -g
 #LDFLAGS = -g -static
 
 export KERNEL_CC MODFLAGS KDIR MDIR USE_KBUILD_26
-export CC CXX CFLAGS CXXFLAGS LDFLAGS
+export CC CXX CFLAGS CXXFLAGS LDFLAGS STRIP
 export INST_DIR
 export ENABLE_ATP ALL_IN_ONE
 export ZLIB_CFLAGS ZLIB_LDFLAGS
@@ -133,6 +134,9 @@ clean:
 
 win32:
 	$(MAKE) -C tools win32
+
+posix:
+	$(MAKE) -C tools posix
 
 allclean:
 	$(MAKE) -C driver allclean

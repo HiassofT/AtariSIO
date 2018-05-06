@@ -199,3 +199,6 @@ AtariSIO changelog:
 
 2017-12-13:
   - atarisio: fix compilation on kernel 4.14
+
+2018-05-06:
+  - tools: add "posix" target to Makefile to build tools for non-Linux posix systems
