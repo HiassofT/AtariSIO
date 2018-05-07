@@ -202,3 +202,7 @@ AtariSIO changelog:
 
 2018-05-06:
   - tools: add "posix" target to Makefile to build tools for non-Linux posix systems
+
+2018-05-07:
+  - tools: disable static linking on posix build, this won't work on OSX
+

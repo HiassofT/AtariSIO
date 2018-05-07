@@ -174,8 +174,7 @@ adir-posix: adir.cpp DiskImage.cpp FileIO.cpp SIOTracer.cpp FileTracer.cpp Error
 	AtrImage.cpp AtrMemoryImage.cpp DCMCodec.cpp CasBlock.cpp CasDataBlock.cpp CasFskBlock.cpp CasImage.cpp \
 	Dos2xUtils.cpp VirtualImageObserver.cpp Directory.cpp MiscUtils.cpp MyPicoDosCode.cpp \
 	winver.cpp
-	$(CXX) -W -Wall -DATARISIO_DEBUG -DPOSIXVER -static -o $@ $^
-	$(STRIP) $@
+	$(CXX) -W -Wall -DATARISIO_DEBUG -DPOSIXVER -o $@ $^
 
 dir2atr: $(DIR2ATR_OBJS)
 	$(CXX) $(LDFLAGS) -o $@ $(DIR2ATR_OBJS) $(COMMON_LIBS)
@@ -200,8 +199,7 @@ dir2atr-posix: dir2atr.cpp DiskImage.cpp FileIO.cpp SIOTracer.cpp FileTracer.cpp
 	AtrImage.cpp AtrMemoryImage.cpp DCMCodec.cpp CasBlock.cpp CasDataBlock.cpp CasFskBlock.cpp CasImage.cpp \
 	Dos2xUtils.cpp VirtualImageObserver.cpp Directory.cpp MiscUtils.cpp MyPicoDosCode.cpp \
 	winver.cpp
-	$(CXX) -W -Wall -DATARISIO_DEBUG -DPOSIXVER -static -o $@ $^
-	$(STRIP) $@
+	$(CXX) -W -Wall -DATARISIO_DEBUG -DPOSIXVER -o $@ $^
 
 serialwatcher: $(SERIALWATCHER_OBJS)
 	$(CXX) $(LDFLAGS) -o $@ $(SERIALWATCHER_OBJS)
@@ -217,8 +215,7 @@ ataricom.exe: ataricom.cpp Error.cpp AtariComMemory.cpp ComBlock.cpp FileIO.cpp
 	$(MINGW_STRIP) $@
 
 ataricom-posix: ataricom.cpp Error.cpp AtariComMemory.cpp ComBlock.cpp FileIO.cpp
-	$(CXX) -W -Wall -DATARISIO_DEBUG -DPOSIXVER -static -o $@ $^
-	$(STRIP) $@
+	$(CXX) -W -Wall -DATARISIO_DEBUG -DPOSIXVER -o $@ $^
 
 turbo: $(TURBO_OBJS)
 	$(CXX) $(LDFLAGS) -o $@ $(TURBO_OBJS) $(ATARISERVER_LIBS)
