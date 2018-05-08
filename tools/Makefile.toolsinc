@@ -1,14 +1,12 @@
 # common definitions for tools-only build
 
-ADIR_SRC = adir.cpp DiskImage.cpp FileIO.cpp SIOTracer.cpp FileTracer.cpp Error.cpp \
-	AtrImage.cpp AtrMemoryImage.cpp DCMCodec.cpp CasBlock.cpp CasDataBlock.cpp \
-	CasFskBlock.cpp CasImage.cpp Dos2xUtils.cpp VirtualImageObserver.cpp \
-	Directory.cpp MiscUtils.cpp MyPicoDosCode.cpp
-
-DIR2ATR_SRC = dir2atr.cpp DiskImage.cpp FileIO.cpp SIOTracer.cpp FileTracer.cpp \
-	Error.cpp AtrImage.cpp AtrMemoryImage.cpp DCMCodec.cpp CasBlock.cpp \
-	CasDataBlock.cpp CasFskBlock.cpp CasImage.cpp Dos2xUtils.cpp \
+COMMON_DISK_SRC = DiskImage.cpp FileIO.cpp SIOTracer.cpp FileTracer.cpp \
+	Error.cpp AtrImage.cpp AtrMemoryImage.cpp DCMCodec.cpp Dos2xUtils.cpp \
 	VirtualImageObserver.cpp Directory.cpp MiscUtils.cpp MyPicoDosCode.cpp
+
+ADIR_SRC = adir.cpp $(COMMON_DISK_SRC)
+
+DIR2ATR_SRC = dir2atr.cpp $(COMMON_DISK_SRC)
 
 ATARICOM_SRC = ataricom.cpp Error.cpp AtariComMemory.cpp ComBlock.cpp FileIO.cpp
 
