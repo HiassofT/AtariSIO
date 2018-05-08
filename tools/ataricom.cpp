@@ -177,7 +177,6 @@ int main(int argc, char** argv)
 	unsigned int block_idx = 0;
 
 	std::vector< std::vector<unsigned int> > split_list;
-	bool split_mode = false;
 	unsigned int split_count = 0;
 	unsigned int split_idx = 0;
 
@@ -343,7 +342,6 @@ int main(int argc, char** argv)
 					goto usage;
 				}
 				idx++;
-				split_mode = true;
 				if (idx >= argc) {
 					goto usage;
 				} else {
