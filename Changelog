@@ -200,12 +200,6 @@ AtariSIO changelog:
 2017-12-13:
   - atarisio: fix compilation on kernel 4.14
 
-2018-05-06:
-  - tools: add "posix" target to Makefile to build tools for non-Linux posix systems
-
-2018-05-07:
-  - tools: disable static linking on posix build, this won't work on OSX
-
 2018-05-08:
-  - tools: factor out posix and win32 tools build into separate makefiles
-    and document building in INSTALL-tools
+  - tools: support (adir, ataricom, dir2atr) tools only build on
+    posix systems. See INSTALL-tools for details
