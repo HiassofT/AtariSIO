@@ -71,9 +71,6 @@ public:
 	virtual bool Unlink(const char* filename);
 
 	virtual bool IsOpen() const = 0;
-
-private:
-	bool fIsOpen;
 };
 
 class StdFileIO : public FileIO
