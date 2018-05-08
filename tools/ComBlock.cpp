@@ -142,11 +142,11 @@ std::string ComBlock::GetDescription(bool offsetInDecimal) const
 	if (offsetInDecimal) {
 		snprintf(tmpstr, 80, "%04x-%04x (bytes: %5d, offset: %6ld)",
 			fStartAddress, fStartAddress + fLen - 1,
-			fLen, fFileOffset);
+			fLen, (long) fFileOffset);
 	} else {
 		snprintf(tmpstr, 80, "%04x-%04x (bytes: %4x, offset: %6lx)",
 			fStartAddress, fStartAddress + fLen - 1,
-			fLen, fFileOffset);
+			fLen, (long) fFileOffset);
 	}
 	return tmpstr;
 }
