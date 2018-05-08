@@ -7,7 +7,7 @@ INSTALLDIR ?= /usr/local/bin
 CXX ?= c++
 CXXFLAGS ?= -W -Wall
 
-CXXFLAGS += -DATARISIO_DEBUG -DPOSIXVER
+TOOLS_CXXFLAGS = -DATARISIO_DEBUG -DPOSIXVER
 
 .PHONY: all
 all: $(EXE)
@@ -24,10 +24,10 @@ install: $(EXE)
 include Makefile.toolsinc
 
 adir: $(ADIR_SRC)
-	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o $@ $^
+	$(CXX) $(CXXFLAGS) $(TOOLS_CXXFLAGS) $(LDFLAGS) -o $@ $^
 
 dir2atr: $(DIR2ATR_SRC)
-	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o $@ $^
+	$(CXX) $(CXXFLAGS) $(TOOLS_CXXFLAGS) $(LDFLAGS) -o $@ $^
 
 ataricom: $(ATARICOM_SRC)
-	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o $@ $^
+	$(CXX) $(CXXFLAGS) $(TOOLS_CXXFLAGS) $(LDFLAGS) -o $@ $^

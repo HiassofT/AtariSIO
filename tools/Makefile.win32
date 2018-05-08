@@ -8,8 +8,7 @@ MINGW_STRIP ?= i686-w64-mingw32-strip
 MINGW_CXXFLAGS ?= -W -Wall
 MINGW_LDFLAGS ?= -static
 
-
-MINGW_CXXFLAGS += -DATARISIO_DEBUG -DWINVER
+TOOLS_CXXFLAGS = -DATARISIO_DEBUG -DWINVER
 
 .PHONY: all
 all: $(EXE)
@@ -21,13 +20,13 @@ clean:
 include Makefile.toolsinc
 
 adir.exe: $(ADIR_SRC) winver.cpp
-	$(MINGW_CXX) $(MINGW_CXXFLAGS) $(MINGW_LDFLAGS) -o $@ $^
+	$(MINGW_CXX) $(MINGW_CXXFLAGS) $(TOOLS_CXXFLAGS) $(MINGW_LDFLAGS) -o $@ $^
 	$(MINGW_STRIP) $@
 
 dir2atr.exe: $(DIR2ATR_SRC) winver.cpp
-	$(MINGW_CXX) $(MINGW_CXXFLAGS) $(MINGW_LDFLAGS) -o $@ $^
+	$(MINGW_CXX) $(MINGW_CXXFLAGS) $(TOOLS_CXXFLAGS) $(MINGW_LDFLAGS) -o $@ $^
 	$(MINGW_STRIP) $@
 
 ataricom.exe: $(ATARICOM_SRC)
-	$(MINGW_CXX) $(MINGW_CXXFLAGS) $(MINGW_LDFLAGS) -o $@ $^
+	$(MINGW_CXX) $(MINGW_CXXFLAGS) $(TOOLS_CXXFLAGS) $(MINGW_LDFLAGS) -o $@ $^
 	$(MINGW_STRIP) $@
