@@ -382,18 +382,16 @@ bool DCMCodec::DecodeRecFA(bool beQuiet)
 	uint8_t btPom;
 	EDiskFormat dformat = eNoDisk;
 	uint8_t btDensity;
-	uint8_t btPass;
        
 	if (!fFileIO->ReadByte(btPom)) {
 		goto failure_EOF;
 	}
 
 	btDensity = ( btPom >> 5 ) & 0x03;
-	btPass = btPom & 0x1F;
 	fLastPassFlag = ( btPom & 0x80 ) ? true : false;
 
 	if (!beQuiet) {
-		DDPRINTF("%d: FA pass=%d last=%d", fCurrentSector, btPass, (int)fLastPassFlag);
+		DDPRINTF("%d: FA pass=%d last=%d", fCurrentSector, btPom & 0x1F, (int)fLastPassFlag);
 	}
 
 	switch( btDensity )
