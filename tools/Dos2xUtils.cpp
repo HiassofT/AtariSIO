@@ -637,7 +637,7 @@ bool Dos2xUtils::CheckNameUnique(unsigned int entryNum)
 bool Dos2xUtils::CreatePiconame(EPicoNameType piconametype)
 {
 	const int maxlen = 4096;
-	const char EOL = 155;
+	const uint8_t EOL = 155;
 	uint8_t buf[maxlen];
 	char* shortstring;
 	unsigned int pos = 0;
