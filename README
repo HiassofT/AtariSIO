@@ -1,6 +1,6 @@
 AtariSIO driver and utilities V0.30
 
-Copyright (C) 2002-2017 Matthias Reichl <hias@horus.com>
+Copyright (C) 2002-2018 Matthias Reichl <hias@horus.com>
 
 This program is proteced under the terms of the GNU General Public
 License, version 2. Please read LICENSE for further details.
@@ -11,7 +11,9 @@ Visit http://www.horus.com/~hias/atari/ for new versions of AtariSIO.
 Installation
 ============
 
-Please read the file "INSTALL".
+Please read the file "INSTALL" for full installation instructions
+or "INSTALL-tools" if you only want to build only the tools (dir2atr,
+adir, ataricom).
 
 
 Other docs

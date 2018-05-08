@@ -18,7 +18,7 @@ mkdir tmp/"${NAME}"/driver
 mkdir -p tmp/"${NAME}"/contrib/gentoo
 cp -a Changelog* README* INSTALL* LICENSE* Makefile \
 	atarisio-modprobe* atarisio-udev* getver.sh getcurses.sh tmp/"${NAME}"
-cp -a tools/Makefile tools/*.cpp tools/*.h tmp/"${NAME}"/tools
+cp -a tools/Makefile* tools/*.cpp tools/*.h tmp/"${NAME}"/tools
 cp -a tools/6502/Makefile tools/6502/*.src tools/6502/*.inc \
       tools/6502/*.c tools/6502/*.h tools/6502/*.bin \
       tools/6502/remote.com tmp/"${NAME}"/tools/6502

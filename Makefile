@@ -133,10 +133,10 @@ clean:
 	$(MAKE) -C tools clean
 
 win32:
-	$(MAKE) -C tools win32
+	$(MAKE) -C tools -f Makefile.win32
 
 posix:
-	$(MAKE) -C tools posix
+	$(MAKE) -C tools -f Makefile.posix
 
 allclean:
 	$(MAKE) -C driver allclean

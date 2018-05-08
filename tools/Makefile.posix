@@ -1,0 +1,33 @@
+# Tools-only makefile for posix systems
+# (c) 2018 by Matthias Reichl <hias@horus.com>
+
+EXE = adir ataricom dir2atr
+INSTALLDIR ?= /usr/local/bin
+
+CXX ?= c++
+CXXFLAGS ?= -W -Wall
+
+CXXFLAGS += -DATARISIO_DEBUG -DPOSIXVER
+
+.PHONY: all
+all: $(EXE)
+
+.PHONY: clean
+clean:
+	rm -f $(EXE)
+
+.PHONY: install
+install: $(EXE)
+	mkdir -p $(INSTALLDIR)
+	install -m 755 $(EXE) $(INSTALLDIR)
+
+include Makefile.toolsinc
+
+adir: $(ADIR_SRC)
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o $@ $^
+
+dir2atr: $(DIR2ATR_SRC)
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o $@ $^
+
+ataricom: $(ATARICOM_SRC)
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o $@ $^

@@ -1,0 +1,61 @@
+AtariSIO tools-only installation
+
+Copyright (C) 2018 Matthias Reichl <hias@horus.com>
+
+If you only want to build the tools adir, ataricom and dir2atr
+follow the instructions in this file. If you want to build
+the full AtariSIO suite for Linux, including the kernel driver,
+atariserver and atarixfer please refer to "INSTALL".
+
+Prerequisites:
+==============
+
+You need a posix compliant system like Linux, BSD, OS X or Cygwin
+to compile the tools.
+
+You also need the following development tools installed:
+- make
+- a C++ compiler, eg GNU g++ or Clang clang++
+- C++ development headers and libraries
+
+Building:
+=========
+
+Instead of using the main Makefile in the source root use
+Makefile.posix from the tools directory
+
+cd tools
+make -f Makefile.posix
+
+This will compile the tools using the default C++ compiler, which
+is typically g++ or c++ and create 3 executables, adir, ataricom
+and dir2atr in the directory.
+
+To use a different C++ compiler set the CXX variable. eg to use Clang:
+
+make -f Makefile.posix CXX=clang++
+
+The makefile rules also honor the CXXFLAGS and LDFLAGS variables
+in case you need to change them.
+
+To clean the source directory (i.e. delete the executables) use
+the clean target.
+
+make -f Makefile.posix clean
+
+Installing the binaries:
+========================
+
+You can either copy the 3 binaries manually to your desired
+location (/usr/local/bin, ${HOME}/bin, ...) or use the install
+target of the Makefile.
+
+To install to the default location, /usr/local/bin, run
+
+make -f Makefile.posix install
+
+The install location can be changed via the INSTALLDIR variable.
+eg if you want to install the binaries to /opt/atari/bin run this command
+
+make -f Makefile.posix install INSTALLDIR=/opt/atari/bin
+

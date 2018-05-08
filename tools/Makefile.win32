@@ -1,0 +1,33 @@
+# Tools-only makefile for mingw32 cross-compilation
+# (c) 2018 by Matthias Reichl <hias@horus.com>
+
+EXE = adir.exe ataricom.exe dir2atr.exe
+
+MINGW_CXX ?= i686-w64-mingw32-g++
+MINGW_STRIP ?= i686-w64-mingw32-strip
+MINGW_CXXFLAGS ?= -W -Wall
+MINGW_LDFLAGS ?= -static
+
+
+MINGW_CXXFLAGS += -DATARISIO_DEBUG -DWINVER
+
+.PHONY: all
+all: $(EXE)
+
+.PHONY: clean
+clean:
+	rm -f $(EXE)
+
+include Makefile.toolsinc
+
+adir.exe: $(ADIR_SRC) winver.cpp
+	$(MINGW_CXX) $(MINGW_CXXFLAGS) $(MINGW_LDFLAGS) -o $@ $^
+	$(MINGW_STRIP) $@
+
+dir2atr.exe: $(DIR2ATR_SRC) winver.cpp
+	$(MINGW_CXX) $(MINGW_CXXFLAGS) $(MINGW_LDFLAGS) -o $@ $^
+	$(MINGW_STRIP) $@
+
+ataricom.exe: $(ATARICOM_SRC)
+	$(MINGW_CXX) $(MINGW_CXXFLAGS) $(MINGW_LDFLAGS) -o $@ $^
+	$(MINGW_STRIP) $@
