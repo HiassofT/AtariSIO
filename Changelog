@@ -203,3 +203,9 @@ AtariSIO changelog:
 2018-05-08:
   - tools: support (adir, ataricom, dir2atr) tools only build on
     posix systems. See INSTALL-tools for details
+
+2018-10-09:
+  - atariserver: add experimental userspace SIO support for USB
+    serial adapters. This must be enabled manually at build time with
+    "make ENABLE_USERSPACE=1"
+

@@ -102,4 +102,12 @@ public:
 	virtual ~ReadError() {}
 };
 
+class DeviceInitError : public ErrorObject {
+public:
+	DeviceInitError()
+		: ErrorObject("error initializing device")
+	{ }
+	virtual ~DeviceInitError() {}
+};
+
 #endif

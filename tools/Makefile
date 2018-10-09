@@ -39,6 +39,15 @@ endif
 
 endif
 
+SIOWRAPPER_OBJS = SIOWrapper.o KernelSIOWrapper.o
+
+ifdef ENABLE_USERSPACE
+ifeq ($(ENABLE_USERSPACE),1)
+CXXFLAGS += -DENABLE_USERSPACE
+SIOWRAPPER_OBJS += UserspaceSIOWrapper.o
+endif
+endif
+
 CFLAGS += $(ZLIB_CFLAGS) $(NCURSES_CFLAGS)
 CXXFLAGS += $(ZLIB_CFLAGS) $(NCURSES_CFLAGS)
 
@@ -47,34 +56,38 @@ COMMON_OBJS = DiskImage.o FileIO.o SIOTracer.o FileTracer.o Error.o
 ATRIMAGE_OBJS = AtrImage.o AtrMemoryImage.o DCMCodec.o \
 	CasBlock.o CasDataBlock.o CasFskBlock.o CasImage.o
 
-ATARIXFER_OBJS = atarixfer.o $(COMMON_OBJS) $(ATRIMAGE_OBJS) \
-	SIOWrapper.o KernelSIOWrapper.o UserspaceSIOWrapper.o MiscUtils.o Directory.o \
+ATARIXFER_OBJS = atarixfer.o \
+	$(COMMON_OBJS) $(SIOWRAPPER_OBJS) $(ATRIMAGE_OBJS) \
+	MiscUtils.o Directory.o \
 	Dos2xUtils.o VirtualImageObserver.o MyPicoDosCode.o 
 
-MEASURE_SYSTEM_LATENCY_OBJS = measure-system-latency.o $(COMMON_OBJS) \
-	SIOWrapper.o KernelSIOWrapper.o UserspaceSIOWrapper.o MiscUtils.o Directory.o
+MEASURE_SYSTEM_LATENCY_OBJS = measure-system-latency.o \
+	$(COMMON_OBJS) $(SIOWRAPPER_OBJS) \
+	MiscUtils.o Directory.o
 
-TEST_FSK_OBJS = test-fsk.o $(COMMON_OBJS) \
-	SIOWrapper.o KernelSIOWrapper.o UserspaceSIOWrapper.o MiscUtils.o Directory.o
+TEST_FSK_OBJS = test-fsk.o \
+	$(COMMON_OBJS) $(SIOWRAPPER_OBJS) \
+	MiscUtils.o Directory.o
 
-TURBO_OBJS = turbo.o $(COMMON_OBJS) $(ATRIMAGE_OBJS) \
-	SIOWrapper.o KernelSIOWrapper.o UserspaceSIOWrapper.o
+TURBO_OBJS = turbo.o \
+	$(COMMON_OBJS) $(SIOWRAPPER_OBJS) $(ATRIMAGE_OBJS)
 
-SPEEDY_OBJS = speedy.o $(COMMON_OBJS) $(ATRIMAGE_OBJS) \
-	SIOWrapper.o KernelSIOWrapper.o UserspaceSIOWrapper.o DiskDriveCode.o
+SPEEDY_OBJS = speedy.o \
+	$(COMMON_OBJS) $(SIOWRAPPER_OBJS) $(ATRIMAGE_OBJS) \
+	DiskDriveCode.o
 
-ATARIDD_OBJS = ataridd.o $(COMMON_OBJS) SIOWrapper.o KernelSIOWrapper.o UserspaceSIOWrapper.o
+ATARIDD_OBJS = ataridd.o \
+	$(COMMON_OBJS) $(SIOWRAPPER_OBJS)
 
 SMAG24_OBJS = smag24.o \
-	$(COMMON_OBJS) $(ATRIMAGE_OBJS) $(ATPIMAGE_OBJS) \
-	SIOWrapper.o KernelSIOWrapper.o UserspaceSIOWrapper.o
+	$(COMMON_OBJS) $(SIOWRAPPER_OBJS) $(ATRIMAGE_OBJS) $(ATPIMAGE_OBJS)
 
 ATARISERVER_OBJS = atariserver.o CursesFrontend.o StringInput.o \
 	History.o Directory.o DirectoryCache.o \
 	FileInput.o FileSelect.o MiscUtils.o \
-	$(COMMON_OBJS) $(ATRIMAGE_OBJS) \
+	$(COMMON_OBJS) $(SIOWRAPPER_OBJS) $(ATRIMAGE_OBJS) \
 	$(ATPIMAGE_OBJS) $(ATPSERVER_OBJS) \
-	DeviceManager.o SIOWrapper.o KernelSIOWrapper.o UserspaceSIOWrapper.o SIOManager.o \
+	DeviceManager.o SIOManager.o \
 	AbstractSIOHandler.o AtrSIOHandler.o \
 	PrinterHandler.o Coprocess.o RemoteControlHandler.o \
 	DataContainer.o HighSpeedSIOCode.o MyPicoDosCode.o \
@@ -87,9 +100,9 @@ COMMON_LIBS = $(ZLIB_LDFLAGS)
 ATARISERVER_LIBS = $(COMMON_LIBS) $(NCURSES_LDFLAGS)
 
 ATARISERVER_NOCURSES_OBJS = atariserver-nocurses.o \
-	$(COMMON_OBJS) $(ATRIMAGE_OBJS) \
+	$(COMMON_OBJS) $(SIOWRAPPER_OBJS) $(ATRIMAGE_OBJS) \
 	$(ATPIMAGE_OBJS) $(ATPSERVER_OBJS) \
-	DeviceManager.o SIOWrapper.o KernelSIOWrapper.o UserspaceSIOWrapper.o SIOManager.o \
+	DeviceManager.o SIOManager.o \
 	AbstractSIOHandler.o AtrSIOHandler.o \
 	PrinterHandler.o Coprocess.o MiscUtils.o \
 	HighSpeedSIOCode.o MyPicoDosCode.o \
@@ -117,8 +130,9 @@ DIR2ATR_OBJS = dir2atr.o $(COMMON_OBJS) $(ATRIMAGE_OBJS) \
 SERIALWATCHER_OBJS = serialwatcher.o SIOTracer.o FileTracer.o Error.o \
 	MiscUtils.o Directory.o
 
-CASINFO_OBJS = $(COMMON_OBJS) CasImage.o CasBlock.o CasDataBlock.o CasFskBlock.o \
-	CasHandler.o SIOWrapper.o KernelSIOWrapper.o UserspaceSIOWrapper.o MiscUtils.o casinfo.o
+CASINFO_OBJS = $(COMMON_OBJS) $(SIOWRAPPER_OBJS) \
+	CasImage.o CasBlock.o CasDataBlock.o CasFskBlock.o \
+	CasHandler.o MiscUtils.o casinfo.o
 
 ATARICOM_OBJS = ComBlock.o Error.o AtariComMemory.o FileIO.o \
 	ataricom.o

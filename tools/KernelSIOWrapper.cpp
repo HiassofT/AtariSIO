@@ -45,7 +45,11 @@ bool KernelSIOWrapper::IsKernelWrapper() const
 
 int KernelSIOWrapper::GetKernelDriverVersion()
 {
-	return ioctl(fDeviceFileNo, ATARISIO_IOC_GET_VERSION);
+	if (fDeviceFileNo < 0) {
+		return -1;
+	} else {
+		return ioctl(fDeviceFileNo, ATARISIO_IOC_GET_VERSION);
+	};
 }
 
 int KernelSIOWrapper::SetCableType_1050_2_PC()
@@ -395,7 +399,7 @@ int KernelSIOWrapper::SendDataFrameXF551(uint8_t* buf, unsigned int length)
 	return fLastResult;
 }
 
-int KernelSIOWrapper::SetBaudrate(unsigned int baudrate)
+int KernelSIOWrapper::SetBaudrate(unsigned int baudrate, bool /* now */)
 {
 	if (fDeviceFileNo < 0) {
 		fLastResult = ENODEV;

@@ -103,6 +103,13 @@ KERNEL_CC ?= $(CC)
 
 #ENABLE_ATP=1
 
+########################################################################
+# Experimental userspace SIO support:
+# Allows using atariserver with USB serial adapters but has
+# very limited functionality and isn't fully tested
+########################################################################
+
+ENABLE_USERSPACE ?= 0
 
 ########################################################################
 # don't change anything below here
@@ -120,28 +127,46 @@ LDFLAGS = -g
 export KERNEL_CC MODFLAGS KDIR MDIR USE_KBUILD_26
 export CC CXX CFLAGS CXXFLAGS LDFLAGS STRIP
 export INST_DIR
-export ENABLE_ATP ALL_IN_ONE
+export ENABLE_ATP ALL_IN_ONE ENABLE_USERSPACE
 export ZLIB_CFLAGS ZLIB_LDFLAGS
 export NCURSES_CFLAGS NCURSES_LDFLAGS
 
-all:
+.PHONY: all
+all: driver tools
+
+.PHONY: driver
+driver:
 	$(MAKE) -C driver
+
+.PHONY: tools
+tools:
 	$(MAKE) -C tools
 
-clean:
+.PHONY: clean
+clean: driver-clean tools-clean
+
+.PHONY: driver-clean
+driver-clean:
 	$(MAKE) -C driver clean
+
+.PHONY: tools-clean
+tools-clean:
 	$(MAKE) -C tools clean
 
+.PHONY: win32
 win32:
 	$(MAKE) -C tools -f Makefile.win32
 
+.PHONY: posix
 posix:
 	$(MAKE) -C tools -f Makefile.posix
 
+.PHONY: allclean
 allclean:
 	$(MAKE) -C driver allclean
 	$(MAKE) -C tools allclean
 
+.PHONY: backup
 backup:
 	tar zcf bak/SIO-`date '+%y%m%d-%H%M'`.tgz \
 	driver/*.c driver/*.h driver/Makefile \
@@ -152,22 +177,38 @@ backup:
 	windll/buildlib.bat windll/aconv.c \
 	Makefile atarisio-ttyS* Changelog README* INSTALL* LICENSE getver.sh
 
-install:
+.PHONY: install
+install: driver-install tools-install
+
+.PHONY: driver-install
+driver-install:
 	$(MAKE) -C driver install
+
+.PHONY: tools-install
+tools-install:
 	$(MAKE) -C tools install
 
+.PHONY: devices
 devices:
 	mknod -m 660 /dev/atarisio0 c 10 240
 	mknod -m 660 /dev/atarisio1 c 10 241
 	mknod -m 660 /dev/atarisio2 c 10 242
 	mknod -m 660 /dev/atarisio3 c 10 243
 
+.PHONY: uninstall
 uninstall:
 	$(MAKE) -C driver uninstall
 	$(MAKE) -C tools uninstall
 	rm -f /dev/atarisio*
 
-dep:
+.PHONY: dep
+dep: driver-dep tools-dep
+
+.PHONY: driver-dep
+driver-dep:
 	$(MAKE) -C driver dep
+
+.PHONY: tools-dep
+tools-dep:
 	$(MAKE) -C tools dep
 

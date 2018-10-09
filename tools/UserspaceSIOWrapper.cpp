@@ -20,12 +20,15 @@
 
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/ioctl.h>
 #include <sys/time.h>
 #include <time.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <linux/serial.h>
 
 #include "UserspaceSIOWrapper.h"
 #include "AtariDebug.h"
@@ -33,164 +36,344 @@
 
 #define TODO { fLastResult = ENODEV; return fLastResult; }
 
+//#define UTRACE_MASK 0x04
+#define UTRACE_MASK 0x00
+
+#define UTRACE_CMD_STATE(x ...) \
+	if (UTRACE_MASK & 0x01) \
+		DPRINTF(x)
+
+#define UTRACE_CMD_DATA(x ...) \
+	if (UTRACE_MASK & 0x02) \
+		DPRINTF(x)
+
+#define UTRACE_CMD_ERROR(x ...) \
+	if (UTRACE_MASK & 0x04) \
+		DPRINTF(x)
+
+#define UTRACE_BAUDRATE(x ...) \
+	if (UTRACE_MASK & 0x08) \
+		DPRINTF(x)
+
+
+#define CMD_BUF_TRACE \
+	"[ %02x %02x %02x %02x %02x ]", \
+		fCmdBuf[0], fCmdBuf[1], fCmdBuf[2], fCmdBuf[3], fCmdBuf[4]
+
+#define UTRACE_CMD_BUF_OK UTRACE_CMD_DATA(CMD_BUF_TRACE)
+
+#define UTRACE_CMD_BUF_ERROR UTRACE_CMD_ERROR(CMD_BUF_TRACE)
+
+bool UserspaceSIOWrapper::InitSerialDevice()
+{
+	int flags = fcntl(fDeviceFileNo, F_GETFL, 0);
+	if (flags < 0) {
+		return false;
+	}
+	if (fcntl(fDeviceFileNo, F_SETFL, flags | O_NONBLOCK) < 0) {
+		AERROR("cannot enable nonblocking mode");
+		return false;
+	}
+
+	struct serial_struct ss;
+        if (ioctl(fDeviceFileNo, TIOCGSERIAL, &ss)) {
+                AERROR("get serial info failed");
+                return false;
+        }
+
+	ss.flags |= ASYNC_LOW_LATENCY;
+        if (ioctl(fDeviceFileNo, TIOCSSERIAL, &ss)) {
+                AWARN("enabling low latency mode failed");
+        }
+
+	struct termios2 tio;
+	if (ioctl(fDeviceFileNo, TCGETS2, &tio)) {
+		return false;
+	}
+	// equivalent of cfmakeraw 
+	tio.c_iflag &= ~(IGNBRK | BRKINT | PARMRK | ISTRIP | INLCR | IGNCR | ICRNL | IXON);
+	tio.c_oflag &= ~OPOST;
+	tio.c_lflag &= ~(ECHO | ECHONL | ICANON | ISIG | IEXTEN);
+	tio.c_cflag &= ~(CSIZE | CSTOPB | PARENB | CBAUD | CBAUD << LINUX_IBSHIFT);
+	tio.c_cflag |= CS8 | CLOCAL | CREAD | B19200 | B19200 << LINUX_IBSHIFT;
+	tio.c_cc[VMIN] = 0;
+	tio.c_cc[VTIME] = 0;
+	if (ioctl(fDeviceFileNo, TCSETS2, &tio)) {
+		AERROR("error configuring serial port");
+		return false;
+	}
+	fBaudrate = ATARISIO_STANDARD_BAUDRATE;
+
+	if (ioctl(fDeviceFileNo, TIOCMGET, &flags)) {
+		return false;
+	}
+
+	// clear DTR and RTS to make autoswitching Atarimax interface work
+	flags &= ~(TIOCM_DTR | TIOCM_RTS);
+
+	if (ioctl(fDeviceFileNo, TIOCMSET, &flags)) {
+		return false;
+	}
+
+	tcflush(fDeviceFileNo, TCIOFLUSH);
+
+	return true;
+}
+
 UserspaceSIOWrapper::UserspaceSIOWrapper(int fileno)
-	: super(fileno)
-{ }
+	: super(fileno),
+	  fHighspeedBaudrate(ATARISIO_HIGHSPEED_BAUDRATE),
+	  fBaudrate(0),
+	  fDoAutobaud(false),
+	  fLastCommandOK(true)
+{
+	if (ioctl(fDeviceFileNo, TCGETS2, &fOriginalTermios)) {
+		fDeviceFileNo = -1;
+		throw new DeviceInitError();
+	}
+	if (!InitSerialDevice()) {
+		throw new DeviceInitError();
+	}
+	if (SetBaudrate(ATARISIO_STANDARD_BAUDRATE)) {
+		throw new DeviceInitError();
+	}
+	if (SetSIOServerMode(ESIOServerCommandLine::eCommandLine_RI)) {
+		throw new DeviceInitError();
+	}
+}
 
 UserspaceSIOWrapper::~UserspaceSIOWrapper()
-{ }
+{
+	if (fDeviceFileNo >= 0) {
+		ioctl(fDeviceFileNo, TCSETS2, &fOriginalTermios);
+	}
+
+	struct serial_struct ss;
+        if (!ioctl(fDeviceFileNo, TIOCGSERIAL, &ss)) {
+            	ss.flags &= ~ASYNC_LOW_LATENCY;
+	        ioctl(fDeviceFileNo, TIOCSSERIAL, &ss);
+        }
+}
 
 bool UserspaceSIOWrapper::IsUserspaceWrapper() const
 {
 	return true;
 }
 
+uint8_t UserspaceSIOWrapper::CalculateChecksum(uint8_t* buf, unsigned int length)
+{
+	uint16_t cksum = 0;
+	for (unsigned int i = 0; i < length; i++) {
+		cksum += buf[i];
+		if (cksum >= 0x100) {
+			cksum = (cksum & 0xff) + 1;
+		}
+	}
+	return (uint8_t) cksum;
+}
+
+bool UserspaceSIOWrapper::CmdBufChecksumOK()
+{
+	return fCmdBuf[eCmdLength] == CalculateChecksum(fCmdBuf, eCmdLength);
+}
+
+bool UserspaceSIOWrapper::BufChecksumOK(unsigned int length)
+{
+	return fBuf[length] == CalculateChecksum(fBuf, length);
+}
 
 int UserspaceSIOWrapper::SetCableType_1050_2_PC()
 {
 	TODO
-
-#if 0
-	if (fDeviceFileNo < 0) {
-		fLastResult = ENODEV;
-	} else {
-		fLastResult = ioctl(fDeviceFileNo, ATARISIO_IOC_SET_MODE, ATARISIO_MODE_1050_2_PC);
-		if (fLastResult == -1) {
-			fLastResult = errno;
-		}
-	}
-	return fLastResult;
-#endif
 }
 
 int UserspaceSIOWrapper::SetCableType_APE_Prosystem()
 {
 	TODO
-#if 0
-	if (fDeviceFileNo < 0) {
-		fLastResult = ENODEV;
-	} else {
-		fLastResult = ioctl(fDeviceFileNo, ATARISIO_IOC_SET_MODE, ATARISIO_MODE_PROSYSTEM);
-		if (fLastResult == -1) {
-			fLastResult = errno;
-		}
-	}
-	return fLastResult;
-#endif
 }
 
 int UserspaceSIOWrapper::SetSIOServerMode(ESIOServerCommandLine cmdLine)
 {
-	TODO
-#if 0
-	int mode;
 	switch (cmdLine) {
 	case eCommandLine_RI:
-		mode = ATARISIO_MODE_SIOSERVER;
+		fCommandLineMask = TIOCM_RI;
 		break;
 	case eCommandLine_DSR:
-		mode = ATARISIO_MODE_SIOSERVER_DSR;
+		fCommandLineMask = TIOCM_DSR;
 		break;
 	case eCommandLine_CTS:
-		mode = ATARISIO_MODE_SIOSERVER_CTS;
+		fCommandLineMask = TIOCM_CTS;
 		break;
 	default:
 		return 1;
 	}
-
-	if (fDeviceFileNo < 0) {
-		fLastResult = ENODEV;
-	} else {
-		fLastResult = ioctl(fDeviceFileNo, ATARISIO_IOC_SET_MODE, mode);
-		if (fLastResult == -1) {
-			fLastResult = errno;
-		}
-	}
-	return fLastResult;
-#endif
+	return 0;
 }
 
-int UserspaceSIOWrapper::DirectSIO(SIO_parameters& params)
+int UserspaceSIOWrapper::DirectSIO(SIO_parameters& /* params */)
 {
 	TODO
-#if 0
-	if (fDeviceFileNo<0) {
-		fLastResult = ENODEV;
-	} else {
-		fLastResult = ioctl(fDeviceFileNo, ATARISIO_IOC_DO_SIO, &params);
-		if (fLastResult == -1) {
-			fLastResult = errno;
-		}
-	}
-	return fLastResult;
-#endif
 }
 
-int UserspaceSIOWrapper::ExtSIO(Ext_SIO_parameters& params)
+int UserspaceSIOWrapper::ExtSIO(Ext_SIO_parameters& /* params */)
 {
 	TODO
-#if 0
-	if (fDeviceFileNo<0) {
-		fLastResult = ENODEV;
-	} else {
-		fLastResult = ioctl(fDeviceFileNo, ATARISIO_IOC_DO_EXT_SIO, &params);
-		if (fLastResult == -1) {
-			fLastResult = errno;
-		}
-	}
-	return fLastResult;
-#endif
 }
 
 int UserspaceSIOWrapper::WaitForCommandFrame(int otherReadPollDevice)
 {
-//	TODO
 	fd_set read_set;
-	//fd_set except_set;
 	struct timeval tv;
+	int maxfd;
+	int flags;
+	int sel;
+	MiscUtils::TimestampType printerTimeout = MiscUtils::GetCurrentTimePlusSec(15);
 
-	int ret;
+	while (true) {
+		tv.tv_sec = 0;
+		tv.tv_usec = 100;
 
-	if (fDeviceFileNo < 0) {
-		return -1;
-	} else {
-		int maxfd=0;
+		FD_ZERO(&read_set);
+		maxfd = -1;
 
-		if (otherReadPollDevice>=0) {
-			if (otherReadPollDevice > maxfd) {
-				maxfd = otherReadPollDevice;
-			}
-			FD_ZERO(&read_set);
+		if (otherReadPollDevice >= 0) {
+			maxfd = otherReadPollDevice;
 			FD_SET(otherReadPollDevice, &read_set);
+		}
 
-			// timeout for checking printer queue
-			tv.tv_sec = 15;
-			tv.tv_usec = 0;
+		switch (fCommandReceiveState) {
+		case eCommandSoftError:
+			if (fLastCommandOK) {
+				fLastCommandOK = false;
+				fCommandReceiveState = eWaitCommandIdle;
+				printerTimeout = MiscUtils::GetCurrentTimePlusSec(15);
+				continue;
+			}
+			// fallthrough
 
-			ret = select(maxfd+1, &read_set, NULL, NULL, &tv);
-			if (ret == -1) {
-				return 2;
+		case eCommandHardError:
+			fLastCommandOK = false;
+			fCommandReceiveState = eWaitCommandIdle;
+			printerTimeout = MiscUtils::GetCurrentTimePlusSec(15);
+			TrySwitchbaud();
+			continue;
+			
+		case eWaitCommandIdle:
+			tcflush(fDeviceFileNo, TCIFLUSH);
+			if (ioctl(fDeviceFileNo, TIOCMGET, &flags)) {
+				AERROR("failed to read modem line status");
+				break;
 			}
-			if (ret == 0) {
-				return -1;
+			if (!(flags & fCommandLineMask)) {
+				UTRACE_CMD_STATE("eWaitCommandIdle -> eWaitCommandAssert");
+				fCommandReceiveState = eWaitCommandAssert;
+				continue;
 			}
-			if (FD_ISSET(otherReadPollDevice, &read_set)) {
+			break;
+
+		case eWaitCommandAssert:
+			if (ioctl(fDeviceFileNo, TIOCMGET, &flags)) {
+				AERROR("failed to read modem line status");
+				break;
+			}
+			if (flags & fCommandLineMask) {
+				UTRACE_CMD_STATE("eWaitCommandAssert -> eReceiveCommandFrame");
+				fCommandReceiveState = eReceiveCommandFrame;
+				fCommandReceiveCount = 0;
+				fCommandFrameTimeout = MiscUtils::GetCurrentTimePlusMsec(15);
+				continue;
+			} else {
+				tcflush(fDeviceFileNo, TCIFLUSH);
+			}
+			break;
+
+		case eReceiveCommandFrame:
+			tv.tv_usec = 1000;
+			FD_SET(fDeviceFileNo, &read_set);
+			if (fDeviceFileNo > maxfd) {
+				maxfd = fDeviceFileNo;
+			}
+			break;
+		case eWaitCommandDeassert:
+			if (ioctl(fDeviceFileNo, TIOCMGET, &flags)) {
+				AERROR("failed to read modem line status");
+				break;
+			}
+			if (!(flags & fCommandLineMask)) {
+				UTRACE_CMD_STATE("eWaitCommandDeassert -> eCommandOK");
+				fCommandReceiveState = eCommandOK;
+				fLastCommandOK = true;
+				return 0;
+			}
+			break;
+		case eCommandOK:
+			UTRACE_CMD_STATE("eCommandOK -> eWaitCommandIdle");
+			fCommandReceiveState = eWaitCommandIdle;
+			continue;
+		}
+
+		sel = select(maxfd + 1, &read_set, NULL, NULL, &tv);
+
+		if (sel < 0) {
+			// error
+			fCommandReceiveState = eCommandHardError;
+			return 2;
+		}
+
+		if (sel > 0) {
+			if (FD_ISSET(fDeviceFileNo, &read_set)) {
+				int cnt = read(fDeviceFileNo, fCmdBuf + fCommandReceiveCount, 10);
+				if (cnt < 0) {
+					AERROR("failed to read command frame data");
+					fCommandReceiveState = eCommandHardError;
+					continue;
+				}
+				fCommandReceiveCount += cnt;
+				UTRACE_CMD_DATA("got %d command frame bytes (%d total)",
+					cnt, fCommandReceiveCount
+				);
+			}
+			if (otherReadPollDevice >= 0 && FD_ISSET(otherReadPollDevice, &read_set)) {
 				return 1;
 			}
-			DPRINTF("illegal condition using select!");
-			return -2;
-		} else {
-			assert(false);
-/*
-			ret = select(maxfd+1, NULL, NULL, NULL, NULL);
-			if (ret == -1) {
-				return 2;
+		}
+
+		MiscUtils::TimestampType now = MiscUtils::GetCurrentTime();
+
+		if (fCommandReceiveState == eReceiveCommandFrame) {
+			if (fCommandReceiveCount == eCmdRawLength) {
+				if (CmdBufChecksumOK()) {
+					UTRACE_CMD_STATE("eReceiveCommandFrame -> eWaitCommandDeassert");
+					UTRACE_CMD_BUF_OK;
+					fCommandReceiveState = eWaitCommandDeassert;
+					continue;
+				} else {
+					UTRACE_CMD_ERROR("command frame checksum error");
+					UTRACE_CMD_BUF_ERROR;
+					fCommandReceiveState = eCommandSoftError;
+					continue;
+				}
 			}
-			if (ret == 0) {
-				return -1;
+
+			if (fCommandReceiveCount > eCmdRawLength) {
+				UTRACE_CMD_ERROR("too many command frame data bytes (%d)", fCommandReceiveCount);
+				fCommandReceiveState = eCommandHardError;
+				continue;
 			}
-*/
-			DPRINTF("illegal condition using select!");
+
+			if (now >= fCommandFrameTimeout) {
+				UTRACE_CMD_ERROR("receive timeout expired, got %d bytes", fCommandReceiveCount);
+				UTRACE_CMD_BUF_ERROR;
+				if (fCommandReceiveCount < 4) {
+					fCommandReceiveState = eCommandHardError;
+				} else {
+					fCommandReceiveState = eCommandSoftError;
+				}
+				continue;
+			}
+		}
+
+		if (printerTimeout && now > printerTimeout) {
 			return -1;
 		}
 	}
@@ -198,521 +381,388 @@ int UserspaceSIOWrapper::WaitForCommandFrame(int otherReadPollDevice)
 
 int UserspaceSIOWrapper::GetCommandFrame(SIO_command_frame& frame)
 {
-	TODO
-#if 0
-	if (fDeviceFileNo < 0) {
-		fLastResult = ENODEV;
+	if (fCommandReceiveState == eCommandOK) {
+		frame.device_id = fCmdBuf[0];
+		frame.command = fCmdBuf[1];
+		frame.aux1 = fCmdBuf[2];
+		frame.aux2 = fCmdBuf[3];
+		frame.reception_timestamp = fCommandFrameTimestamp;
+		frame.missed_count = 0;
+		fCommandReceiveState = eWaitCommandAssert;
+		return 0;
 	} else {
-		fLastResult = ioctl(fDeviceFileNo, ATARISIO_IOC_GET_COMMAND_FRAME, &frame);
-		if (fLastResult == -1) {
-			fLastResult = errno;
+		return ENOMSG;
+	}
+}
+
+MiscUtils::TimestampType UserspaceSIOWrapper::TimeForBytes(unsigned int length)
+{
+	return ((MiscUtils::TimestampType) length * 10 * 1000000) / fBaudrate;
+}
+
+bool UserspaceSIOWrapper::NanoSleep(unsigned long nsec) {
+	struct timespec ts;
+	ts.tv_sec = 0;
+	ts.tv_nsec = nsec;
+	return nanosleep(&ts, NULL);
+}
+
+int UserspaceSIOWrapper::TransmitBuf(uint8_t* buf, unsigned int length)
+{
+	// timeout with 30% margin
+	MiscUtils::TimestampType to = TimeForBytes(length) * 13 / 10 + eDelayT3;
+
+	unsigned int pos = 0;
+	int cnt;
+	int sel;
+
+	fd_set write_set;
+	struct timeval tv;
+
+	MiscUtils::TimestampType now = MiscUtils::GetCurrentTime();
+	MiscUtils::TimestampType endTime = now + to;
+
+	while (pos < length) {
+		FD_ZERO(&write_set);
+		FD_SET(fDeviceFileNo, &write_set);
+		now = MiscUtils::GetCurrentTime();
+		if (now >= endTime) {
+			// DPRINTF("timeout in TransmitBuf(%d)", length);
+			fLastResult = EATARISIO_COMMAND_TIMEOUT;
+			return fLastResult;
+		}
+		MiscUtils::TimestampToTimeval(endTime - now, tv);
+		sel = select(fDeviceFileNo + 1, NULL, &write_set, NULL, &tv);
+		if (sel < 0) {
+			// DPRINTF("select failed in TransmitBuf(%d): ", length, errno);
+			fLastResult = EATARISIO_UNKNOWN_ERROR;
+			return fLastResult;
+		}
+		if (sel == 1) {
+			cnt = write(fDeviceFileNo, buf + pos, length - pos);
+			if (cnt < 0) {
+				// DPRINTF("write failed in TransmitBuf(%d): ", length, errno);
+				return EATARISIO_UNKNOWN_ERROR;
+			}
+			pos += cnt;
 		}
 	}
+	// DPRINTF("TransmitBuf(%d) OK", length);
+	tcdrain(fDeviceFileNo);
+
+	fLastResult = 0;
 	return fLastResult;
-#endif
+}
+
+void UserspaceSIOWrapper::WaitTransmitComplete()
+{
+	int cnt;
+	unsigned int lsr;
+
+	//tcdrain(fDeviceFileNo);
+	cnt = 10;
+	while (cnt--) {
+		if (ioctl(fDeviceFileNo, TIOCSERGETLSR, &lsr)) {
+			break;
+		}
+		if (lsr & TIOCSER_TEMT) {
+			break;
+		}
+		NanoSleep(100000);
+	}
+	// one byte could still be in the transmitter holding register
+	NanoSleep(TimeForBytes(1) * 1500);
+}
+
+int UserspaceSIOWrapper::TransmitByte(uint8_t byte, bool waitTransmit)
+{
+	int ret = TransmitBuf(&byte, 1);
+	if (waitTransmit) {
+		WaitTransmitComplete();
+	}
+	return ret;
+}
+
+int UserspaceSIOWrapper::TransmitBuf(unsigned int length)
+{
+	return TransmitBuf(fBuf, length);
+}
+
+int UserspaceSIOWrapper::ReceiveBuf(uint8_t* buf, unsigned int length, unsigned int additionalTimeout)
+{
+	// timeout with 30% margin
+	MiscUtils::TimestampType to = TimeForBytes(length) * 13 / 10 + additionalTimeout;
+
+	unsigned int pos = 0;
+	int cnt;
+	int sel;
+	
+	fd_set read_set;
+	struct timeval tv;
+
+	MiscUtils::TimestampType now = MiscUtils::GetCurrentTime();
+	MiscUtils::TimestampType endTime = now + to;
+
+	while (pos < length) {
+		FD_ZERO(&read_set);
+		FD_SET(fDeviceFileNo, &read_set);
+		now = MiscUtils::GetCurrentTime();
+		if (now >= endTime) {
+			fLastResult = EATARISIO_COMMAND_TIMEOUT;
+			return fLastResult;
+		}
+		MiscUtils::TimestampToTimeval(endTime - now, tv);
+		sel = select(fDeviceFileNo + 1, &read_set, NULL, NULL, &tv);
+		if (sel < 0) {
+			fLastResult = EATARISIO_UNKNOWN_ERROR;
+			return fLastResult;
+		}
+		if (sel == 1) {
+			cnt = read(fDeviceFileNo, buf + pos, length - pos);
+			if (cnt < 0) {
+				return false;
+			}
+			pos += cnt;
+		}
+	}
+	fLastResult = 0;
+	return fLastResult;
+}
+
+int UserspaceSIOWrapper::ReceiveBuf(unsigned int length, unsigned int additionalTimeout)
+{
+	return ReceiveBuf(fBuf, length, additionalTimeout);
 }
 
 int UserspaceSIOWrapper::SendCommandACK()
 {
-	TODO
-#if 0
-	if (fDeviceFileNo < 0) {
-		fLastResult = ENODEV;
-	} else {
-		fLastResult = ioctl(fDeviceFileNo, ATARISIO_IOC_SEND_COMMAND_ACK);
-		if (fLastResult == -1) {
-			fLastResult = errno;
-		}
-	}
-	return fLastResult;
-#endif
+	MicroSleep(eDelayT2);
+	return TransmitByte('A', true);
 }
 
 int UserspaceSIOWrapper::SendCommandNAK()
 {
-	TODO
-#if 0
-	if (fDeviceFileNo < 0) {
-		fLastResult = ENODEV;
-	} else {
-		fLastResult = ioctl(fDeviceFileNo, ATARISIO_IOC_SEND_COMMAND_NAK);
-		if (fLastResult == -1) {
-			fLastResult = errno;
-		}
-	}
-	return fLastResult;
-#endif
+	MicroSleep(eDelayT2);
+	return TransmitByte('N');
 }
 
 int UserspaceSIOWrapper::SendDataACK()
 {
-	TODO
-#if 0
-	if (fDeviceFileNo < 0) {
-		fLastResult = ENODEV;
-	} else {
-		fLastResult = ioctl(fDeviceFileNo, ATARISIO_IOC_SEND_DATA_ACK);
-		if (fLastResult == -1) {
-			fLastResult = errno;
-		}
-	}
-	return fLastResult;
-#endif
+	MicroSleep(eDelayT4);
+	return TransmitByte('A', true);
 }
 
 int UserspaceSIOWrapper::SendDataNAK()
 {
-	TODO
-#if 0
-	if (fDeviceFileNo < 0) {
-		fLastResult = ENODEV;
-	} else {
-		fLastResult = ioctl(fDeviceFileNo, ATARISIO_IOC_SEND_DATA_NAK);
-		if (fLastResult == -1) {
-			fLastResult = errno;
-		}
-	}
-	return fLastResult;
-#endif
+	MicroSleep(eDelayT4);
+	return TransmitByte('N');
 }
 
 int UserspaceSIOWrapper::SendComplete()
 {
-	TODO
-#if 0
-	if (fDeviceFileNo < 0) {
-		fLastResult = ENODEV;
-	} else {
-		fLastResult = ioctl(fDeviceFileNo, ATARISIO_IOC_SEND_COMPLETE);
-		if (fLastResult == -1) {
-			fLastResult = errno;
-		}
-	}
-	return fLastResult;
-#endif
+	MicroSleep(eDelayT5);
+	return TransmitByte('C');
 }
 
 int UserspaceSIOWrapper::SendError()
 {
-	TODO
-#if 0
-	if (fDeviceFileNo < 0) {
-		fLastResult = ENODEV;
-	} else {
-		fLastResult = ioctl(fDeviceFileNo, ATARISIO_IOC_SEND_ERROR);
-		if (fLastResult == -1) {
-			fLastResult = errno;
-		}
-	}
-	return fLastResult;
-#endif
+	MicroSleep(eDelayT5);
+	return TransmitByte('E');
 }
 
 int UserspaceSIOWrapper::SendDataFrame(uint8_t* buf, unsigned int length)
 {
-	TODO
-#if 0
-	SIO_data_frame frame;
-
-	frame.data_buffer = buf;
-	frame.data_length = length;
-
-	if (fDeviceFileNo < 0) {
-		fLastResult = ENODEV;
-	} else {
-		fLastResult = ioctl(fDeviceFileNo, ATARISIO_IOC_SEND_DATA_FRAME, &frame);
-		if (fLastResult == -1) {
-			fLastResult = errno;
-		}
+	if (length > eMaxDataLength) {
+		fLastResult = EATARISIO_ERROR_BLOCK_TOO_LONG;
+		return fLastResult;
 	}
-	return fLastResult;
-#endif
+	memcpy(fBuf, buf, length);
+	fBuf[length] = CalculateChecksum(fBuf, length);
+
+	WaitTransmitComplete();
+
+	MicroSleep(eDataDelay);
+	return TransmitBuf(fBuf, length+1);
 }
 
 int UserspaceSIOWrapper::ReceiveDataFrame(uint8_t* buf, unsigned int length)
 {
-	TODO
-#if 0
-	SIO_data_frame frame;
+	fLastResult = ReceiveBuf(fBuf, length+1, eDelayT3);
+	// DPRINTF("ReceiveBuf(%d): %d", length+1, fLastResult);
 
-	frame.data_buffer = buf;
-	frame.data_length = length;
-
-	if (fDeviceFileNo < 0) {
-		fLastResult = ENODEV;
+	if (fLastResult) {
+		return fLastResult;
+	}
+	if (BufChecksumOK(length)) {
+		memcpy(buf, fBuf, length);
+		fLastResult = SendDataACK();
 	} else {
-		fLastResult = ioctl(fDeviceFileNo, ATARISIO_IOC_RECEIVE_DATA_FRAME, &frame);
-		if (fLastResult == -1) {
-			fLastResult = errno;
-		}
+		SendDataNAK();
+		fLastResult = EATARISIO_CHECKSUM_ERROR;
 	}
 	return fLastResult;
-#endif
 }
 
 int UserspaceSIOWrapper::SendRawFrame(uint8_t* buf, unsigned int length)
 {
-	TODO
-#if 0
-	SIO_data_frame frame;
-
-	frame.data_buffer = buf;
-	frame.data_length = length;
-
-	if (fDeviceFileNo < 0) {
-		fLastResult = ENODEV;
-	} else {
-		fLastResult = ioctl(fDeviceFileNo, ATARISIO_IOC_SEND_RAW_FRAME, &frame);
-		if (fLastResult == -1) {
-			fLastResult = errno;
-		}
-	}
-	return fLastResult;
-#endif
+	return TransmitBuf(buf, length);
 }
 
 int UserspaceSIOWrapper::ReceiveRawFrame(uint8_t* buf, unsigned int length)
 {
-	TODO
-#if 0
-	SIO_data_frame frame;
-
-	frame.data_buffer = buf;
-	frame.data_length = length;
-
-	if (fDeviceFileNo < 0) {
-		fLastResult = ENODEV;
-	} else {
-		fLastResult = ioctl(fDeviceFileNo, ATARISIO_IOC_RECEIVE_RAW_FRAME, &frame);
-		if (fLastResult == -1) {
-			fLastResult = errno;
-		}
-	}
-	return fLastResult;
-#endif
+	return ReceiveBuf(buf, length, eDelayT3);
 }
-
 
 int UserspaceSIOWrapper::SendCommandACKXF551()
 {
 	TODO
-#if 0
-	if (fDeviceFileNo < 0) {
-		fLastResult = ENODEV;
-	} else {
-		fLastResult = ioctl(fDeviceFileNo, ATARISIO_IOC_SEND_COMMAND_ACK_XF551);
-		if (fLastResult == -1) {
-			fLastResult = errno;
-		}
-	}
-	return fLastResult;
-#endif
 }
 
 int UserspaceSIOWrapper::SendCompleteXF551()
 {
 	TODO
-#if 0
-	if (fDeviceFileNo < 0) {
-		fLastResult = ENODEV;
-	} else {
-		fLastResult = ioctl(fDeviceFileNo, ATARISIO_IOC_SEND_COMPLETE_XF551);
-		if (fLastResult == -1) {
-			fLastResult = errno;
-		}
-	}
-	return fLastResult;
-#endif
 }
 
-int UserspaceSIOWrapper::SendDataFrameXF551(uint8_t* buf, unsigned int length)
+int UserspaceSIOWrapper::SendDataFrameXF551(uint8_t* /* buf */, unsigned int /* length */)
 {
 	TODO
-#if 0
-	SIO_data_frame frame;
-
-	frame.data_buffer = buf;
-	frame.data_length = length;
-
-	if (fDeviceFileNo < 0) {
-		fLastResult = ENODEV;
-	} else {
-		fLastResult = ioctl(fDeviceFileNo, ATARISIO_IOC_SEND_DATA_FRAME_XF551, &frame);
-		if (fLastResult == -1) {
-			fLastResult = errno;
-		}
-	}
-	return fLastResult;
-#endif
 }
 
-int UserspaceSIOWrapper::SetBaudrate(unsigned int baudrate)
+int UserspaceSIOWrapper::SetBaudrate(unsigned int baudrate, bool now)
 {
-	TODO
+	struct termios2 tios2;
+	UTRACE_BAUDRATE("change baudrate from %d to %d, now = %d", fBaudrate, baudrate, now);
+
+	if (!now) {
+		WaitTransmitComplete();
+	}
+
+	int ret = ioctl(fDeviceFileNo, TCGETS2, &tios2);
+	if (ret < 0) {
+		return ret;
+	}
+	tios2.c_cflag &= ~(CBAUD | CBAUD << LINUX_IBSHIFT);
+	switch (baudrate) {
 #if 0
-	if (fDeviceFileNo < 0) {
-		fLastResult = ENODEV;
-	} else {
-		fLastResult = ioctl(fDeviceFileNo, ATARISIO_IOC_SET_BAUDRATE, baudrate);
-		if (fLastResult == -1) {
-			fLastResult = errno;
+	case 19200:
+		tios2.c_cflag |= B19200 | B19200 << LINUX_IBSHIFT;
+		break;
+	case 38400:
+		tios2.c_cflag |= B38400 | B38400 << LINUX_IBSHIFT;
+		break;
+	case 57600:
+		tios2.c_cflag |= B57600 | B57600 << LINUX_IBSHIFT;
+		break;
+#endif
+	default:
+		tios2.c_cflag |= BOTHER | BOTHER << LINUX_IBSHIFT;
+		break;
+	};
+	tios2.c_ispeed = baudrate;
+	tios2.c_ospeed = baudrate;
+
+	ret = ioctl(fDeviceFileNo, now ? TCSETS2 : TCSETSW2, &tios2);
+	if (!ret) {
+		fBaudrate = baudrate;
+	}
+	return ret;
+}
+
+void UserspaceSIOWrapper::TrySwitchbaud()
+{
+	if (fDoAutobaud) {
+		if (fBaudrate == ATARISIO_STANDARD_BAUDRATE) {
+			SetBaudrate(fHighspeedBaudrate);
+		} else {
+			SetBaudrate(ATARISIO_STANDARD_BAUDRATE);
 		}
 	}
-	return fLastResult;
-#endif
+	tcflush(fDeviceFileNo, TCIOFLUSH);
 }
 
 int UserspaceSIOWrapper::SetHighSpeedBaudrate(unsigned int baudrate)
 {
-	TODO
-#if 0
-	if (fDeviceFileNo < 0) {
-		fLastResult = ENODEV;
-	} else {
-		fLastResult = ioctl(fDeviceFileNo, ATARISIO_IOC_SET_HIGHSPEED_BAUDRATE, baudrate);
-		if (fLastResult == -1) {
-			fLastResult = errno;
-		}
-	}
-	return fLastResult;
-#endif
+	fHighspeedBaudrate = baudrate;
+	return 0;
 }
 
 int UserspaceSIOWrapper::SetAutobaud(unsigned int on)
 {
-	TODO
-#if 0
-	if (fDeviceFileNo < 0) {
-		fLastResult = ENODEV;
-	} else {
-		fLastResult = ioctl(fDeviceFileNo, ATARISIO_IOC_SET_AUTOBAUD, on);
-		if (fLastResult == -1) {
-			fLastResult = errno;
-		}
-	}
-	return fLastResult;
-#endif
+	fDoAutobaud = on;
+	return 0;
 }
 
 int UserspaceSIOWrapper::SetHighSpeedPause(unsigned int on)
 {
-	TODO
-#if 0
-	if (fDeviceFileNo < 0) {
-		fLastResult = ENODEV;
+	if (on) {
+		fLastResult = EINVAL;
 	} else {
-		fLastResult = ioctl(fDeviceFileNo, ATARISIO_IOC_SET_HIGHSPEEDPAUSE, on);
-		if (fLastResult == -1) {
-			fLastResult = errno;
-		}
+		fLastResult = 0;
 	}
 	return fLastResult;
-#endif
 }
 
 int UserspaceSIOWrapper::GetBaudrate()
 {
-	TODO
-#if 0
-	int baudrate;
-
-	if (fDeviceFileNo < 0) {
-		fLastResult = ENODEV;
-	} else {
-		fLastResult = 0;
-		baudrate = ioctl(fDeviceFileNo, ATARISIO_IOC_GET_BAUDRATE);
-		if (baudrate == -1) {
-			fLastResult = errno;
-			return ATARISIO_STANDARD_BAUDRATE;
-		} else {
-			return baudrate;
-		}
-	}
-	return fLastResult;
-#endif
+	return fBaudrate;
 }
 
 int UserspaceSIOWrapper::GetExactBaudrate()
 {
-	TODO
-#if 0
-	int baudrate;
-
-	if (fDeviceFileNo < 0) {
-		fLastResult = ENODEV;
-	} else {
-		fLastResult = 0;
-		baudrate = ioctl(fDeviceFileNo, ATARISIO_IOC_GET_EXACT_BAUDRATE);
-		if (baudrate == -1) {
-			fLastResult = errno;
-			return ATARISIO_STANDARD_BAUDRATE;
-		} else {
-			return baudrate;
-		}
-	}
-	return fLastResult;
-#endif
+	// TODO
+	return fBaudrate;
 }
 
 
-int UserspaceSIOWrapper::SetTapeBaudrate(unsigned int baudrate)
+int UserspaceSIOWrapper::SetTapeBaudrate(unsigned int /* baudrate */)
 {
 	TODO
-#if 0
-	if (fDeviceFileNo < 0) {
-		fLastResult = ENODEV;
-	} else {
-		fLastResult = ioctl(fDeviceFileNo, ATARISIO_IOC_SET_TAPE_BAUDRATE, baudrate);
-		if (fLastResult == -1) {
-			fLastResult = errno;
-		}
-	}
-	return fLastResult;
-#endif
 }
 
-int UserspaceSIOWrapper::SendTapeBlock(uint8_t* buf, unsigned int length)
+int UserspaceSIOWrapper::SendTapeBlock(uint8_t* /* buf */, unsigned int /* length */)
 {
 	TODO
-#if 0
-	SIO_data_frame frame;
-
-	frame.data_buffer = buf;
-	frame.data_length = length;
-
-	if (fDeviceFileNo < 0) {
-		fLastResult = ENODEV;
-	} else {
-		fLastResult = ioctl(fDeviceFileNo, ATARISIO_IOC_SEND_TAPE_BLOCK, &frame);
-		if (fLastResult == -1) {
-			fLastResult = errno;
-		}
-	}
-	return fLastResult;
-#endif
 }
 
 int UserspaceSIOWrapper::StartTapeMode()
 {
 	TODO
-#if 0
-	if (fDeviceFileNo < 0) {
-		fLastResult = ENODEV;
-	} else {
-		fLastResult = ioctl(fDeviceFileNo, ATARISIO_IOC_START_TAPE_MODE);
-		if (fLastResult == -1) {
-			fLastResult = errno;
-		}
-	}
-	return fLastResult;
-#endif
 }
 
 int UserspaceSIOWrapper::EndTapeMode()
 {
 	TODO
-#if 0
-	if (fDeviceFileNo < 0) {
-		fLastResult = ENODEV;
-	} else {
-		fLastResult = ioctl(fDeviceFileNo, ATARISIO_IOC_END_TAPE_MODE);
-		if (fLastResult == -1) {
-			fLastResult = errno;
-		}
-	}
-	return fLastResult;
-#endif
 }
 
-int UserspaceSIOWrapper::SendRawDataNoWait(uint8_t* buf, unsigned int length)
+int UserspaceSIOWrapper::SendRawDataNoWait(uint8_t* /* buf */, unsigned int /* length */)
 {
 	TODO
-#if 0
-	SIO_data_frame frame;
-
-	frame.data_buffer = buf;
-	frame.data_length = length;
-
-	if (fDeviceFileNo < 0) {
-		fLastResult = ENODEV;
-	} else {
-		fLastResult = ioctl(fDeviceFileNo, ATARISIO_IOC_SEND_RAW_DATA_NOWAIT, &frame);
-		if (fLastResult == -1) {
-			fLastResult = errno;
-		}
-	}
-	return fLastResult;
-#endif
 }
 
 int UserspaceSIOWrapper::FlushWriteBuffer()
 {
 	TODO
-#if 0
-	if (fDeviceFileNo < 0) {
-		fLastResult = ENODEV;
-	} else {
-		fLastResult = ioctl(fDeviceFileNo, ATARISIO_IOC_FLUSH_WRITE_BUFFER);
-		if (fLastResult == -1) {
-			fLastResult = errno;
-		}
-	}
-	return fLastResult;
-#endif
 }
 
-int UserspaceSIOWrapper::SendFskData(uint16_t* bit_delays, unsigned int num_bits)
+int UserspaceSIOWrapper::SendFskData(uint16_t* /* bit_delays */, unsigned int /* num_bits */)
 {
 	TODO
-#if 0
-	FSK_data fsk;
-
-	fsk.num_entries = num_bits;
-	fsk.bit_time = bit_delays;
-
-	if (fDeviceFileNo < 0) {
-		fLastResult = ENODEV;
-	} else {
-		fLastResult = ioctl(fDeviceFileNo, ATARISIO_IOC_SEND_FSK_DATA, &fsk);
-		if (fLastResult == -1) {
-			fLastResult = errno;
-		}
-	}
-	return fLastResult;
-#endif
 }
 
 
 int UserspaceSIOWrapper::DebugKernelStatus()
 {
-	TODO
-#if 0
-	if (fDeviceFileNo < 0) {
-		fLastResult = ENODEV;
-	} else {
-		fLastResult = ioctl(fDeviceFileNo, ATARISIO_IOC_PRINT_STATUS);
-		if (fLastResult == -1) {
-			fLastResult = errno;
-		}
-	}
-	return fLastResult;
-#endif
+	// NOP
+	return 0;
 }
 
-int UserspaceSIOWrapper::EnableTimestampRecording(unsigned int on)
+int UserspaceSIOWrapper::EnableTimestampRecording(unsigned int /* on */)
 {
-	TODO
-#if 0
-	fLastResult = ioctl(fDeviceFileNo, ATARISIO_IOC_ENABLE_TIMESTAMPS, on);
-	return fLastResult;
-#endif
+	// NOP
+	return 1;
 }
 
-int UserspaceSIOWrapper::GetTimestamps(SIO_timestamps& timestamps)
+int UserspaceSIOWrapper::GetTimestamps(SIO_timestamps& /* timestamps */)
 {
 	TODO
-#if 0
-	fLastResult = ioctl(fDeviceFileNo, ATARISIO_IOC_GET_TIMESTAMPS, &timestamps);
-	return fLastResult;
-#endif
 }

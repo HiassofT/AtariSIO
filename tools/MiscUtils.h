@@ -45,6 +45,21 @@ namespace MiscUtils {
 	{
 		return (TimestampType)tv.tv_sec * 1000000 + tv.tv_usec;
 	}
+
+	inline TimestampType UsecToTimestamp(unsigned long usec)
+	{
+		return (TimestampType) usec;
+	}
+
+	inline TimestampType MsecToTimestamp(unsigned long msec)
+	{
+		return (TimestampType) msec * 1000;
+	}
+
+	inline TimestampType SecToTimestamp(unsigned long sec)
+	{
+		return (TimestampType) sec * 1000000;
+	}
 	
 	inline void TimestampToTimeval(TimestampType ts, struct timeval& tv)
 	{
@@ -57,6 +72,21 @@ namespace MiscUtils {
 		struct timeval tv;
 		gettimeofday(&tv, NULL);
 		return TimevalToTimestamp(tv);
+	}
+
+	inline TimestampType GetCurrentTimePlusUsec(unsigned long usec)
+	{
+		return GetCurrentTime() + UsecToTimestamp(usec);
+	}
+
+	inline TimestampType GetCurrentTimePlusMsec(unsigned long msec)
+	{
+		return GetCurrentTime() + MsecToTimestamp(msec);
+	}
+
+	inline TimestampType GetCurrentTimePlusSec(unsigned long sec)
+	{
+		return GetCurrentTime() + SecToTimestamp(sec);
 	}
 
 	void WaitUntil(TimestampType endTime);

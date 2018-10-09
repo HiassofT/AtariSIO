@@ -21,7 +21,10 @@
    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
+#include <termios.h>
+#include "Termios2.h"
 #include "SIOWrapper.h"
+#include "MiscUtils.h"
 
 class UserspaceSIOWrapper : public SIOWrapper {
 public:
@@ -81,7 +84,7 @@ public:
 	virtual int SendCompleteXF551();
 	virtual int SendDataFrameXF551(uint8_t* buf, unsigned int length);
 
-	virtual int SetBaudrate(unsigned int baudrate);
+	virtual int SetBaudrate(unsigned int baudrate, bool now = true);
 	virtual int SetHighSpeedBaudrate(unsigned int baudrate);
 	virtual int SetAutobaud(unsigned int on);
 	virtual int SetHighSpeedPause(unsigned int on);
@@ -108,6 +111,76 @@ public:
 
 private:
 	typedef SIOWrapper super;
+
+	bool InitSerialDevice();
+
+	uint8_t CalculateChecksum(uint8_t* buf, unsigned int length);
+	bool CmdBufChecksumOK();
+	bool BufChecksumOK(unsigned int length);
+
+	MiscUtils::TimestampType TimeForBytes(unsigned int length);
+	
+	int TransmitBuf(uint8_t* buf, unsigned int length);
+	int TransmitBuf(unsigned int length);
+	int TransmitByte(uint8_t byte, bool waitTransmit = false);
+
+	void WaitTransmitComplete();
+
+	int ReceiveBuf(uint8_t* buf, unsigned int length, unsigned int additionalTimeout = 0);
+	int ReceiveBuf(unsigned int length, unsigned int additionalTimeout = 0);
+
+	bool NanoSleep(unsigned long nsec);
+
+	inline bool MicroSleep(unsigned long usec)
+	{
+		return NanoSleep(usec * 1000);
+	}
+
+	void TrySwitchbaud();
+
+	int fCommandLineMask;
+	int fHighspeedBaudrate;
+	int fBaudrate;
+	bool fDoAutobaud;
+
+	struct termios2 fOriginalTermios;
+
+	enum {
+		eDelayT2 = 100,
+		eDelayT3 = 2000,
+		eDelayT4 = 1000,
+		eDelayT5 = 300,
+		eDataDelay = 150 // between complete and data frame
+	};
+		
+
+	enum {
+		eCmdLength = 4,
+		eCmdRawLength = 5,
+		eCmdBufLength = 20,
+		eMaxDataLength = 8199,
+		eBufLength = 8200
+	};
+	uint8_t fCmdBuf[eCmdBufLength];
+	uint8_t fBuf[eBufLength];
+
+	enum ECommandReceiveState {
+		eWaitCommandIdle,
+		eWaitCommandAssert,
+		eReceiveCommandFrame,
+		eWaitCommandDeassert,
+		eCommandOK,
+		eCommandSoftError,
+		eCommandHardError
+	};
+
+	ECommandReceiveState fCommandReceiveState;
+	int fCommandReceiveCount;
+	bool fLastCommandOK;
+
+	MiscUtils::TimestampType fCommandFrameTimestamp;
+	MiscUtils::TimestampType fCommandFrameTimeout;
+
 };
 
 #endif

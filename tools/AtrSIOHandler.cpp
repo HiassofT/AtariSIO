@@ -862,7 +862,7 @@ int AtrSIOHandler::ProcessCommandFrame(SIO_command_frame& frame, const RCPtr<SIO
 
 			// set highspeed baudrate now, so the kernel driver doesn't
 			// have to detect the baudrate switch
-			wrapper->SetBaudrate(fHighSpeedBaudrate);
+			wrapper->SetBaudrate(fHighSpeedBaudrate, false);
 
 		} else {
 			if (wrapper->SendCommandNAK()) {
@@ -1255,7 +1255,7 @@ unsupported_command:
 	}
 
 	if (reset_baudrate) {
-		wrapper->SetBaudrate(ATARISIO_STANDARD_BAUDRATE);
+		wrapper->SetBaudrate(ATARISIO_STANDARD_BAUDRATE, false);
 		LOG_SIO_MISC("resetting baudrate");
 	}
 

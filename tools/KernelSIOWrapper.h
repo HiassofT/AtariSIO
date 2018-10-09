@@ -84,7 +84,7 @@ public:
 	virtual int SendCompleteXF551();
 	virtual int SendDataFrameXF551(uint8_t* buf, unsigned int length);
 
-	virtual int SetBaudrate(unsigned int baudrate);
+	virtual int SetBaudrate(unsigned int baudrate, bool now = true);
 	virtual int SetHighSpeedBaudrate(unsigned int baudrate);
 	virtual int SetAutobaud(unsigned int on);
 	virtual int SetHighSpeedPause(unsigned int on);
