@@ -128,7 +128,6 @@ bool OpenSerial(const char* device)
 
 	if (ioctl(serial_fd, TIOCSSERIAL, &ss)) {
 		DPRINTF("set serial info failed");
-		return false;
 	}
 	tcflush(serial_fd, TCIOFLUSH);	/* flush input and output buffer */
 
