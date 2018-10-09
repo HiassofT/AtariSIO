@@ -167,6 +167,8 @@ public:
 	virtual int EnableTimestampRecording(unsigned int on) = 0;
 	virtual int GetTimestamps(SIO_timestamps& timestamps) = 0;
 
+	virtual unsigned int PokeyDivisorToBaudrate(unsigned int divisor);
+
 protected:
 	SIOWrapper(int fileno);
 

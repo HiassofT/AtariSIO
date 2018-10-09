@@ -621,3 +621,20 @@ int KernelSIOWrapper::GetTimestamps(SIO_timestamps& timestamps)
 	fLastResult = ioctl(fDeviceFileNo, ATARISIO_IOC_GET_TIMESTAMPS, &timestamps);
 	return fLastResult;
 }
+
+unsigned int KernelSIOWrapper::PokeyDivisorToBaudrate(unsigned int divisor)
+{
+	switch (divisor) {
+	case 0: return 125494;
+	case 1: return 110765;
+	case 2: return 97010;
+	case 3: return 87771;
+	case 4: return 80139;
+	case 5: return 73728;
+	case 6: return 68266;
+	case 7: return 62481;
+	case 9: return 55434;
+	case 10: return 52150;
+	default: return super::PokeyDivisorToBaudrate(divisor);
+	}
+}

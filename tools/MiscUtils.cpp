@@ -115,54 +115,12 @@ char* MiscUtils::ShortenFilename(const char* filename, unsigned int maxlen, bool
 	return s;
 }
 
-// pokey divisor to baudrate table
-typedef struct {
-	int divisor;
-	int baudrate;
-} pokey_divisor_entry;
-
-static pokey_divisor_entry divisor_table[] = {
-//	{ 0, 122880 },	// doesn't work
-//	{ 1, 108423 },
-	{ 0, 125494 },
-	{ 1, 110765 },
-	{ 2, 97010 },
-	{ 3, 87771 },
-	{ 4, 80139 },
-	{ 5, 73728 },
-	{ 6, 68266 }, // works with 1050 Turbo
-	{ 7, 62481 },
-	{ 8, 57600 }, // standard 3xSIO speed
-	//{ 8, 59458 },
-	{ 9, 55434 }, // works with Speedy 1050
-	{ 10, 52150 }, // works with Happy 1050
-	{ 16, 38400 }, // happy warp / XF551 speed
-	{ 40, 19200 }, // standard speed
-	{ -1, -1 }
-};
-
-bool MiscUtils::PokeyDivisorToBaudrate(unsigned int divisor, unsigned int& baudrate, bool enable_calculated_speed)
-{
-	int i = 0;
-	while (divisor_table[i].divisor >= 0) {
-		if (divisor_table[i].divisor == (int) divisor) {
-			baudrate = (unsigned int) divisor_table[i].baudrate;
-			return true;
-		}
-		i++;
-	}
-	if (enable_calculated_speed) {
-		baudrate = (1773445 + divisor + 7) / (2 * (divisor + 7));
-		return true;
-	}
-	return false;
-}
-
 // format is "divisor[,baudrate]"
-bool MiscUtils::ParseHighSpeedParameters(const char* string, uint8_t& divisor, unsigned int& baudrate, bool enable_calculated_speed)
+bool MiscUtils::ParseHighSpeedParameters(const char* string, uint8_t& divisor, unsigned int& baudrate)
 {
 	char* tmp;
 	long l;
+	baudrate = 0;
 	l = strtol(string, &tmp, 10);
 	if (tmp == string) {
 		return false;
@@ -172,10 +130,8 @@ bool MiscUtils::ParseHighSpeedParameters(const char* string, uint8_t& divisor, u
 	}
 	divisor = l;
 
-	if (MiscUtils::PokeyDivisorToBaudrate(divisor, baudrate, enable_calculated_speed)) {
-		if (*tmp == 0) {
-			return true;
-		}
+	if (*tmp == 0) {
+		return true;
 	}
 	if (*tmp != ',') {
 		return false;

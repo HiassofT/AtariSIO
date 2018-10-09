@@ -766,3 +766,13 @@ int UserspaceSIOWrapper::GetTimestamps(SIO_timestamps& /* timestamps */)
 {
 	TODO
 }
+
+unsigned int UserspaceSIOWrapper::PokeyDivisorToBaudrate(unsigned int divisor)
+{
+	switch (divisor) {
+	case 0: return 125000;
+	case 1: return 110500;
+	case 2: return 98500;
+	default: return super::PokeyDivisorToBaudrate(divisor);
+	}
+}

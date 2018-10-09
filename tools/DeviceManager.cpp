@@ -939,6 +939,10 @@ bool DeviceManager::SetHighSpeedParameters(unsigned int pokeyDivisor, unsigned i
 	if (pokeyDivisor >= 64) {
 		AERROR("illegal high speed pokey divisor %d", pokeyDivisor);
 	}
+	if (baudrate == 0) {
+		baudrate = fSIOWrapper->PokeyDivisorToBaudrate(pokeyDivisor);
+		AWARN("high speed baudrate not set, using default %d", baudrate);
+	}
 
 	fHighSpeedBaudrate = baudrate;
 	fPokeyDivisor = pokeyDivisor;

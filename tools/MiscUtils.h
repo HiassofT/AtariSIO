@@ -102,9 +102,8 @@ namespace MiscUtils {
 		}
 	}
 
-	bool PokeyDivisorToBaudrate(unsigned int divisor, unsigned int& baudrate, bool enable_calculated_speed = true);
-
-	bool ParseHighSpeedParameters(const char* string, uint8_t& pokeyDivisor, unsigned int& baudrate, bool enable_calculated_speed = true);
+	// baudrate will be zero if optional baudrate isn't set in string
+	bool ParseHighSpeedParameters(const char* string, uint8_t& pokeyDivisor, unsigned int& baudrate);
 
 	void ByteToFsk(const uint8_t byte, std::list<uint16_t>& bit_delays, unsigned int bit_time = 16);
 

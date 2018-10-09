@@ -281,3 +281,12 @@ int SIOWrapper::ImmediateCommand(uint8_t driveNo, uint8_t command,
 	return ExtSIO(params);
 }
 
+unsigned int SIOWrapper::PokeyDivisorToBaudrate(unsigned int divisor)
+{
+	switch (divisor) {
+	case 40: return 19200;
+	case 16: return 38400;
+	case 8: return 57600;
+	default: return (1773445 + divisor + 7) / (2 * (divisor + 7));
+	}
+}

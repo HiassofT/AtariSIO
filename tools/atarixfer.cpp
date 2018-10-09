@@ -502,7 +502,8 @@ static bool check_ultraspeed()
 	int ret = SIO->ExtSIO(params);
 
 	if (ret == 0) {
-		if (!MiscUtils::PokeyDivisorToBaudrate(pokey_div, baud, true)) {
+		baud = SIO->PokeyDivisorToBaudrate(pokey_div);
+		if (!baud) {
 			printf("unsupported ultra speed pokey divisor %d\n", pokey_div);
 			return false;
 		}
@@ -531,11 +532,7 @@ static bool check_happy_1050()
 {
 	if (SIO->ImmediateCommand(drive_no, 0x48, 0x20, 0, 1) == 0) {
 		printf("detected Happy Warp Speed drive\n");
-		unsigned int baud;
-		if (!MiscUtils::PokeyDivisorToBaudrate(16, baud, true)) {
-			printf("internal error: cannot get XF551 baudrate\n");
-			return false;
-		}
+		unsigned int baud = SIO->PokeyDivisorToBaudrate(16);
 		if (set_and_check_highspeed_baudrate(baud)) {
 			highspeed_mode = ATARISIO_EXTSIO_SPEED_WARP;
 			return true;
@@ -556,11 +553,7 @@ static bool check_high_status(unsigned int baudrate, uint8_t highspeed_mode)
 
 static bool check_turbo_1050()
 {
-	unsigned int baud;
-	if (!MiscUtils::PokeyDivisorToBaudrate(6, baud, true)) {
-		printf("internal error: cannot get 1050 Turbo baudrate\n");
-		return false;
-	}
+	unsigned int baud = SIO->PokeyDivisorToBaudrate(6);
 	if (check_high_status(baud, ATARISIO_EXTSIO_SPEED_TURBO)) {
 		printf("detected 1050 Turbo\n");
 		if (set_and_check_highspeed_baudrate(baud)) {
@@ -573,11 +566,7 @@ static bool check_turbo_1050()
 
 static bool check_xf551()
 {
-	unsigned int baud;
-	if (!MiscUtils::PokeyDivisorToBaudrate(16, baud, true)) {
-		printf("internal error: cannot get XF551 baudrate\n");
-		return false;
-	}
+	unsigned int baud = SIO->PokeyDivisorToBaudrate(16);
 	if (check_high_status(baud, ATARISIO_EXTSIO_SPEED_XF551)) {
 		printf("detected XF551\n");
 		if (!xf551_format_detection) {

@@ -147,7 +147,10 @@ static void process_args(RCPtr<DeviceManager>& manager, CursesFrontend* frontend
 						i++;
 						unsigned int baud;
 						uint8_t divisor;
-						if (MiscUtils::ParseHighSpeedParameters(argv[i], divisor, baud, true)) {
+						if (MiscUtils::ParseHighSpeedParameters(argv[i], divisor, baud)) {
+							if (baud == 0) {
+								baud = manager->GetSIOWrapper()->PokeyDivisorToBaudrate(divisor);
+							}
 							if (manager->SetHighSpeedParameters(divisor, baud)) {
 								ALOG("Configured high speed mode to pokey divisor %d / %d baud", divisor, baud);
 							} else {

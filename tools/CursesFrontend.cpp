@@ -2425,12 +2425,7 @@ void CursesFrontend::ProcessSetHighSpeedParameters()
 {
 	uint8_t divisor = fDeviceManager->GetHighSpeedPokeyDivisor();
 	unsigned int baud = fDeviceManager->GetHighSpeedBaudrate();
-	unsigned int defaultBaudrate;
-
-	if (!MiscUtils::PokeyDivisorToBaudrate(divisor, defaultBaudrate, true)) {
-		AERROR("internal error: PokeyDivisorToBaudrate(%d) failed", divisor);
-		return;
-	}
+	unsigned int defaultBaudrate = fDeviceManager->GetSIOWrapper()->PokeyDivisorToBaudrate(divisor);
 
 	char param[20];
 
@@ -2466,13 +2461,16 @@ void CursesFrontend::ProcessSetHighSpeedParameters()
 			AbortInput();
 			return;
 		}
-		if (MiscUtils::ParseHighSpeedParameters(param, divisor, baud, true)) {
+		if (MiscUtils::ParseHighSpeedParameters(param, divisor, baud)) {
 			break;
 		} else {
 			beep();
 		}
 	} while (1);
 
+	if (baud == 0) {
+		baud = fDeviceManager->GetSIOWrapper()->PokeyDivisorToBaudrate(divisor);
+	}
 	if (fDeviceManager->SetHighSpeedParameters(divisor, baud)) {
 		ALOG("Configured high speed mode to pokey divisor %d / %d baud", divisor, baud);
 	} else {

@@ -109,6 +109,8 @@ public:
 	virtual int EnableTimestampRecording(unsigned int on);
 	virtual int GetTimestamps(SIO_timestamps& timestamps);
 
+	virtual unsigned int PokeyDivisorToBaudrate(unsigned int divisor);
+
 private:
 	typedef SIOWrapper super;
 };
