@@ -39,19 +39,19 @@
 //#define UTRACE_MASK 0x04
 #define UTRACE_MASK 0x00
 
-#define UTRACE_CMD_STATE(x ...) \
+#define UTRACE_CMD_STATE(x...) \
 	if (UTRACE_MASK & 0x01) \
 		DPRINTF(x)
 
-#define UTRACE_CMD_DATA(x ...) \
+#define UTRACE_CMD_DATA(x...) \
 	if (UTRACE_MASK & 0x02) \
 		DPRINTF(x)
 
-#define UTRACE_CMD_ERROR(x ...) \
+#define UTRACE_CMD_ERROR(x...) \
 	if (UTRACE_MASK & 0x04) \
 		DPRINTF(x)
 
-#define UTRACE_BAUDRATE(x ...) \
+#define UTRACE_BAUDRATE(x...) \
 	if (UTRACE_MASK & 0x08) \
 		DPRINTF(x)
 
