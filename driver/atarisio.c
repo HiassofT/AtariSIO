@@ -898,11 +898,13 @@ static int get_optimized_16950_921600(unsigned int baudrate,
 	uint8_t* tcr, uint8_t* cpr, uint16_t* div)
 {
 	switch(baudrate) {
-	C950_PARAM(125494, 10,  47,   2); /* divisor 0 */
-	C950_PARAM(110765,  5, 213,   1); /* divisor 1 */
-	C950_PARAM( 97010,  8,   8,  19); /* divisor 2 */
-	C950_PARAM( 87771, 16,  12,   7); /* divisor 3 */
-	C950_PARAM( 55434, 16,  19,   7); /* divisor 9, tested with Speedy 1050 */
+	C950_PARAM(125494, 10,  47,   2); /* pokey divisor 0 */
+	C950_PARAM(110765,  5, 213,   1); /* pokey divisor 1 */
+	C950_PARAM( 97010,  8,   8,  19); /* pokey divisor 2 */
+	C950_PARAM( 87771, 16,  12,   7); /* pokey divisor 3 */
+	C950_PARAM( 68266, 16,   9,  12); /* pokey divisor 6, works with 1050 Turbo */
+	C950_PARAM( 55434, 16,  19,   7); /* pokey divisor 9, tested with Speedy 1050 */
+	C950_PARAM( 52150, 13,  29,   6); /* pokey divisor 10, compatible with Happy 1050 */
 
 	default: return 1;
 	}
@@ -912,7 +914,8 @@ static int get_optimized_16950_4000000(unsigned int baudrate,
 	uint8_t* tcr, uint8_t* cpr, uint16_t* div)
 {
 	switch(baudrate) {
-	/* TODO */
+	C950_PARAM(125000, 16,  25,  10); /* divisor 0 */
+	C950_PARAM(125494, 16,  25,  10); /* alias for atariserver */
 	default: return 1;
 	}
 }
@@ -941,9 +944,9 @@ static int set_baudrate_16950(struct atarisio_dev* dev, unsigned int baudrate)
 	}
 
 	if (got_optimized) {
-		/* try to match baudrate +/- 1% */
-		unsigned int min_baud = baudrate * 99 / 100;
-		unsigned int max_baud = baudrate * 101 / 100;
+		/* try to match baudrate +/- 0.5% */
+		unsigned int min_baud = baudrate * 995 / 1000;
+		unsigned int max_baud = baudrate * 1005 / 1000;
 
 		cpr = 8; /* no clock prescaling */
 		tcr = 16;
