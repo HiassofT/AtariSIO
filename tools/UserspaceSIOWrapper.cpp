@@ -125,6 +125,7 @@ UserspaceSIOWrapper::UserspaceSIOWrapper(int fileno)
 	  fHighspeedBaudrate(ATARISIO_HIGHSPEED_BAUDRATE),
 	  fBaudrate(0),
 	  fDoAutobaud(false),
+	  fTapeBaudrate(ATARISIO_TAPE_BAUDRATE),
 	  fLastCommandOK(true)
 {
 	if (ioctl(fDeviceFileNo, TCGETS2, &fOriginalTermios)) {
@@ -714,9 +715,15 @@ int UserspaceSIOWrapper::GetExactBaudrate()
 }
 
 
-int UserspaceSIOWrapper::SetTapeBaudrate(unsigned int /* baudrate */)
+int UserspaceSIOWrapper::SetTapeBaudrate(unsigned int baudrate)
 {
-	TODO
+	fTapeBaudrate = baudrate;
+	if (fBaudrate != baudrate) {
+		fLastResult = SetBaudrate(baudrate);
+	} else {
+		fLastResult = 0;
+	}
+	return fLastResult;
 }
 
 int UserspaceSIOWrapper::SendTapeBlock(uint8_t* /* buf */, unsigned int /* length */)
@@ -726,22 +733,32 @@ int UserspaceSIOWrapper::SendTapeBlock(uint8_t* /* buf */, unsigned int /* lengt
 
 int UserspaceSIOWrapper::StartTapeMode()
 {
-	TODO
+	fTapeOldBaudrate = fBaudrate;
+	SetBaudrate(fTapeBaudrate);
+	tcflush(fDeviceFileNo, TCIOFLUSH);
+	fLastResult = 0;
+	return fLastResult;
 }
 
 int UserspaceSIOWrapper::EndTapeMode()
 {
-	TODO
+	SetBaudrate(fTapeOldBaudrate, false);
+	tcflush(fDeviceFileNo, TCIOFLUSH);
+	fLastResult = 0;
+	return fLastResult;
 }
 
-int UserspaceSIOWrapper::SendRawDataNoWait(uint8_t* /* buf */, unsigned int /* length */)
+int UserspaceSIOWrapper::SendRawDataNoWait(uint8_t* buf, unsigned int length)
 {
-	TODO
+	fLastResult = TransmitBuf(buf, length);
+	return fLastResult;
 }
 
 int UserspaceSIOWrapper::FlushWriteBuffer()
 {
-	TODO
+	WaitTransmitComplete();
+	fLastResult = 0;
+	return fLastResult;
 }
 
 int UserspaceSIOWrapper::SendFskData(uint16_t* /* bit_delays */, unsigned int /* num_bits */)

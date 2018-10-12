@@ -144,6 +144,8 @@ private:
 	int fHighspeedBaudrate;
 	int fBaudrate;
 	bool fDoAutobaud;
+	int fTapeBaudrate;
+	int fTapeOldBaudrate;
 
 	struct termios2 fOriginalTermios;
 
