@@ -178,22 +178,15 @@
 #define ATARISIO_PRINT_TIMESTAMPS
 */
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,0,0)
 #define PRINTK_NODEV(x...) printk(NAME ": " x)
-
-#define PRINTK_TIMESTAMP(x...) do { \
-		struct timeval tv; \
-		do_gettimeofday(&tv); \
-		printk(NAME "%d: [%lu.%06lu] ", dev->id, tv.tv_sec, tv.tv_usec); \
-		printk(x); \
-	} while(0)
-
-#ifdef ATARISIO_PRINT_TIMESTAMPS
-#define PRINTK(x...) PRINTK_TIMESTAMP(x)
-#else
 #define PRINTK(x...) do { \
 		printk(NAME "%d: ", dev->id); \
 		printk(x); \
 	} while(0)
+#else
+#define PRINTK_NODEV(x...) pr_info(NAME ": " x)
+#define PRINTK(x...) dev_info(dev->miscdev->this_device, x)
 #endif
 
 #define IRQ_PRINTK(level, x...) \
@@ -597,15 +590,15 @@ static int detect_16c950(struct atarisio_dev* dev)
 	rev=read_icr(dev, UART_REV);
 
 	if ((id1 == id2) && (id1 == id3) && (id1 == rev)) {
-		DBG_PRINTK(DEBUG_STANDARD, "not a 16C950, ID registers all contain %02x\n", id1);
+		DBG_PRINTK_NODEV(DEBUG_STANDARD, "not a 16C950, ID registers all contain %02x\n", id1);
 		return 0;
 	}
 	if ((id1 == 0x16) && (id2 == 0xc9) && ( (id3 & 0xf0) == 0x50)) {
-		PRINTK("detected 16C950: id = %02X%02X%02X rev = %02X\n",
+		PRINTK_NODEV("detected 16C950: id = %02X%02X%02X rev = %02X\n",
 			id1, id2, id3, rev);
 		return 1;
 	} else {
-		DBG_PRINTK(DEBUG_STANDARD,"unknown (possible 16C950) chip: id = %02X%02X%02X rev = %02X\n",
+		DBG_PRINTK_NODEV(DEBUG_STANDARD,"unknown (possible 16C950) chip: id = %02X%02X%02X rev = %02X\n",
 			id1, id2, id3, rev);
 		return 0;
 	}
@@ -3406,7 +3399,7 @@ static int disable_serial_port(struct atarisio_dev* dev)
 
 	f = filp_open(dev->port,O_RDWR | O_NONBLOCK,0);
 	if (IS_ERR(f)) {
-		DBG_PRINTK(DEBUG_STANDARD, "error opening serial port %s\n", dev->port);
+		DBG_PRINTK_NODEV(DEBUG_STANDARD, "error opening serial port %s\n", dev->port);
 		goto fail;
 	}
 #ifdef HAVE_UNLOCKED_IOCTL
@@ -3425,11 +3418,11 @@ static int disable_serial_port(struct atarisio_dev* dev)
 #endif
 		if (de && de->d_inode) {
 			if (ioctl_wrapper(dev, f, TIOCGSERIAL, (unsigned long) &ss)) {
-				DBG_PRINTK(DEBUG_STANDARD, "TIOCGSERIAL failed\n");
+				DBG_PRINTK_NODEV(DEBUG_STANDARD, "TIOCGSERIAL failed\n");
 				goto fail_close;
 			}
 			if (ioctl_wrapper(dev, f, TIOCGSERIAL, (unsigned long) &dev->orig_serial_struct)) {
-				DBG_PRINTK(DEBUG_STANDARD, "TIOCGSERIAL failed\n");
+				DBG_PRINTK_NODEV(DEBUG_STANDARD, "TIOCGSERIAL failed\n");
 				goto fail_close;
 			}
 			switch (ss.type) {
@@ -3443,11 +3436,11 @@ static int disable_serial_port(struct atarisio_dev* dev)
 #endif
 				break;
 			default:
-				PRINTK("illegal port type %d - only 16550(A) and 16C950 are supported\n", ss.type);
+				PRINTK_NODEV("illegal port type %d - only 16550(A) and 16C950 are supported\n", ss.type);
 				goto fail_close;
 			}
 
-			DBG_PRINTK(DEBUG_STANDARD, "ss.port = 0x%04x ss.irq = %d ss.type = %d\n",
+			DBG_PRINTK_NODEV(DEBUG_STANDARD, "ss.port = 0x%04x ss.irq = %d ss.type = %d\n",
 				ss.port, ss.irq, ss.type);
 
 			if (dev->io == 0) {
@@ -3465,21 +3458,21 @@ static int disable_serial_port(struct atarisio_dev* dev)
 			ss.type = PORT_UNKNOWN;
 
 			if (ioctl_wrapper(dev, f, TIOCSSERIAL, (unsigned long) &ss)) {
-				DBG_PRINTK(DEBUG_STANDARD, "TIOCSSERIAL failed\n");
+				DBG_PRINTK_NODEV(DEBUG_STANDARD, "TIOCSSERIAL failed\n");
 				goto fail_close;
 			}
 			dev->need_reenable = 1;
 		} else {
-			DBG_PRINTK(DEBUG_STANDARD, "unable to get inode of %s\n", dev->port);
+			DBG_PRINTK_NODEV(DEBUG_STANDARD, "unable to get inode of %s\n", dev->port);
 			goto fail_close;
 		}
 	} else {
-		DBG_PRINTK(DEBUG_STANDARD, "device doesn't provide ioctl function!\n");
+		DBG_PRINTK_NODEV(DEBUG_STANDARD, "device doesn't provide ioctl function!\n");
 		goto fail_close;
 	}
 
 	if (filp_close(f,NULL)) {
-		DBG_PRINTK(DEBUG_STANDARD, "error closing serial port %s\n", dev->port);
+		DBG_PRINTK_NODEV(DEBUG_STANDARD, "error closing serial port %s\n", dev->port);
 		goto fail;
 	}
 	set_fs(fs);
@@ -3488,7 +3481,7 @@ static int disable_serial_port(struct atarisio_dev* dev)
 
 fail_close:
 	if (filp_close(f,NULL)) {
-		DBG_PRINTK(DEBUG_STANDARD, "error closing serial port %s\n", dev->port);
+		DBG_PRINTK_NODEV(DEBUG_STANDARD, "error closing serial port %s\n", dev->port);
 		goto fail;
 	}
 
@@ -3506,7 +3499,7 @@ static int reenable_serial_port(struct atarisio_dev* dev)
 	struct serial_struct ss;
 
 	if (!dev->need_reenable) {
-		DBG_PRINTK(DEBUG_STANDARD, "unnecessary call to reenable_serial_port\n");
+		DBG_PRINTK_NODEV(DEBUG_STANDARD, "unnecessary call to reenable_serial_port\n");
 		return 0;
 	}
 
@@ -3516,7 +3509,7 @@ static int reenable_serial_port(struct atarisio_dev* dev)
 
 	f = filp_open(dev->port,O_RDWR,0);
 	if (IS_ERR(f)) {
-		DBG_PRINTK(DEBUG_STANDARD, "error opening serial port %s\n", dev->port);
+		DBG_PRINTK_NODEV(DEBUG_STANDARD, "error opening serial port %s\n", dev->port);
 		goto fail;
 	}
 #ifdef HAVE_UNLOCKED_IOCTL
@@ -3535,26 +3528,26 @@ static int reenable_serial_port(struct atarisio_dev* dev)
 #endif
 		if (de && de->d_inode) {
 			if (ioctl_wrapper(dev, f, TIOCGSERIAL, (unsigned long) &ss)) {
-				DBG_PRINTK(DEBUG_STANDARD, "TIOCGSERIAL failed\n");
+				DBG_PRINTK_NODEV(DEBUG_STANDARD, "TIOCGSERIAL failed\n");
 				goto fail_close;
 			}
 			/* restore original values */
 			ss.type = dev->orig_serial_struct.type;
 			if (ioctl_wrapper(dev, f, TIOCSSERIAL, (unsigned long) &ss)) {
-				DBG_PRINTK(DEBUG_STANDARD, "TIOCSSERIAL failed\n");
+				DBG_PRINTK_NODEV(DEBUG_STANDARD, "TIOCSSERIAL failed\n");
 				goto fail_close;
 			}
 		} else {
-			DBG_PRINTK(DEBUG_STANDARD, "unable to get inode of %s\n", dev->port);
+			DBG_PRINTK_NODEV(DEBUG_STANDARD, "unable to get inode of %s\n", dev->port);
 			goto fail_close;
 		}
 	} else {
-		DBG_PRINTK(DEBUG_STANDARD, "device doesn't provide ioctl function!\n");
+		DBG_PRINTK_NODEV(DEBUG_STANDARD, "device doesn't provide ioctl function!\n");
 		goto fail_close;
 	}
 
 	if (filp_close(f,NULL)) {
-		DBG_PRINTK(DEBUG_STANDARD, "error closing serial port %s\n", dev->port);
+		DBG_PRINTK_NODEV(DEBUG_STANDARD, "error closing serial port %s\n", dev->port);
 		goto fail;
 	}
 	set_fs(fs);
@@ -3563,7 +3556,7 @@ static int reenable_serial_port(struct atarisio_dev* dev)
 
 fail_close:
 	if (filp_close(f,NULL)) {
-		DBG_PRINTK(DEBUG_STANDARD, "error closing serial port %s\n", dev->port);
+		DBG_PRINTK_NODEV(DEBUG_STANDARD, "error closing serial port %s\n", dev->port);
 		goto fail;
 	}
 
@@ -3579,14 +3572,14 @@ static int check_register_atarisio(struct atarisio_dev* dev)
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,4,0)
 	if (check_region(dev->io,8)) {
-		PRINTK("cannot access IO-ports 0x%04x-0x%04x\n",dev->io,dev->io+7);
+		PRINTK_NODEV("cannot access IO-ports 0x%04x-0x%04x\n",dev->io,dev->io+7);
 		ret = -EINVAL;
 		goto failure;
 	}
 	request_region(dev->io, 8, NAME);
 #else
 	if (request_region(dev->io, 8, NAME) == 0) {
-		PRINTK("cannot access IO-ports 0x%04x-0x%04x\n",dev->io,dev->io+7);
+		PRINTK_NODEV("cannot access IO-ports 0x%04x-0x%04x\n",dev->io,dev->io+7);
 		ret = -EINVAL;
 		goto failure;
 	}
@@ -3598,14 +3591,14 @@ static int check_register_atarisio(struct atarisio_dev* dev)
 	 */
 	serial_out(dev, UART_SCR,0xaa);
 	if (serial_in(dev, UART_SCR) != 0xaa) {
-		PRINTK("couldn't detect 16550/16C950\n");
+		PRINTK_NODEV("couldn't detect 16550/16C950\n");
 		ret = -ENODEV;
 		goto failure_release;
 	}
 
 	serial_out(dev, UART_SCR,0x55);
 	if (serial_in(dev, UART_SCR) != 0x55) {
-		PRINTK("couldn't detect 16550/16C950\n");
+		PRINTK_NODEV("couldn't detect 16550/16C950\n");
 		ret = -ENODEV;
 		goto failure_release;
 	}
@@ -3613,7 +3606,7 @@ static int check_register_atarisio(struct atarisio_dev* dev)
 	if (detect_16c950(dev)) {
 		dev->is_16c950 = 1;
 		if (dev->use_16c950_mode) {
-			PRINTK("using extended 16C950 features\n");
+			PRINTK_NODEV("using extended 16C950 features\n");
 		}
 	} else {
 		dev->is_16c950 = 0;
@@ -3624,7 +3617,7 @@ static int check_register_atarisio(struct atarisio_dev* dev)
 	 */
 	if (misc_register(dev->miscdev))
 	{
-		PRINTK("failed to register device %s (minor %d)\n", dev->miscdev->name, dev->miscdev->minor);
+		PRINTK_NODEV("failed to register device %s (minor %d)\n", dev->miscdev->name, dev->miscdev->minor);
 		ret = -ENODEV;
 		goto failure_release;
 	}
@@ -3642,9 +3635,9 @@ failure_release:
 failure:
 	if (dev->need_reenable) {
 		if (reenable_serial_port(dev)) {
-			PRINTK("error re-enabling serial port!\n");
+			PRINTK_NODEV("error re-enabling serial port!\n");
 		} else {
-			DBG_PRINTK(DEBUG_STANDARD, "successfully re-enabled serial port %s\n", dev->port);
+			DBG_PRINTK_NODEV(DEBUG_STANDARD, "successfully re-enabled serial port %s\n", dev->port);
 		}
 	}
 	return ret;
@@ -3664,9 +3657,9 @@ static void atarisio_cleanup_module(void)
 			release_region(dev->io,8);
 			if (dev->need_reenable) {
 				if (reenable_serial_port(dev)) {
-					PRINTK("error re-enabling serial port!\n");
+					PRINTK_NODEV("error re-enabling serial port!\n");
 				} else {
-					DBG_PRINTK(DEBUG_STANDARD, "successfully re-enabled serial port %s\n", dev->port);
+					DBG_PRINTK_NODEV(DEBUG_STANDARD, "successfully re-enabled serial port %s\n", dev->port);
 				}
 			}
 			free_atarisio_dev(i);
@@ -3700,7 +3693,7 @@ static int atarisio_init_module(void)
 			dev->irq = irq[i];
 			if (baud_base[i]) {
 				dev->serial_config.baud_base = baud_base[i];
-				DBG_PRINTK(DEBUG_STANDARD, "using a baud_base of %ld\n", dev->serial_config.baud_base);
+				DBG_PRINTK_NODEV(DEBUG_STANDARD, "using a baud_base of %ld\n", dev->serial_config.baud_base);
 			} else {
 				dev->serial_config.baud_base = 0;
 			}
@@ -3709,11 +3702,11 @@ static int atarisio_init_module(void)
 			if (port[i] && port[i][0]) {
 				dev->port = port[i];
 				if (disable_serial_port(dev)) {
-					PRINTK("unable to disable serial port %s\n", dev->port);
+					PRINTK_NODEV("unable to disable serial port %s\n", dev->port);
 					free_atarisio_dev(i);
 					continue;
 				} else {
-					DBG_PRINTK(DEBUG_STANDARD, "successfully disabled serial port %s\n", dev->port);
+					DBG_PRINTK_NODEV(DEBUG_STANDARD, "successfully disabled serial port %s\n", dev->port);
 				}
 			}
 
