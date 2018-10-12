@@ -444,8 +444,11 @@ struct atarisio_dev {
 		u8 IER;
 		u8 MCR;
 		u8 LCR;
+		u8 DL;  /* divisor */
 		u8 FCR;
 		u8 ACR;	/* for 16C950 UARTs */
+		u8 TCR;
+		u8 CPR;
 
 		unsigned int just_switched_baud; /* true if we just switched baud rates */
 		/* this flag is cleared after successful reception of a command frame */
@@ -523,6 +526,15 @@ static void set_lcr(struct atarisio_dev* dev, uint8_t lcr)
 	serial_out(dev, UART_LCR, dev->serial_config.LCR);
 }
 
+static void set_dl(struct atarisio_dev* dev, uint16_t dl)
+{
+	dev->serial_config.DL = dl;
+	serial_out(dev, UART_LCR, dev->serial_config.LCR | UART_LCR_DLAB);
+	serial_out(dev, UART_DLL, dev->serial_config.DL & 0xff);
+	serial_out(dev, UART_DLM, dev->serial_config.DL >> 8);
+	serial_out(dev, UART_LCR, dev->serial_config.LCR);
+}
+
 /*
  * helper functions for additional 16c950 registers
  * according to the 16c950 application notes
@@ -551,6 +563,19 @@ static inline u8 read_icr(struct atarisio_dev* dev, u8 index)
 
 	return ret;
 }
+
+static void set_tcr(struct atarisio_dev* dev, uint8_t tcr)
+{
+	dev->serial_config.TCR = tcr;
+	write_icr(dev, UART_TCR, dev->serial_config.TCR);
+}
+
+static void set_cpr(struct atarisio_dev* dev, uint8_t cpr)
+{
+	dev->serial_config.CPR = cpr;
+	write_icr(dev, UART_CPR, dev->serial_config.CPR);
+}
+
 
 /*
  * try to detect a 16C950 chip
@@ -869,7 +894,145 @@ static int calc_16c950_baudrate(struct atarisio_dev* dev, unsigned int baudrate)
 	return divisor;
 }
 
+#define C950_PARAM(opt_baud, opt_tcr, opt_cpr, opt_div) \
+	case opt_baud: \
+		*tcr = opt_tcr; \
+		*cpr = opt_cpr; \
+		*div = opt_div; \
+		return 0;
+
+static int get_optimized_16950_921600(unsigned int baudrate,
+	uint8_t* tcr, uint8_t* cpr, uint16_t* div)
+{
+	switch(baudrate) {
+	C950_PARAM(125494, 10,  47,   2); /* divisor 0 */
+	C950_PARAM(110765,  5, 213,   1); /* divisor 1 */
+	C950_PARAM( 97010,  8,   8,  19); /* divisor 2 */
+	C950_PARAM( 87771, 16,  12,   7); /* divisor 3 */
+	C950_PARAM( 55434, 16,  19,   7); /* divisor 9, tested with Speedy 1050 */
+
+	default: return 1;
+	}
+}
+
+static int get_optimized_16950_4000000(unsigned int baudrate,
+	uint8_t* tcr, uint8_t* cpr, uint16_t* div)
+{
+	switch(baudrate) {
+	/* TODO */
+	default: return 1;
+	}
+}
+
+static int set_baudrate_16950(struct atarisio_dev* dev, unsigned int baudrate)
+{
+	int got_optimized = 1;
+	uint8_t tcr = 16, cpr = 8;
+	uint16_t div = 0;
+	unsigned int baud_base = dev->serial_config.baud_base;
+	unsigned int real_baud;
+
+	switch (baud_base) {
+	case 921600:
+		got_optimized = get_optimized_16950_921600(baudrate, &tcr, &cpr, &div);
+		break;
+	case 4000000:
+		/* PCIe cards actually have 62.5MHz/16 base clock */
+		baud_base = 3906250;
+		/* fallthrough */
+	case 3906250:
+		got_optimized = get_optimized_16950_4000000(baudrate, &tcr, &cpr, &div);
+		break;
+	default:
+		break;
+	}
+
+	if (got_optimized) {
+		/* try to match baudrate +/- 1% */
+		unsigned int min_baud = baudrate * 99 / 100;
+		unsigned int max_baud = baudrate * 101 / 100;
+
+		cpr = 8; /* no clock prescaling */
+		tcr = 16;
+		while (tcr >= 4) {
+			div = (baud_base * 16 / tcr + baudrate / 2) / baudrate;
+			real_baud = baud_base * 16 / tcr / div;
+			if (real_baud >= min_baud && real_baud <= max_baud) {
+				break;
+			}
+			if (tcr == 4) {
+				break;
+			}
+			tcr--;
+		}
+	}
+
+	if (div == 0) {
+		return -EINVAL;
+	}
+
+	real_baud = baud_base * 16 * 8 / cpr / tcr / div;
+
+	DBG_PRINTK(DEBUG_STANDARD, "set_baudrate_16950(%d): CPR %d TCR %d DIV %d real_baud %d\n",
+		baudrate, cpr, tcr, div, real_baud);
+
+	if (cpr == 8) {
+		dev->serial_config.MCR &= ~UART_MCR_CLKSEL; /* disable clock prescaler */
+	} else {
+		dev->serial_config.MCR |= UART_MCR_CLKSEL; /* enable clock prescaler */
+	}
+
+	set_cpr(dev, cpr);
+	serial_out(dev, UART_MCR, dev->serial_config.MCR);
+	set_tcr(dev, tcr);
+	set_dl(dev,div);
+
+	return real_baud;
+}
+
+static int set_baudrate_16550(struct atarisio_dev* dev, unsigned int baudrate)
+{
+	uint16_t divisor;
+	unsigned int real_baud;
+
+	divisor = (dev->serial_config.baud_base + baudrate / 2) / baudrate;
+
+	if (divisor == 0) {
+		DBG_PRINTK(DEBUG_STANDARD, "set_baudrate_16550(%d): divisor is zero\n",
+			baudrate);
+		return -EINVAL;
+	}
+
+	real_baud = dev->serial_config.baud_base / divisor;
+
+	DBG_PRINTK(DEBUG_STANDARD, "set_baudrate_16550(%d): divisor %d real_baud %d\n",
+		baudrate, divisor, real_baud);
+
+	set_dl(dev, divisor);
+	return real_baud;
+}
+
 static int force_set_baudrate(struct atarisio_dev* dev, unsigned int baudrate)
+{
+	int ret;
+
+	if (dev->is_16c950 && dev->use_16c950_mode) {
+		ret = set_baudrate_16950(dev, baudrate);
+	} else {
+		ret = set_baudrate_16550(dev, baudrate);
+	}
+	if (ret < 0) {
+		return ret;
+	}
+
+	dev->serial_config.baudrate = baudrate;
+	dev->serial_config.just_switched_baud = 1;
+	dev->serial_config.exact_baudrate = ret;
+
+	return 0;
+}
+
+static int force_set_baudrate_old(struct atarisio_dev* dev, unsigned int baudrate)
 {
 	int divisor;
 	int ret = 0;
