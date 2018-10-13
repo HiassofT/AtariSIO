@@ -1,5 +1,5 @@
 /*
-   atarisio V1.06
+   atarisio V1.07
    a kernel module for handling the Atari 8bit SIO protocol
 
    Copyright (C) 2002-2018 Matthias Reichl <hias@horus.com>
@@ -922,6 +922,8 @@ static unsigned int pokey_div_to_baud_16950_921600(unsigned int pokey_div)
 		return 52150;
 	case ATARISIO_POKEY_DIVISOR_2XSIO_XF551:
 		return 38550;
+	case ATARISIO_POKEY_DIVISOR_STANDARD:
+		return 18856;
 	default: return 0;
 	}
 }
@@ -940,7 +942,7 @@ static unsigned int optimized_baudrate_16950_921600(unsigned int baudrate,
 	C950_PARAM( 55434, 16,  19,   7); /* pokey divisor 9, tested with Speedy 1050 */
 	C950_PARAM( 52150, 13,  29,   6); /* pokey divisor 10, compatible with Happy 1050 */
 	C950_PARAM( 38550, 15,  12,  17); /* pokey divisor 16 */
-
+	C950_PARAM( 18856, 16,  17,  23); /* pokey divisor 40 */
 	default: return 1;
 	}
 }
@@ -949,7 +951,31 @@ static unsigned int pokey_div_to_baud_16950_4000000(unsigned int pokey_div)
 {
 	switch (pokey_div) {
 	case 0:
-		return 125000;
+		return 125313;
+	case 1:
+		return 110815;
+	case 2:
+		return 98386;
+	case 3:
+		return 88778;
+	case 4:
+		return 80541;
+	case 5:
+		return 73877;
+	case ATARISIO_POKEY_DIVISOR_1050_TURBO:
+		return 68082;
+	case 7:
+		return 63323;
+	case ATARISIO_POKEY_DIVISOR_3XSIO:
+		return 59073;
+	case ATARISIO_POKEY_DIVISOR_SPEEDY:
+		return 55407;
+	case ATARISIO_POKEY_DIVISOR_HAPPY:
+		return 52083;
+	case ATARISIO_POKEY_DIVISOR_2XSIO_XF551:
+		return 38580;
+	case ATARISIO_POKEY_DIVISOR_STANDARD:
+		return 18870;
 	default:
 		return 0;
 	}
@@ -959,8 +985,19 @@ static unsigned int optimized_baudrate_16950_4000000(unsigned int baudrate,
 	uint8_t* tcr, uint8_t* cpr, uint16_t* div)
 {
 	switch(baudrate) {
-	C950_PARAM(125000, 16,  25,  10); /* divisor 0 */
-	C950_PARAM(125494, 16,  25,  10); /* alias for atariserver */
+	C950_PARAM(125313, 15,  14,  19); /* pokey divisor 0 */
+	C950_PARAM(110815, 16,  47,   6); /* pokey divisor 1 */
+	C950_PARAM( 98386, 14, 121,   3); /* pokey divisor 2 */
+	C950_PARAM( 88778, 16,   8,  44); /* pokey divisor 3 */
+	C950_PARAM( 80541, 16,  97,   4); /* pokey divisor 4 */
+	C950_PARAM( 73877, 16,   9,  47); /* pokey divisor 5 */
+	C950_PARAM( 68082, 16,  27,  17); /* pokey divisor 6 */
+	C950_PARAM( 63323, 14,  12,  47); /* pokey divisor 7 */
+	C950_PARAM( 59073, 16,  23,  23); /* pokey divisor 8 */
+	C950_PARAM( 55407, 16,  12,  47); /* pokey divisor 9 */
+	C950_PARAM( 52083, 16,   8,  75); /* pokey divisor 10 */
+	C950_PARAM( 38580, 16,   9,  90); /* pokey divisor 16 */
+	C950_PARAM( 18870, 16,   9, 184); /* pokey divisor 40 */
 	default: return 1;
 	}
 }
