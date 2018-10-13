@@ -1255,7 +1255,7 @@ unsupported_command:
 	}
 
 	if (reset_baudrate) {
-		wrapper->SetBaudrate(ATARISIO_STANDARD_BAUDRATE, false);
+		wrapper->SetBaudrate(wrapper->GetStandardBaudrate(), false);
 		LOG_SIO_MISC("resetting baudrate");
 	}
 

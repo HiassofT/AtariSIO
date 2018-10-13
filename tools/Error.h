@@ -104,8 +104,8 @@ public:
 
 class DeviceInitError : public ErrorObject {
 public:
-	DeviceInitError()
-		: ErrorObject("error initializing device")
+	DeviceInitError(const std::string cause)
+		: ErrorObject("error initializing device: " + cause)
 	{ }
 	virtual ~DeviceInitError() {}
 };

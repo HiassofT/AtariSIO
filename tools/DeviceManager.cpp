@@ -44,9 +44,7 @@
 #include "AtariDebug.h"
 
 DeviceManager::DeviceManager(const char* devname)
-        : fHighSpeedBaudrate(ATARISIO_HIGHSPEED_BAUDRATE),
-	  fPokeyDivisor(8),
-	  fUseStrictFormatChecking(false),
+        : fUseStrictFormatChecking(false),
 	  fTapeSpeedPercent(100)
 {
 	fSIOWrapper = SIOWrapper::CreateSIOWrapper(devname);
@@ -55,7 +53,14 @@ DeviceManager::DeviceManager(const char* devname)
 		throw ErrorObject("unable to activate SIO server mode");
 	}
 
-	SetHighSpeedMode(eHighSpeedOn);
+	fPokeyDivisor = ATARISIO_POKEY_DIVISOR_3XSIO;
+	fHighspeedBaudrate = fSIOWrapper->GetBaudrateForPokeyDivisor(fPokeyDivisor);
+	if (fHighspeedBaudrate == 0) {
+		SetHighSpeedMode(eHighSpeedOff);
+	} else {
+		SetHighSpeedMode(eHighSpeedOn);
+	}
+
 	EnableXF551Mode(false);
 }
 
@@ -185,7 +190,7 @@ bool DeviceManager::LoadDiskImage(EDriveNumber driveno, const char* filename, bo
 	} else if (image->IsAtrImage()) {
 		handler = new AtrSIOHandler(RCPtrStaticCast<AtrImage>(image));
 		handler->EnableHighSpeed(fUseHighSpeed);
-		handler->SetHighSpeedParameters(fPokeyDivisor, fHighSpeedBaudrate);
+		handler->SetHighSpeedParameters(fPokeyDivisor, fHighspeedBaudrate);
 		handler->EnableXF551Mode(fEnableXF551Mode);
 		handler->EnableStrictFormatChecking(fUseStrictFormatChecking);
 	} else {
@@ -437,7 +442,7 @@ bool DeviceManager::CreateAtrMemoryImage(EDriveNumber driveno, EDiskFormat forma
 
 	RCPtr<AtrSIOHandler> handler(new AtrSIOHandler(img));
 	handler->EnableHighSpeed(fUseHighSpeed);
-	handler->SetHighSpeedParameters(fPokeyDivisor, fHighSpeedBaudrate);
+	handler->SetHighSpeedParameters(fPokeyDivisor, fHighspeedBaudrate);
 	handler->EnableXF551Mode(fEnableXF551Mode);
 	handler->EnableStrictFormatChecking(fUseStrictFormatChecking);
 
@@ -471,7 +476,7 @@ bool DeviceManager::CreateAtrMemoryImage(EDriveNumber driveno, ESectorLength den
 
 	RCPtr<AtrSIOHandler> handler(new AtrSIOHandler(img));
 	handler->EnableHighSpeed(fUseHighSpeed);
-	handler->SetHighSpeedParameters(fPokeyDivisor, fHighSpeedBaudrate);
+	handler->SetHighSpeedParameters(fPokeyDivisor, fHighspeedBaudrate);
 	handler->EnableXF551Mode(fEnableXF551Mode);
 	handler->EnableStrictFormatChecking(fUseStrictFormatChecking);
 
@@ -887,7 +892,7 @@ bool DeviceManager::SetHighSpeedMode(EHighSpeedMode mode)
 	fHighSpeedMode = mode;
 	switch (mode) {
 	case eHighSpeedOff:
-		if (fSIOWrapper->SetBaudrate(ATARISIO_STANDARD_BAUDRATE)) {
+		if (fSIOWrapper->SetBaudrate(fSIOWrapper->GetStandardBaudrate())) {
 			return false;
 		}
 		if (fSIOWrapper->SetAutobaud(0)) {
@@ -896,7 +901,7 @@ bool DeviceManager::SetHighSpeedMode(EHighSpeedMode mode)
 		fUseHighSpeed = false;
 		break;
 	case eHighSpeedOn:
-		if (fSIOWrapper->SetBaudrate(fHighSpeedBaudrate)) {
+		if (fSIOWrapper->SetBaudrate(fHighspeedBaudrate)) {
 			return false;
 		}
 		if (fSIOWrapper->SetAutobaud(1)) {
@@ -908,7 +913,7 @@ bool DeviceManager::SetHighSpeedMode(EHighSpeedMode mode)
 		fUseHighSpeed = true;
 		break;
 	case eHighSpeedWithPause:
-		if (fSIOWrapper->SetBaudrate(fHighSpeedBaudrate)) {
+		if (fSIOWrapper->SetBaudrate(fHighspeedBaudrate)) {
 			return false;
 		}
 		if (fSIOWrapper->SetAutobaud(1)) {
@@ -924,12 +929,12 @@ bool DeviceManager::SetHighSpeedMode(EHighSpeedMode mode)
 
 	for (int i=eMinDriveNumber; i<=eMaxDriveNumber; i++) {
 		if (DriveInUse(EDriveNumber(i))) {
-			GetSIOHandler((EDriveNumber)i)->SetHighSpeedParameters(fPokeyDivisor, fHighSpeedBaudrate);
+			GetSIOHandler((EDriveNumber)i)->SetHighSpeedParameters(fPokeyDivisor, fHighspeedBaudrate);
 			GetSIOHandler((EDriveNumber)i)->EnableHighSpeed(fUseHighSpeed);
 		}
 	}
 
-	fSIOWrapper->SetBaudrate(ATARISIO_STANDARD_BAUDRATE);
+	fSIOWrapper->SetBaudrate(fSIOWrapper->GetStandardBaudrate());
 
 	return true;
 }
@@ -940,11 +945,14 @@ bool DeviceManager::SetHighSpeedParameters(unsigned int pokeyDivisor, unsigned i
 		AERROR("illegal high speed pokey divisor %d", pokeyDivisor);
 	}
 	if (baudrate == 0) {
-		baudrate = fSIOWrapper->PokeyDivisorToBaudrate(pokeyDivisor);
-		AWARN("high speed baudrate not set, using default %d", baudrate);
+		baudrate = fSIOWrapper->GetBaudrateForPokeyDivisor(pokeyDivisor);
+		if (baudrate == 0) {
+			AERROR("pokey divisor %d is not supported by driver", pokeyDivisor);
+			return false;
+		}
 	}
 
-	fHighSpeedBaudrate = baudrate;
+	fHighspeedBaudrate = baudrate;
 	fPokeyDivisor = pokeyDivisor;
 	fSIOWrapper->SetHighSpeedBaudrate(baudrate);
 

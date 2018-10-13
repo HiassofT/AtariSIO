@@ -149,7 +149,7 @@ private:
 
 	EHighSpeedMode fHighSpeedMode;
 	bool fUseHighSpeed;
-	unsigned int fHighSpeedBaudrate;
+	unsigned int fHighspeedBaudrate;
 	unsigned int fPokeyDivisor;
 	bool fUseStrictFormatChecking;
 
@@ -196,7 +196,7 @@ inline bool DeviceManager::GetStrictFormatChecking() const
 
 inline unsigned int DeviceManager::GetHighSpeedBaudrate() const
 {
-	return fHighSpeedBaudrate;
+	return fHighspeedBaudrate;
 }
 
 inline uint8_t DeviceManager::GetHighSpeedPokeyDivisor() const

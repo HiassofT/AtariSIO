@@ -142,6 +142,7 @@ public:
 	virtual int SendDataFrameXF551(uint8_t* buf, unsigned int length) = 0;
 
 	virtual int SetBaudrate(unsigned int baudrate, bool now = true) = 0;
+	virtual int SetStandardBaudrate(unsigned int baudrate) = 0;
 	virtual int SetHighSpeedBaudrate(unsigned int baudrate) = 0;
 	virtual int SetAutobaud(unsigned int on) = 0;
 	virtual int SetHighSpeedPause(unsigned int on) = 0;
@@ -167,13 +168,25 @@ public:
 	virtual int EnableTimestampRecording(unsigned int on) = 0;
 	virtual int GetTimestamps(SIO_timestamps& timestamps) = 0;
 
-	virtual unsigned int PokeyDivisorToBaudrate(unsigned int divisor);
+	virtual unsigned int GetBaudrateForPokeyDivisor(unsigned int pokey_div) = 0;
+
+	inline unsigned int GetStandardBaudrate() {
+		return fStandardBaudrate;
+	}
+
+	inline unsigned int GetHighspeedBaudrate() {
+		return fHighspeedBaudrate;
+	}
 
 protected:
 	SIOWrapper(int fileno);
 
+	void InitializeBaudrates();
+
 	int fDeviceFileNo;
 	int fLastResult;
+	unsigned int fStandardBaudrate;
+	unsigned int fHighspeedBaudrate;
 };
 
 inline int SIOWrapper::GetLastStatus()

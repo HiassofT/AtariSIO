@@ -85,6 +85,7 @@ public:
 	virtual int SendDataFrameXF551(uint8_t* buf, unsigned int length);
 
 	virtual int SetBaudrate(unsigned int baudrate, bool now = true);
+	virtual int SetStandardBaudrate(unsigned int baudrate);
 	virtual int SetHighSpeedBaudrate(unsigned int baudrate);
 	virtual int SetAutobaud(unsigned int on);
 	virtual int SetHighSpeedPause(unsigned int on);
@@ -109,12 +110,13 @@ public:
 	virtual int EnableTimestampRecording(unsigned int on);
 	virtual int GetTimestamps(SIO_timestamps& timestamps);
 
-	virtual unsigned int PokeyDivisorToBaudrate(unsigned int divisor);
+	virtual unsigned int GetBaudrateForPokeyDivisor(unsigned int pokey_div);
 
 private:
 	typedef SIOWrapper super;
 
 	bool InitSerialDevice();
+	bool ClearControlLines();
 
 	uint8_t CalculateChecksum(uint8_t* buf, unsigned int length);
 	bool CmdBufChecksumOK();
@@ -141,11 +143,10 @@ private:
 	void TrySwitchbaud();
 
 	int fCommandLineMask;
-	int fHighspeedBaudrate;
-	int fBaudrate;
+	unsigned int fTapeBaudrate;
+	unsigned int fBaudrate;
 	bool fDoAutobaud;
-	int fTapeBaudrate;
-	int fTapeOldBaudrate;
+	unsigned int fTapeOldBaudrate;
 
 	struct termios2 fOriginalTermios;
 

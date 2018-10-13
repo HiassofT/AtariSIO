@@ -33,7 +33,9 @@
 
 KernelSIOWrapper::KernelSIOWrapper(int fileno)
 	: super(fileno)
-{ }
+{
+	InitializeBaudrates();
+}
 
 KernelSIOWrapper::~KernelSIOWrapper()
 { }
@@ -412,6 +414,19 @@ int KernelSIOWrapper::SetBaudrate(unsigned int baudrate, bool /* now */)
 	return fLastResult;
 }
 
+int KernelSIOWrapper::SetStandardBaudrate(unsigned int baudrate)
+{
+	if (fDeviceFileNo < 0) {
+		fLastResult = ENODEV;
+	} else {
+		fLastResult = ioctl(fDeviceFileNo, ATARISIO_IOC_SET_STANDARD_BAUDRATE, baudrate);
+		if (fLastResult == -1) {
+			fLastResult = errno;
+		}
+	}
+	return fLastResult;
+}
+
 int KernelSIOWrapper::SetHighSpeedBaudrate(unsigned int baudrate)
 {
 	if (fDeviceFileNo < 0) {
@@ -462,7 +477,7 @@ int KernelSIOWrapper::GetBaudrate()
 		baudrate = ioctl(fDeviceFileNo, ATARISIO_IOC_GET_BAUDRATE);
 		if (baudrate == -1) {
 			fLastResult = errno;
-			return ATARISIO_STANDARD_BAUDRATE;
+			return fStandardBaudrate;
 		} else {
 			return baudrate;
 		}
@@ -481,7 +496,7 @@ int KernelSIOWrapper::GetExactBaudrate()
 		baudrate = ioctl(fDeviceFileNo, ATARISIO_IOC_GET_EXACT_BAUDRATE);
 		if (baudrate == -1) {
 			fLastResult = errno;
-			return ATARISIO_STANDARD_BAUDRATE;
+			return fStandardBaudrate;
 		} else {
 			return baudrate;
 		}
@@ -622,19 +637,22 @@ int KernelSIOWrapper::GetTimestamps(SIO_timestamps& timestamps)
 	return fLastResult;
 }
 
-unsigned int KernelSIOWrapper::PokeyDivisorToBaudrate(unsigned int divisor)
+unsigned int KernelSIOWrapper::GetBaudrateForPokeyDivisor(unsigned int pokey_div)
 {
-	switch (divisor) {
-	case 0: return 125494;
-	case 1: return 110765;
-	case 2: return 97010;
-	case 3: return 87771;
-	case 4: return 80139;
-	case 5: return 73728;
-	case 6: return 68266;
-	case 7: return 62481;
-	case 9: return 55434;
-	case 10: return 52150;
-	default: return super::PokeyDivisorToBaudrate(divisor);
+	int baudrate;
+
+	if (fDeviceFileNo < 0) {
+		fLastResult = ENODEV;
+	} else {
+		fLastResult = 0;
+		baudrate = ioctl(fDeviceFileNo, ATARISIO_IOC_GET_BAUDRATE_FOR_POKEY_DIVISOR, pokey_div);
+		if (baudrate == -1) {
+			fLastResult = errno;
+			return 0;
+		} else {
+			return baudrate;
+		}
 	}
+	return fLastResult;
 }
+

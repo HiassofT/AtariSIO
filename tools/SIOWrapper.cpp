@@ -259,6 +259,7 @@ int SIOWrapper::PercomPut(uint8_t driveNo, uint8_t* buf,
 	params.highspeed_mode = highspeedMode;
 	return ExtSIO(params);
 }
+
 int SIOWrapper::ImmediateCommand(uint8_t driveNo, uint8_t command,
 		uint8_t aux1, uint8_t aux2,
 		uint8_t timeout, uint8_t highspeedMode)
@@ -281,12 +282,14 @@ int SIOWrapper::ImmediateCommand(uint8_t driveNo, uint8_t command,
 	return ExtSIO(params);
 }
 
-unsigned int SIOWrapper::PokeyDivisorToBaudrate(unsigned int divisor)
+void SIOWrapper::InitializeBaudrates()
 {
-	switch (divisor) {
-	case 40: return 19200;
-	case 16: return 38400;
-	case 8: return 57600;
-	default: return (1773445 + divisor + 7) / (2 * (divisor + 7));
+	fStandardBaudrate = GetBaudrateForPokeyDivisor(ATARISIO_POKEY_DIVISOR_STANDARD);
+	if (!fStandardBaudrate) {
+		throw new DeviceInitError("no baudrate for standard SIO speed");
+	}
+	fHighspeedBaudrate = GetBaudrateForPokeyDivisor(ATARISIO_POKEY_DIVISOR_3XSIO);
+	if (!fHighspeedBaudrate) {
+		fHighspeedBaudrate = fStandardBaudrate;
 	}
 }

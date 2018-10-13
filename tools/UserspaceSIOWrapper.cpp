@@ -102,44 +102,34 @@ bool UserspaceSIOWrapper::InitSerialDevice()
 		AERROR("error configuring serial port");
 		return false;
 	}
-	fBaudrate = ATARISIO_STANDARD_BAUDRATE;
-
-	if (ioctl(fDeviceFileNo, TIOCMGET, &flags)) {
-		return false;
-	}
-
-	// clear DTR and RTS to make autoswitching Atarimax interface work
-	flags &= ~(TIOCM_DTR | TIOCM_RTS);
-
-	if (ioctl(fDeviceFileNo, TIOCMSET, &flags)) {
-		return false;
-	}
-
-	tcflush(fDeviceFileNo, TCIOFLUSH);
 
 	return true;
 }
 
 UserspaceSIOWrapper::UserspaceSIOWrapper(int fileno)
 	: super(fileno),
-	  fHighspeedBaudrate(ATARISIO_HIGHSPEED_BAUDRATE),
+	  fTapeBaudrate(ATARISIO_TAPE_BAUDRATE),
 	  fBaudrate(0),
 	  fDoAutobaud(false),
-	  fTapeBaudrate(ATARISIO_TAPE_BAUDRATE),
 	  fLastCommandOK(true)
 {
 	if (ioctl(fDeviceFileNo, TCGETS2, &fOriginalTermios)) {
 		fDeviceFileNo = -1;
-		throw new DeviceInitError();
+		throw new DeviceInitError("cannot get current serial port settings");
 	}
 	if (!InitSerialDevice()) {
-		throw new DeviceInitError();
+		throw new DeviceInitError("cannot initialize serial port");
 	}
-	if (SetBaudrate(ATARISIO_STANDARD_BAUDRATE)) {
-		throw new DeviceInitError();
+
+	InitializeBaudrates();
+
+	if (SetBaudrate(fStandardBaudrate)) {
+		throw new DeviceInitError("cannot set standard baudrate");
 	}
+	tcflush(fDeviceFileNo, TCIOFLUSH);
+
 	if (SetSIOServerMode(ESIOServerCommandLine::eCommandLine_RI)) {
-		throw new DeviceInitError();
+		throw new DeviceInitError("cannot set SIO server mode");
 	}
 }
 
@@ -193,8 +183,25 @@ int UserspaceSIOWrapper::SetCableType_APE_Prosystem()
 	TODO
 }
 
+bool UserspaceSIOWrapper::ClearControlLines()
+{
+	int flags;
+	if (ioctl(fDeviceFileNo, TIOCMGET, &flags)) {
+		return false;
+	}
+
+	// clear DTR and RTS to make autoswitching Atarimax interface work
+	flags &= ~(TIOCM_DTR | TIOCM_RTS);
+
+	if (ioctl(fDeviceFileNo, TIOCMSET, &flags)) {
+		return false;
+	}
+	return true;
+}
+
 int UserspaceSIOWrapper::SetSIOServerMode(ESIOServerCommandLine cmdLine)
 {
+	fLastResult = 0;
 	switch (cmdLine) {
 	case eCommandLine_RI:
 		fCommandLineMask = TIOCM_RI;
@@ -206,9 +213,13 @@ int UserspaceSIOWrapper::SetSIOServerMode(ESIOServerCommandLine cmdLine)
 		fCommandLineMask = TIOCM_CTS;
 		break;
 	default:
-		return 1;
+		fLastResult = 1;
 	}
-	return 0;
+
+	// clear DTR and RTS to make autoswitching Atarimax interface work
+	ClearControlLines();
+
+	return fLastResult;
 }
 
 int UserspaceSIOWrapper::DirectSIO(SIO_parameters& /* params */)
@@ -638,9 +649,9 @@ int UserspaceSIOWrapper::SetBaudrate(unsigned int baudrate, bool now)
 		WaitTransmitComplete();
 	}
 
-	int ret = ioctl(fDeviceFileNo, TCGETS2, &tios2);
-	if (ret < 0) {
-		return ret;
+	int fLastResult = ioctl(fDeviceFileNo, TCGETS2, &tios2);
+	if (fLastResult < 0) {
+		return fLastResult;
 	}
 	tios2.c_cflag &= ~(CBAUD | CBAUD << LINUX_IBSHIFT);
 	switch (baudrate) {
@@ -662,35 +673,44 @@ int UserspaceSIOWrapper::SetBaudrate(unsigned int baudrate, bool now)
 	tios2.c_ispeed = baudrate;
 	tios2.c_ospeed = baudrate;
 
-	ret = ioctl(fDeviceFileNo, now ? TCSETS2 : TCSETSW2, &tios2);
-	if (!ret) {
+	fLastResult = ioctl(fDeviceFileNo, now ? TCSETS2 : TCSETSW2, &tios2);
+	if (!fLastResult) {
 		fBaudrate = baudrate;
 	}
-	return ret;
+	return fLastResult;
 }
 
 void UserspaceSIOWrapper::TrySwitchbaud()
 {
 	if (fDoAutobaud) {
-		if (fBaudrate == ATARISIO_STANDARD_BAUDRATE) {
+		if (fBaudrate == fStandardBaudrate) {
 			SetBaudrate(fHighspeedBaudrate);
 		} else {
-			SetBaudrate(ATARISIO_STANDARD_BAUDRATE);
+			SetBaudrate(fStandardBaudrate);
 		}
 	}
 	tcflush(fDeviceFileNo, TCIOFLUSH);
 }
 
+int UserspaceSIOWrapper::SetStandardBaudrate(unsigned int baudrate)
+{
+	fStandardBaudrate = baudrate;
+	fLastResult = 0;
+	return fLastResult;
+}
+
 int UserspaceSIOWrapper::SetHighSpeedBaudrate(unsigned int baudrate)
 {
 	fHighspeedBaudrate = baudrate;
-	return 0;
+	fLastResult = 0;
+	return fLastResult;
 }
 
 int UserspaceSIOWrapper::SetAutobaud(unsigned int on)
 {
 	fDoAutobaud = on;
-	return 0;
+	fLastResult = 0;
+	return fLastResult;
 }
 
 int UserspaceSIOWrapper::SetHighSpeedPause(unsigned int on)
@@ -784,12 +804,22 @@ int UserspaceSIOWrapper::GetTimestamps(SIO_timestamps& /* timestamps */)
 	TODO
 }
 
-unsigned int UserspaceSIOWrapper::PokeyDivisorToBaudrate(unsigned int divisor)
+unsigned int UserspaceSIOWrapper::GetBaudrateForPokeyDivisor(unsigned int divisor)
 {
 	switch (divisor) {
-	case 0: return 125000;
-	case 1: return 110500;
-	case 2: return 98500;
-	default: return super::PokeyDivisorToBaudrate(divisor);
+	case 0:
+		return 125000;
+	case 1:
+		return 110500;
+	case 2:
+		return 98500;
+	case ATARISIO_POKEY_DIVISOR_STANDARD:
+		return 19200;
+	case ATARISIO_POKEY_DIVISOR_2XSIO_XF551:
+		return 38400;
+	case ATARISIO_POKEY_DIVISOR_3XSIO:
+		return 57600;
+	default:
+		return ATARISIO_ATARI_FREQUENCY_PAL / (2 * (divisor + 7));
 	}
 }
