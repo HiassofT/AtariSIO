@@ -43,5 +43,21 @@ struct termios2 {
 
 #endif
 
+#ifndef TCGETS2
+#define TCGETS2 0x2A
+#endif
+
+#ifndef TCSETS2
+#define TCSETS2 0x2B
+#endif
+
+#ifndef TCSETSW2
+#define TCSETSW2 0x2C
+#endif
+
+#ifndef TCSETSF2
+#define TCSETSF2 0x2D
+#endif
+
 #endif
 
