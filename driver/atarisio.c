@@ -467,7 +467,7 @@ struct atarisio_dev {
 	uint8_t command_line_high; /* = 0; */
 
 	unsigned int default_baudrate; /* = ATARISIO_STANDARD_BAUDRATE; */
-	unsigned int highspeed_baudrate; /* = ATARISIO_STANDARD_BAUDRATE; */
+	unsigned int highspeed_baudrate; /* = ATARISIO_HIGHSPEED_BAUDRATE; */
 
 	int do_autobaud; /* = 0; */
 	int add_highspeedpause; /* = 0; */
@@ -690,7 +690,7 @@ static inline void reset_cmdframe_buf_data(struct atarisio_dev* dev)
 	dev->cmdframe_buf.end_reception_time=0;
 }
 
-
+#if 0
 typedef struct {
 	unsigned int baudrate;
 	u8 tcr;
@@ -886,6 +886,7 @@ static int calc_16c950_baudrate(struct atarisio_dev* dev, unsigned int baudrate)
 
 	return divisor;
 }
+#endif
 
 #define C950_PARAM(opt_baud, opt_tcr, opt_cpr, opt_div) \
 	case opt_baud: \
@@ -894,7 +895,35 @@ static int calc_16c950_baudrate(struct atarisio_dev* dev, unsigned int baudrate)
 		*div = opt_div; \
 		return 0;
 
-static int get_optimized_16950_921600(unsigned int baudrate,
+static unsigned int pokey_div_to_baud_16950_921600(unsigned int pokey_div)
+{
+	switch (pokey_div) {
+	case 0:
+		return 125494;
+	case 1:
+		return 110765;
+	case 2:
+		return 97010;
+	case 3:
+		return 87771;
+	case 4:
+		return 80139;
+	case 5:
+		return 73728;
+	case ATARISIO_POKEY_DIVISOR_1050_TURBO:
+		return 68266;
+	case 7:
+		return 62481;
+	case ATARISIO_POKEY_DIVISOR_SPEEDY:
+		return 55434;
+	case ATARISIO_POKEY_DIVISOR_HAPPY:
+		return 52150;
+	default: return 0;
+	}
+}
+
+
+static unsigned int optimized_baudrate_16950_921600(unsigned int baudrate,
 	uint8_t* tcr, uint8_t* cpr, uint16_t* div)
 {
 	switch(baudrate) {
@@ -910,7 +939,17 @@ static int get_optimized_16950_921600(unsigned int baudrate,
 	}
 }
 
-static int get_optimized_16950_4000000(unsigned int baudrate,
+static unsigned int pokey_div_to_baud_16950_4000000(unsigned int pokey_div)
+{
+	switch (pokey_div) {
+	case 0:
+		return 125000;
+	default:
+		return 0;
+	}
+}
+
+static unsigned int optimized_baudrate_16950_4000000(unsigned int baudrate,
 	uint8_t* tcr, uint8_t* cpr, uint16_t* div)
 {
 	switch(baudrate) {
@@ -920,9 +959,51 @@ static int get_optimized_16950_4000000(unsigned int baudrate,
 	}
 }
 
+static unsigned int pokey_div_to_baud_16950(struct atarisio_dev* dev, unsigned int pokey_div)
+{
+	int baudrate = 0;
+
+	switch (dev->serial_config.baud_base) {
+	case 921600:
+		baudrate = pokey_div_to_baud_16950_921600(pokey_div);
+		break;
+	case 4000000:
+		baudrate = pokey_div_to_baud_16950_4000000(pokey_div);
+		break;
+	default:
+		break;
+	}
+	if (baudrate == 0) {
+		baudrate = ATARISIO_ATARI_FREQUENCY_PAL / (2 * (pokey_div + 7));
+	}
+	return baudrate;
+}
+
+static int pokey_div_to_baud(struct atarisio_dev* dev, unsigned int pokey_div)
+{
+	if (pokey_div >= 256) {
+		return -EINVAL;
+	}
+	if (dev->is_16c950 && dev->use_16c950_mode) {
+		return pokey_div_to_baud_16950(dev, pokey_div);
+	}
+
+	/* 16550 can only use standard speeds */
+	switch (pokey_div) {
+	case ATARISIO_POKEY_DIVISOR_STANDARD:
+		return 19200;
+	case ATARISIO_POKEY_DIVISOR_2XSIO_XF551:
+		return 38400;
+	case ATARISIO_POKEY_DIVISOR_3XSIO:
+		return 57600;
+	default:
+		return 0;
+	}
+}
+
 static int set_baudrate_16950(struct atarisio_dev* dev, unsigned int baudrate)
 {
-	int got_optimized = 1;
+	unsigned int got_optimized = 1;
 	uint8_t tcr = 16, cpr = 8;
 	uint16_t div = 0;
 	unsigned int baud_base = dev->serial_config.baud_base;
@@ -930,14 +1011,14 @@ static int set_baudrate_16950(struct atarisio_dev* dev, unsigned int baudrate)
 
 	switch (baud_base) {
 	case 921600:
-		got_optimized = get_optimized_16950_921600(baudrate, &tcr, &cpr, &div);
+		got_optimized = optimized_baudrate_16950_921600(baudrate, &tcr, &cpr, &div);
 		break;
 	case 4000000:
 		/* PCIe cards actually have 62.5MHz/16 base clock */
 		baud_base = 3906250;
 		/* fallthrough */
 	case 3906250:
-		got_optimized = get_optimized_16950_4000000(baudrate, &tcr, &cpr, &div);
+		got_optimized = optimized_baudrate_16950_4000000(baudrate, &tcr, &cpr, &div);
 		break;
 	default:
 		break;
@@ -1028,6 +1109,7 @@ static int force_set_baudrate(struct atarisio_dev* dev, unsigned int baudrate)
 	return 0;
 }
 
+#if 0
 static int force_set_baudrate_old(struct atarisio_dev* dev, unsigned int baudrate)
 {
 	int divisor;
@@ -1073,6 +1155,7 @@ static int force_set_baudrate_old(struct atarisio_dev* dev, unsigned int baudrat
 
 	return ret;
 }
+#endif
 
 static int set_baudrate(struct atarisio_dev* dev, unsigned int baudrate, int do_locks)
 {
@@ -1232,14 +1315,10 @@ static inline void try_switchbaud(struct atarisio_dev* dev)
         baud= dev->serial_config.baudrate;
 
 	if (dev->do_autobaud) {
-		if (baud == ATARISIO_STANDARD_BAUDRATE) {
+		if (baud == dev->default_baudrate) {
 			baud = dev->highspeed_baudrate;
-		/*
-		} else if (baud == 57600) {
-			baud = 38400;
-		*/
 		} else {
-			baud = ATARISIO_STANDARD_BAUDRATE;
+			baud = dev->default_baudrate;
 		}
 
 		IRQ_PRINTK(DEBUG_STANDARD, "switching to %d baud\n",baud);
@@ -1849,7 +1928,7 @@ static int send_block(struct atarisio_dev* dev,
 	if (block_len) {
 		spin_lock_irqsave(&dev->lock, flags);
 		if ((dev->add_highspeedpause & ATARISIO_HIGHSPEEDPAUSE_BYTE_DELAY) && 
-			( (dev->serial_config.baudrate != ATARISIO_STANDARD_BAUDRATE) || (dev->current_mode == MODE_1050_2_PC) ) ) {
+			( (dev->serial_config.baudrate != dev->default_baudrate) || (dev->current_mode == MODE_1050_2_PC) ) ) {
 			set_lcr(dev, dev->slow_lcr);
 		}
 		ret = setup_send_frame(dev, block_len, user_buffer, add_checksum);
@@ -1869,7 +1948,7 @@ static int send_block(struct atarisio_dev* dev,
 			}
 		}
 		if ((dev->add_highspeedpause & ATARISIO_HIGHSPEEDPAUSE_BYTE_DELAY) && 
-			( (dev->serial_config.baudrate != ATARISIO_STANDARD_BAUDRATE) || (dev->current_mode == MODE_1050_2_PC) ) ) {
+			( (dev->serial_config.baudrate != dev->default_baudrate) || (dev->current_mode == MODE_1050_2_PC) ) ) {
 			spin_lock_irqsave(&dev->lock, flags);
 			set_lcr(dev, dev->standard_lcr);
 			spin_unlock_irqrestore(&dev->lock, flags);
@@ -2862,8 +2941,10 @@ static int atarisio_ioctl(struct inode* inode, struct file* filp,
 		}
 		break;
 	case ATARISIO_IOC_SET_BAUDRATE:
+		ret = set_baudrate(dev, arg, 1);
+		break;
+	case ATARISIO_IOC_SET_STANDARD_BAUDRATE:
 		dev->default_baudrate = arg;
-		ret = set_baudrate(dev, dev->default_baudrate, 1);
 		break;
 	case ATARISIO_IOC_SET_HIGHSPEED_BAUDRATE:
 		dev->highspeed_baudrate = arg;
@@ -2928,7 +3009,7 @@ static int atarisio_ioctl(struct inode* inode, struct file* filp,
 		ret = send_single_character(dev, OPERATION_COMPLETE_CHAR);
 		PRINT_TIMESTAMP("end sending complete\n");
 		if (cmd == ATARISIO_IOC_SEND_COMPLETE_XF551) {
-			set_baudrate(dev, ATARISIO_STANDARD_BAUDRATE, 1);
+			set_baudrate(dev, dev->default_baudrate, 1);
 		}
 		break;
 	case ATARISIO_IOC_SEND_ERROR:
@@ -2951,7 +3032,7 @@ static int atarisio_ioctl(struct inode* inode, struct file* filp,
 		ret = perform_send_frame(dev, arg, 1, SEND_MODE_WAIT_ALL);
 		PRINT_TIMESTAMP("end send data frame\n");
 		if (cmd == ATARISIO_IOC_SEND_DATA_FRAME_XF551) {
-			set_baudrate(dev, ATARISIO_STANDARD_BAUDRATE, 1);
+			set_baudrate(dev, dev->default_baudrate, 1);
 		}
 		break;
 	case ATARISIO_IOC_RECEIVE_DATA_FRAME:
@@ -3044,6 +3125,9 @@ static int atarisio_ioctl(struct inode* inode, struct file* filp,
 		}
 		ret = perform_send_fsk_data(dev, arg);
 		break;
+	case ATARISIO_IOC_GET_BAUDRATE_FOR_POKEY_DIVISOR:
+		ret = pokey_div_to_baud(dev, (unsigned int) arg);
+		break;
 	default:
 		ret = -EINVAL;
 	}
@@ -3125,8 +3209,8 @@ static int atarisio_open(struct inode* inode, struct file* filp)
 	init_cmdframe_buf(dev);
 
 	dev->do_autobaud = 0;
-	dev->default_baudrate = ATARISIO_STANDARD_BAUDRATE;
-	dev->highspeed_baudrate = ATARISIO_HIGHSPEED_BAUDRATE;
+	dev->default_baudrate = pokey_div_to_baud(dev, ATARISIO_POKEY_DIVISOR_STANDARD);
+	dev->highspeed_baudrate = pokey_div_to_baud(dev, ATARISIO_POKEY_DIVISOR_3XSIO);
 	dev->tape_baudrate = ATARISIO_TAPE_BAUDRATE;
 	dev->add_highspeedpause = ATARISIO_HIGHSPEEDPAUSE_OFF;
 	dev->tape_mode_enabled = 0;
@@ -3325,6 +3409,7 @@ struct atarisio_dev* alloc_atarisio_dev(unsigned int id)
 	dev->command_line_low = UART_MCR_RTS;
 	dev->command_line_high = 0;
 	dev->default_baudrate = ATARISIO_STANDARD_BAUDRATE;
+	dev->highspeed_baudrate = ATARISIO_HIGHSPEED_BAUDRATE;
 	dev->tape_baudrate = ATARISIO_TAPE_BAUDRATE;
 	dev->do_autobaud = 0;
 	dev->tape_mode_enabled = 0;

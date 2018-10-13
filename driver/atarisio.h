@@ -2,7 +2,7 @@
 #define ATARISIO_H
 
 /*
-   atarisio V1.05
+   atarisio V1.07
    a kernel module for handling the Atari 8bit SIO protocol
 
    Copyright (C) 2002-2009 Matthias Reichl <hias@horus.com>
@@ -25,7 +25,7 @@
 #include <linux/types.h>
 
 #define ATARISIO_MAJOR_VERSION 1
-#define ATARISIO_MINOR_VERSION 6
+#define ATARISIO_MINOR_VERSION 7
 #define ATARISIO_VERSION_MAGIC 42
 
 #define ATARISIO_VERSION ( ( (ATARISIO_VERSION_MAGIC) << 16) | ( (ATARISIO_MAJOR_VERSION) << 8) | (ATARISIO_MINOR_VERSION) )
@@ -38,6 +38,12 @@
 #define ATARISIO_XF551_BAUDRATE 38400
 #define ATARISIO_HIGHSPEED_BAUDRATE 57600
 #define ATARISIO_TAPE_BAUDRATE 600
+
+/*
+   Atari system frequencies in Hz
+*/
+#define ATARISIO_ATARI_FREQUENCY_PAL  1773447
+#define ATARISIO_ATARI_FREQUENCY_NTSC 1789772
 
 /*
    SIO parameter struct passed to DO_SIO ioctl.
@@ -363,7 +369,27 @@ typedef struct FSK_data_struct {
 
 #define ATARISIO_IOC_SEND_FSK_DATA	_IOW( ATARISIO_IOC_MAGIC, 33, FSK_data *)
 
-#define ATARISIO_IOC_MAXNR 33
+/*
+   Set the standard baudrate (the default is 19200 bit/sec)
+*/
+#define ATARISIO_IOC_SET_STANDARD_BAUDRATE \
+	_IOW( ATARISIO_IOC_MAGIC, 34, unsigned int)
+
+#define ATARISIO_POKEY_DIVISOR_STANDARD		40
+#define ATARISIO_POKEY_DIVISOR_2XSIO_XF551	16
+#define ATARISIO_POKEY_DIVISOR_HAPPY		10
+#define ATARISIO_POKEY_DIVISOR_SPEEDY		9
+#define ATARISIO_POKEY_DIVISOR_3XSIO		8
+#define ATARISIO_POKEY_DIVISOR_1050_TURBO	6
+
+/*
+   Get the baudrate that should be used for the given pokey divisor.
+   0 means proper operation is not guaranteed.
+*/
+#define ATARISIO_IOC_GET_BAUDRATE_FOR_POKEY_DIVISOR \
+	_IOR( ATARISIO_IOC_MAGIC, 35, unsigned int)
+
+#define ATARISIO_IOC_MAXNR 35
 
 /*
    errno codes for DO_SIO, mainly according to
