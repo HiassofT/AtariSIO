@@ -55,6 +55,9 @@
 	if (UTRACE_MASK & 0x08) \
 		DPRINTF(x)
 
+#define UTRACE_1050_2_PC(x...) \
+	if (UTRACE_MASK & 0x10) \
+		DPRINTF(x)
 
 #define CMD_BUF_TRACE \
 	"[ %02x %02x %02x %02x %02x ]", \
@@ -173,14 +176,68 @@ bool UserspaceSIOWrapper::BufChecksumOK(unsigned int length)
 	return fBuf[length] == CalculateChecksum(fBuf, length);
 }
 
+bool UserspaceSIOWrapper::SetCommandLine(bool asserted)
+{
+	int flags;
+	if (ioctl(fDeviceFileNo, TIOCMGET, &flags)) {
+		return false;
+	}
+
+	flags &= fCommandLineMask;
+
+	if (asserted) {
+		flags |= fCommandLineLow;
+	} else {
+		flags |= fCommandLineHigh;
+	}
+
+	if (ioctl(fDeviceFileNo, TIOCMSET, &flags)) {
+		return false;
+	}
+	return true;
+}
+
+
+bool UserspaceSIOWrapper::Set1050ToPCMode(bool prosystem)
+{
+	bool ok;
+	fCommandLineMask = ~(TIOCM_RTS | TIOCM_DTR);
+	fCommandLineLow = TIOCM_RTS | TIOCM_DTR;
+	if (prosystem) {
+		fCommandLineHigh = TIOCM_RTS;
+	} else {
+		fCommandLineHigh = TIOCM_DTR;
+	}
+	ok = SetCommandLine(false);
+
+	SetBaudrate(fStandardBaudrate);
+
+	// wait 0.5 sec for voltage supply to stabilize
+	MilliSleep(500);
+
+	tcflush(fDeviceFileNo, TCIOFLUSH);
+
+	return ok;
+}
+
 int UserspaceSIOWrapper::SetCableType_1050_2_PC()
 {
-	TODO
+	if (Set1050ToPCMode(false)) {
+		fLastResult = 0;
+	} else {
+		fLastResult = 1;
+	}
+	return fLastResult;
 }
 
 int UserspaceSIOWrapper::SetCableType_APE_Prosystem()
 {
-	TODO
+	if (Set1050ToPCMode(true)) {
+		fLastResult = 0;
+	} else {
+		fLastResult = 1;
+	}
+	return fLastResult;
 }
 
 bool UserspaceSIOWrapper::ClearControlLines()
@@ -227,9 +284,23 @@ int UserspaceSIOWrapper::DirectSIO(SIO_parameters& /* params */)
 	TODO
 }
 
-int UserspaceSIOWrapper::ExtSIO(Ext_SIO_parameters& /* params */)
+int UserspaceSIOWrapper::ExtSIO(Ext_SIO_parameters& params)
 {
-	TODO
+	if (params.data_length > eMaxDataLength) {
+		fLastResult = EATARISIO_ERROR_BLOCK_TOO_LONG;
+		return fLastResult;
+	}
+	switch (params.highspeed_mode) {
+	case ATARISIO_EXTSIO_SPEED_NORMAL:
+	case ATARISIO_EXTSIO_SPEED_ULTRA:
+		break;
+	default:
+		fLastResult = EATARISIO_UNKNOWN_ERROR;
+		break;
+	};
+
+	fLastResult = InternalExtSIO(params);
+	return fLastResult;
 }
 
 int UserspaceSIOWrapper::WaitForCommandFrame(int otherReadPollDevice)
@@ -419,53 +490,6 @@ bool UserspaceSIOWrapper::NanoSleep(unsigned long nsec) {
 	return nanosleep(&ts, NULL);
 }
 
-int UserspaceSIOWrapper::TransmitBuf(uint8_t* buf, unsigned int length)
-{
-	// timeout with 30% margin
-	MiscUtils::TimestampType to = TimeForBytes(length) * 13 / 10 + eDelayT3;
-
-	unsigned int pos = 0;
-	int cnt;
-	int sel;
-
-	fd_set write_set;
-	struct timeval tv;
-
-	MiscUtils::TimestampType now = MiscUtils::GetCurrentTime();
-	MiscUtils::TimestampType endTime = now + to;
-
-	while (pos < length) {
-		FD_ZERO(&write_set);
-		FD_SET(fDeviceFileNo, &write_set);
-		now = MiscUtils::GetCurrentTime();
-		if (now >= endTime) {
-			// DPRINTF("timeout in TransmitBuf(%d)", length);
-			fLastResult = EATARISIO_COMMAND_TIMEOUT;
-			return fLastResult;
-		}
-		MiscUtils::TimestampToTimeval(endTime - now, tv);
-		sel = select(fDeviceFileNo + 1, NULL, &write_set, NULL, &tv);
-		if (sel < 0) {
-			// DPRINTF("select failed in TransmitBuf(%d): ", length, errno);
-			fLastResult = EATARISIO_UNKNOWN_ERROR;
-			return fLastResult;
-		}
-		if (sel == 1) {
-			cnt = write(fDeviceFileNo, buf + pos, length - pos);
-			if (cnt < 0) {
-				// DPRINTF("write failed in TransmitBuf(%d): ", length, errno);
-				return EATARISIO_UNKNOWN_ERROR;
-			}
-			pos += cnt;
-		}
-	}
-	// DPRINTF("TransmitBuf(%d) OK", length);
-	tcdrain(fDeviceFileNo);
-
-	fLastResult = 0;
-	return fLastResult;
-}
-
 void UserspaceSIOWrapper::WaitTransmitComplete()
 {
 	int cnt;
@@ -486,18 +510,64 @@ void UserspaceSIOWrapper::WaitTransmitComplete()
 	NanoSleep(TimeForBytes(1) * 1500);
 }
 
-int UserspaceSIOWrapper::TransmitByte(uint8_t byte, bool waitTransmit)
+int UserspaceSIOWrapper::TransmitBuf(uint8_t* buf, unsigned int length, bool waitTransmit)
 {
-	int ret = TransmitBuf(&byte, 1);
+	// timeout with 30% margin
+	MiscUtils::TimestampType to = TimeForBytes(length) * 13 / 10 + eDelayT3;
+
+	unsigned int pos = 0;
+	int cnt;
+	int sel;
+
+	fd_set write_set;
+	struct timeval tv;
+
+	MiscUtils::TimestampType now = MiscUtils::GetCurrentTime();
+	MiscUtils::TimestampType endTime = now + to;
+
+	while (pos < length) {
+		FD_ZERO(&write_set);
+		FD_SET(fDeviceFileNo, &write_set);
+		now = MiscUtils::GetCurrentTime();
+		if (now >= endTime) {
+			// DPRINTF("timeout in TransmitBuf(%d)", length);
+			return EATARISIO_COMMAND_TIMEOUT;
+		}
+		MiscUtils::TimestampToTimeval(endTime - now, tv);
+		sel = select(fDeviceFileNo + 1, NULL, &write_set, NULL, &tv);
+		if (sel < 0) {
+			// DPRINTF("select failed in TransmitBuf(%d): ", length, errno);
+			return EATARISIO_UNKNOWN_ERROR;
+		}
+		if (sel == 1) {
+			cnt = write(fDeviceFileNo, buf + pos, length - pos);
+			if (cnt < 0) {
+				// DPRINTF("write failed in TransmitBuf(%d): ", length, errno);
+				return EATARISIO_UNKNOWN_ERROR;
+			}
+			pos += cnt;
+		}
+	}
+	// DPRINTF("TransmitBuf(%d) OK", length);
+	tcdrain(fDeviceFileNo);
+
 	if (waitTransmit) {
 		WaitTransmitComplete();
 	}
-	return ret;
+
+	return 0;
 }
 
-int UserspaceSIOWrapper::TransmitBuf(unsigned int length)
+int UserspaceSIOWrapper::TransmitBuf(unsigned int length, bool waitTransmit)
 {
-	return TransmitBuf(fBuf, length);
+	return TransmitBuf(fBuf, length, waitTransmit);
+}
+
+
+int UserspaceSIOWrapper::TransmitByte(uint8_t byte, bool waitTransmit)
+{
+	int ret = TransmitBuf(&byte, 1, waitTransmit);
+	return ret;
 }
 
 int UserspaceSIOWrapper::ReceiveBuf(uint8_t* buf, unsigned int length, unsigned int additionalTimeout)
@@ -520,25 +590,22 @@ int UserspaceSIOWrapper::ReceiveBuf(uint8_t* buf, unsigned int length, unsigned 
 		FD_SET(fDeviceFileNo, &read_set);
 		now = MiscUtils::GetCurrentTime();
 		if (now >= endTime) {
-			fLastResult = EATARISIO_COMMAND_TIMEOUT;
-			return fLastResult;
+			return EATARISIO_COMMAND_TIMEOUT;
 		}
 		MiscUtils::TimestampToTimeval(endTime - now, tv);
 		sel = select(fDeviceFileNo + 1, &read_set, NULL, NULL, &tv);
 		if (sel < 0) {
-			fLastResult = EATARISIO_UNKNOWN_ERROR;
-			return fLastResult;
+			return EATARISIO_UNKNOWN_ERROR;
 		}
 		if (sel == 1) {
 			cnt = read(fDeviceFileNo, buf + pos, length - pos);
 			if (cnt < 0) {
-				return false;
+				return EATARISIO_UNKNOWN_ERROR;
 			}
 			pos += cnt;
 		}
 	}
-	fLastResult = 0;
-	return fLastResult;
+	return 0;
 }
 
 int UserspaceSIOWrapper::ReceiveBuf(unsigned int length, unsigned int additionalTimeout)
@@ -546,40 +613,58 @@ int UserspaceSIOWrapper::ReceiveBuf(unsigned int length, unsigned int additional
 	return ReceiveBuf(fBuf, length, additionalTimeout);
 }
 
+int UserspaceSIOWrapper::ReceiveByte(unsigned int additionalTimeout)
+{
+	uint8_t byte;
+	int ret;
+	ret = ReceiveBuf(&byte, 1, additionalTimeout);
+	if (ret) {
+		return -ret;
+	} else {
+		return byte;
+	}
+}
+
 int UserspaceSIOWrapper::SendCommandACK()
 {
 	MicroSleep(eDelayT2);
-	return TransmitByte('A', true);
+	fLastResult = TransmitByte(cAckByte, true);
+	return fLastResult;
 }
 
 int UserspaceSIOWrapper::SendCommandNAK()
 {
 	MicroSleep(eDelayT2);
-	return TransmitByte('N');
+	fLastResult = TransmitByte(cNakByte);
+	return fLastResult;
 }
 
 int UserspaceSIOWrapper::SendDataACK()
 {
 	MicroSleep(eDelayT4);
-	return TransmitByte('A', true);
+	fLastResult = TransmitByte(cAckByte, true);
+	return fLastResult;
 }
 
 int UserspaceSIOWrapper::SendDataNAK()
 {
 	MicroSleep(eDelayT4);
-	return TransmitByte('N');
+	fLastResult = TransmitByte(cNakByte);
+	return fLastResult;
 }
 
 int UserspaceSIOWrapper::SendComplete()
 {
 	MicroSleep(eDelayT5);
-	return TransmitByte('C');
+	fLastResult = TransmitByte(cCompleteByte);
+	return fLastResult;
 }
 
 int UserspaceSIOWrapper::SendError()
 {
 	MicroSleep(eDelayT5);
-	return TransmitByte('E');
+	fLastResult = TransmitByte(cErrorByte);
+	return fLastResult;
 }
 
 int UserspaceSIOWrapper::SendDataFrame(uint8_t* buf, unsigned int length)
@@ -594,7 +679,8 @@ int UserspaceSIOWrapper::SendDataFrame(uint8_t* buf, unsigned int length)
 	WaitTransmitComplete();
 
 	MicroSleep(eDataDelay);
-	return TransmitBuf(fBuf, length+1);
+	fLastResult = TransmitBuf(fBuf, length+1);
+	return fLastResult;
 }
 
 int UserspaceSIOWrapper::ReceiveDataFrame(uint8_t* buf, unsigned int length)
@@ -617,12 +703,14 @@ int UserspaceSIOWrapper::ReceiveDataFrame(uint8_t* buf, unsigned int length)
 
 int UserspaceSIOWrapper::SendRawFrame(uint8_t* buf, unsigned int length)
 {
-	return TransmitBuf(buf, length);
+	fLastResult = TransmitBuf(buf, length);
+	return fLastResult;
 }
 
 int UserspaceSIOWrapper::ReceiveRawFrame(uint8_t* buf, unsigned int length)
 {
-	return ReceiveBuf(buf, length, eDelayT3);
+	fLastResult = ReceiveBuf(buf, length, eDelayT3);
+	return fLastResult;
 }
 
 int UserspaceSIOWrapper::SendCommandACKXF551()
@@ -678,6 +766,14 @@ int UserspaceSIOWrapper::SetBaudrate(unsigned int baudrate, bool now)
 		fBaudrate = baudrate;
 	}
 	return fLastResult;
+}
+
+int UserspaceSIOWrapper::SetBaudrateIfDifferent(unsigned int baudrate, bool now)
+{
+	if (fBaudrate == baudrate) {
+		return 0;
+	}
+	return SetBaudrate(baudrate, now);
 }
 
 void UserspaceSIOWrapper::TrySwitchbaud()
@@ -822,4 +918,165 @@ unsigned int UserspaceSIOWrapper::GetBaudrateForPokeyDivisor(unsigned int diviso
 	default:
 		return ATARISIO_ATARI_FREQUENCY_PAL / (2 * (divisor + 7));
 	}
+}
+
+int UserspaceSIOWrapper::SendCommandFrame(Ext_SIO_parameters& params)
+{
+	int retry = 0;
+	int ret = 0;
+
+	fCmdBuf[0] = params.device + params.unit - 1;
+	fCmdBuf[1] = params.command;
+	fCmdBuf[2] = params.aux1;
+	fCmdBuf[3] = params.aux2;
+	fCmdBuf[4] = CalculateChecksum(fCmdBuf, 4);
+
+	while (retry < eCommandFrameRetries) {
+		if (params.highspeed_mode == ATARISIO_EXTSIO_SPEED_ULTRA) {
+			SetBaudrateIfDifferent(fHighspeedBaudrate);
+		} else {
+			SetBaudrateIfDifferent(fStandardBaudrate);
+		}
+		tcflush(fDeviceFileNo, TCIOFLUSH);
+
+		UTRACE_CMD_STATE("asserting command line");
+		SetCommandLine(true);
+
+		MicroSleep(eDelayT0);
+
+		ret = TransmitBuf(fCmdBuf, eCmdRawLength, true);
+
+		if (ret) {
+			SetCommandLine(false);
+			MilliSleep(20);
+			goto next_retry;
+		}
+
+		MicroSleep(eDelayT1);
+
+		UTRACE_CMD_STATE("de-asserting command line");
+		SetCommandLine(false);
+
+		ret = ReceiveByte(eDelayT2Max);
+		if (ret < 0) {
+			UTRACE_CMD_ERROR("waiting for command ACK returned %d\n", ret);
+			ret = -ret;
+			goto next_retry;
+		}
+
+		UTRACE_CMD_DATA("got command ACK char %02x", ret);
+		if (ret == cAckByte) {
+			ret = 0;
+			break;
+		}
+
+		if (ret == cNakByte) {
+			ret = EATARISIO_COMMAND_NAK;
+		} else {
+			ret = EATARISIO_UNKNOWN_ERROR;
+		}
+
+	next_retry:
+		retry++;
+
+	}
+
+	return ret;
+}
+
+int UserspaceSIOWrapper::InternalExtSIO(Ext_SIO_parameters& params)
+{
+	int ret = 0;
+	int retry = 0;
+
+	while (retry < eSIORetries) {
+		ret = SendCommandFrame(params);
+		UTRACE_1050_2_PC("SendCommandFrame returned %d", ret);
+		if (ret) {
+			goto retry_sio;
+		}
+
+		// send data
+		if ((params.data_length > 0) &&
+		    (params.direction & ATARISIO_EXTSIO_DIR_SEND)) {
+			memcpy(fBuf, params.data_buffer, params.data_length);
+			fBuf[params.data_length] = CalculateChecksum(fBuf, params.data_length);
+			MicroSleep(eDelayT3Min);
+			ret = TransmitBuf(fBuf, params.data_length+1, true);
+			UTRACE_1050_2_PC("Sending %d data bytes returned %d",
+				params.data_length, ret);
+			if (ret) {
+				goto retry_sio;
+			}
+
+			ret = ReceiveByte(eDelayT4Max);
+			UTRACE_1050_2_PC("Receive data ACK returned %d", ret);
+			if (ret < 0) {
+				ret = -ret;
+				goto retry_sio;
+			}
+			switch (ret) {
+			case cAckByte:
+				ret = 0;
+				break;
+			case cNakByte:
+				ret = EATARISIO_DATA_NAK;
+				goto retry_sio;
+			default:
+				ret = EATARISIO_DATA_NAK;
+				goto retry_sio;
+			}
+		}
+
+		// wait for complete
+		ret = ReceiveByte(params.timeout*1000*1000);
+		UTRACE_1050_2_PC("Receive command complete returned %d", ret);
+
+		if (ret < 0) {
+			ret = -ret;
+			goto retry_sio;
+		}
+
+		switch (ret) {
+		case cAckByte:
+			UTRACE_1050_2_PC("got ACK instead of complete");
+			// fallthrough
+		case cCompleteByte:
+			ret = 0;
+			break;
+		case cErrorByte:
+		default:
+			ret = EATARISIO_COMMAND_COMPLETE_ERROR;
+			goto retry_sio;
+		}
+
+		// receive data
+		if ((params.data_length > 0) &&
+		    (params.direction & ATARISIO_EXTSIO_DIR_RECV)) {
+			ret = ReceiveBuf(params.data_length+1, 10000);
+			UTRACE_1050_2_PC("Receiving %d data bytes returned %d",
+				params.data_length, ret);
+
+			if (ret) {
+				goto retry_sio;
+			}
+			memcpy(params.data_buffer, fBuf, params.data_length);
+
+			if (BufChecksumOK(params.data_length)) {
+				ret = 0;
+			} else {
+				UTRACE_1050_2_PC("Received data checksum error");
+				ret = EATARISIO_DATA_NAK;
+			}
+		}
+
+		if (ret == 0) {
+			break;
+		}
+retry_sio:
+		MilliSleep(20);
+		retry++;
+	}
+
+	return ret;
 }

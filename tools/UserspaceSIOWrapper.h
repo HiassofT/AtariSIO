@@ -118,20 +118,30 @@ private:
 	bool InitSerialDevice();
 	bool ClearControlLines();
 
+	bool Set1050ToPCMode(bool prosystem);
+	bool SetCommandLine(bool asserted);
+
+	int SendCommandFrame(Ext_SIO_parameters& params);
+
+	int SetBaudrateIfDifferent(unsigned int baudrate, bool now = true);
+
 	uint8_t CalculateChecksum(uint8_t* buf, unsigned int length);
 	bool CmdBufChecksumOK();
 	bool BufChecksumOK(unsigned int length);
 
 	MiscUtils::TimestampType TimeForBytes(unsigned int length);
 	
-	int TransmitBuf(uint8_t* buf, unsigned int length);
-	int TransmitBuf(unsigned int length);
+	int TransmitBuf(uint8_t* buf, unsigned int length, bool waitTransmit = false);
+	int TransmitBuf(unsigned int length, bool waitTransmit = false);
 	int TransmitByte(uint8_t byte, bool waitTransmit = false);
 
 	void WaitTransmitComplete();
 
 	int ReceiveBuf(uint8_t* buf, unsigned int length, unsigned int additionalTimeout = 0);
 	int ReceiveBuf(unsigned int length, unsigned int additionalTimeout = 0);
+
+	// < 0 means error
+	int ReceiveByte(unsigned int additionalTimeout = 0);
 
 	bool NanoSleep(unsigned long nsec);
 
@@ -140,9 +150,18 @@ private:
 		return NanoSleep(usec * 1000);
 	}
 
+	inline bool MilliSleep(unsigned long usec)
+	{
+		return NanoSleep(usec * 1000 * 1000);
+	}
+
 	void TrySwitchbaud();
 
+	int InternalExtSIO(Ext_SIO_parameters& params);
+
 	int fCommandLineMask;
+	int fCommandLineLow;
+	int fCommandLineHigh;
 	unsigned int fTapeBaudrate;
 	unsigned int fBaudrate;
 	bool fDoAutobaud;
@@ -151,9 +170,14 @@ private:
 	struct termios2 fOriginalTermios;
 
 	enum {
+		eDelayT0 = 1000,
+		eDelayT1 = 850,
 		eDelayT2 = 100,
+		eDelayT2Max = 20000,
+		eDelayT3Min = 1000,
 		eDelayT3 = 2000,
 		eDelayT4 = 1000,
+		eDelayT4Max = 16000,
 		eDelayT5 = 300,
 		eDataDelay = 150 // between complete and data frame
 	};
@@ -179,12 +203,26 @@ private:
 		eCommandHardError
 	};
 
+	static const uint8_t cAckByte = 0x41;
+	static const uint8_t cNakByte = 0x4e;
+	static const uint8_t cCompleteByte = 0x43;
+	static const uint8_t cErrorByte = 0x45;
+
+
 	ECommandReceiveState fCommandReceiveState;
 	int fCommandReceiveCount;
 	bool fLastCommandOK;
 
 	MiscUtils::TimestampType fCommandFrameTimestamp;
 	MiscUtils::TimestampType fCommandFrameTimeout;
+
+	enum {
+		eCommandFrameRetries = 13
+	};
+
+	enum {
+		eSIORetries = 2
+	};
 
 };
 
