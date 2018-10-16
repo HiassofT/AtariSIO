@@ -207,5 +207,15 @@ AtariSIO changelog:
 2018-10-09:
   - atariserver: add experimental userspace SIO support for USB
     serial adapters. This must be enabled manually at build time with
-    "make ENABLE_USERSPACE=1"
+    "make ENABLE_USERSPACE=1".
+    Only standard SIO and ultra speed protocols are supported.
 
+2018-10-16:
+  - atarisio: add support for PCIe based 16C950 cards
+  - atarisio: add ioctl to get optimal baud rates for given pokey divisor
+  - atarisio: refactor baud rate configuration, add optimized baudrates
+    for 16C950 cards
+  - atariserver: implement 1050-2-PC mode in userspace SIO driver
+  - atariserver: implement "no command line" configuration in userspace
+    SIO driver
+  - atariserver: enable userspace SIO driver by default
