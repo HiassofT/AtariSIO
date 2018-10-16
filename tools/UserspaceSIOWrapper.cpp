@@ -1,7 +1,7 @@
 /*
    UserspaceSIOWrapper.cpp - a simple wrapper around the IOCTLs offered by atarisio
 
-   Copyright (C) 2002-2004 Matthias Reichl <hias@horus.com>
+   Copyright (C) 2018 Matthias Reichl <hias@horus.com>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
