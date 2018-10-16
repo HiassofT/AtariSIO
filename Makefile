@@ -109,7 +109,7 @@ KERNEL_CC ?= $(CC)
 # very limited functionality and isn't fully tested
 ########################################################################
 
-ENABLE_USERSPACE ?= 0
+ENABLE_USERSPACE=1
 
 ########################################################################
 # don't change anything below here
