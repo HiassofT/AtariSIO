@@ -473,6 +473,8 @@ void CursesFrontend::DisplayStatusLine()
 		waddstr(fStatusLineWindow, "DSR"); break;
 	case SIOWrapper::eCommandLine_CTS:
 		waddstr(fStatusLineWindow, "CTS"); break;
+	case SIOWrapper::eCommandLine_None:
+		waddstr(fStatusLineWindow, "None"); break;
 	default:
 		waddstr(fStatusLineWindow, "???"); break;
 	}
@@ -2334,7 +2336,7 @@ void CursesFrontend::ProcessSetCableType()
 {
 	werase(fBottomLineWindow);
 	wmove(fBottomLineWindow, 0, 0);
-	waddstr(fBottomLineWindow,"'r'=RING, 'd'=DSR, 'c'=CTS, 'q'=abort");
+	waddstr(fBottomLineWindow,"'r'=RING, 'd'=DSR, 'c'=CTS, 'n'=none, 'q'=abort");
 	ClearInputLine();
 	waddstr(fInputLineWindow, "set cable type: ");
 	ShowCursor(true);
@@ -2349,7 +2351,8 @@ void CursesFrontend::ProcessSetCableType()
 		}
 		if ( (ch == 'R') || (ch == 'r') ||
 		     (ch == 'D') || (ch == 'd') ||
-		     (ch == 'C') || (ch == 'c') ) {
+		     (ch == 'C') || (ch == 'c') ||
+		     (ch == 'N') || (ch == 'n') ) {
 			break;
 		}
 		beep();
@@ -2370,6 +2373,11 @@ void CursesFrontend::ProcessSetCableType()
 	case 'c':
 		wprintw(fInputLineWindow, "CTS");
 		fDeviceManager->SetSioServerMode(SIOWrapper::eCommandLine_CTS);
+		break;
+	case 'N':
+	case 'n':
+		wprintw(fInputLineWindow, "none");
+		fDeviceManager->SetSioServerMode(SIOWrapper::eCommandLine_None);
 		break;
 	}
 

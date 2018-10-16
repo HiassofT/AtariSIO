@@ -546,6 +546,10 @@ int main(int argc, char**argv)
 				manager->SetSioServerMode(SIOWrapper::eCommandLine_CTS);
 				printf("using alternative SIO2PC/nullmodem cable type (command=CTS)\n");
 				break;
+			case 'N':
+				manager->SetSioServerMode(SIOWrapper::eCommandLine_None);
+				ALOG("using SIO2PC cable without command line");
+				break;
 			case 'a':
 				auto_status_update = false;
 				break;
@@ -979,6 +983,7 @@ usage:
 	printf("-a          disable auto status update\n");
 	printf("-c          use alternative SIO2PC cable (command=DSR)\n");
 	printf("-C          use alternative SIO2PC/nullmodem cable (command=CTS)\n");
+	printf("-N          use SIO2PC cable without command line connected\n");
 	printf("-p          write protect the next image\n");
 	printf("-s          slow mode - disable highspeed SIO\n");
 	printf("-S          high speed SIO mode with pauses\n");

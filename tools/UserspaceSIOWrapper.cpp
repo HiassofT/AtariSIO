@@ -259,6 +259,7 @@ bool UserspaceSIOWrapper::ClearControlLines()
 int UserspaceSIOWrapper::SetSIOServerMode(ESIOServerCommandLine cmdLine)
 {
 	fLastResult = 0;
+	fHaveCommandLine = true;
 	switch (cmdLine) {
 	case eCommandLine_RI:
 		fCommandLineMask = TIOCM_RI;
@@ -269,12 +270,17 @@ int UserspaceSIOWrapper::SetSIOServerMode(ESIOServerCommandLine cmdLine)
 	case eCommandLine_CTS:
 		fCommandLineMask = TIOCM_CTS;
 		break;
+	case eCommandLine_None:
+		fHaveCommandLine = false;
+		break;
 	default:
+		fHaveCommandLine = false;
 		fLastResult = 1;
 	}
 
 	// clear DTR and RTS to make autoswitching Atarimax interface work
 	ClearControlLines();
+	SetWaitCommandIdleState();
 
 	return fLastResult;
 }
@@ -303,6 +309,58 @@ int UserspaceSIOWrapper::ExtSIO(Ext_SIO_parameters& params)
 	return fLastResult;
 }
 
+void UserspaceSIOWrapper::SetWaitCommandIdleState()
+{
+	UTRACE_CMD_STATE("State WaitCommandIdle, cmd = %d", fHaveCommandLine);
+	fCommandReceiveState = eWaitCommandIdle;
+	if (!fHaveCommandLine) {
+		// wait for 15msec idle before trying to fetch a command rame
+		fCommandFrameTimeout = MiscUtils::GetCurrentTimePlusUsec(eNoCommandLineIdleTimeout);
+	}
+}
+
+void UserspaceSIOWrapper::SetWaitCommandAssertState()
+{
+	UTRACE_CMD_STATE("State WaitCommandAssert, cmd = %d", fHaveCommandLine);
+	fCommandReceiveState = eWaitCommandAssert;
+}
+
+void UserspaceSIOWrapper::SetReceiveCommandState()
+{
+	UTRACE_CMD_STATE("State ReceiveCommandFrame, cmd = %d", fHaveCommandLine);
+	fCommandReceiveState = eReceiveCommandFrame;
+	fCommandReceiveCount = 0;
+	fCommandFrameTimeout = MiscUtils::GetCurrentTimePlusMsec(eCommandFrameReceiveTimeout);
+}
+
+void UserspaceSIOWrapper::SetWaitCommandDeassertState()
+{
+	UTRACE_CMD_STATE("State WaitCommandDeassert, cmd = %d", fHaveCommandLine);
+	if (!fHaveCommandLine) {
+		fCommandFrameTimeout = MiscUtils::GetCurrentTimePlusUsec(eNoCommandLineDeassertDelay);
+	}
+	fCommandReceiveState = eWaitCommandDeassert;
+}
+
+void UserspaceSIOWrapper::SetCommandOKState()
+{
+	UTRACE_CMD_STATE("State CommandOK, cmd = %d", fHaveCommandLine);
+	fCommandReceiveState = eCommandOK;
+	fLastCommandOK = true;
+}
+
+void UserspaceSIOWrapper::SetCommandSoftErrorState()
+{
+	UTRACE_CMD_STATE("State CommandSoftError, cmd = %d", fHaveCommandLine);
+	fCommandReceiveState = eCommandSoftError;
+}
+
+void UserspaceSIOWrapper::SetCommandHardErrorState()
+{
+	UTRACE_CMD_STATE("State CommandHardError, cmd = %d", fHaveCommandLine);
+	fCommandReceiveState = eCommandHardError;
+}
+
 int UserspaceSIOWrapper::WaitForCommandFrame(int otherReadPollDevice)
 {
 	fd_set read_set;
@@ -310,17 +368,24 @@ int UserspaceSIOWrapper::WaitForCommandFrame(int otherReadPollDevice)
 	int maxfd;
 	int flags;
 	int sel;
+	int cnt;
 	MiscUtils::TimestampType printerTimeout = MiscUtils::GetCurrentTimePlusSec(15);
+	MiscUtils::TimestampType now;
 
 	while (true) {
+		now = MiscUtils::GetCurrentTime();
+
 		tv.tv_sec = 0;
 		tv.tv_usec = 100;
 
 		FD_ZERO(&read_set);
-		maxfd = -1;
+		FD_SET(fDeviceFileNo, &read_set);
+			maxfd = fDeviceFileNo;
 
 		if (otherReadPollDevice >= 0) {
-			maxfd = otherReadPollDevice;
+			if (otherReadPollDevice > maxfd) {
+				maxfd = otherReadPollDevice;
+			}
 			FD_SET(otherReadPollDevice, &read_set);
 		}
 
@@ -328,7 +393,7 @@ int UserspaceSIOWrapper::WaitForCommandFrame(int otherReadPollDevice)
 		case eCommandSoftError:
 			if (fLastCommandOK) {
 				fLastCommandOK = false;
-				fCommandReceiveState = eWaitCommandIdle;
+				SetWaitCommandIdleState();
 				printerTimeout = MiscUtils::GetCurrentTimePlusSec(15);
 				continue;
 			}
@@ -336,123 +401,146 @@ int UserspaceSIOWrapper::WaitForCommandFrame(int otherReadPollDevice)
 
 		case eCommandHardError:
 			fLastCommandOK = false;
-			fCommandReceiveState = eWaitCommandIdle;
+			SetWaitCommandIdleState();
 			printerTimeout = MiscUtils::GetCurrentTimePlusSec(15);
 			TrySwitchbaud();
 			continue;
 			
 		case eWaitCommandIdle:
-			tcflush(fDeviceFileNo, TCIFLUSH);
-			if (ioctl(fDeviceFileNo, TIOCMGET, &flags)) {
-				AERROR("failed to read modem line status");
-				break;
-			}
-			if (!(flags & fCommandLineMask)) {
-				UTRACE_CMD_STATE("eWaitCommandIdle -> eWaitCommandAssert");
-				fCommandReceiveState = eWaitCommandAssert;
-				continue;
+			if (fHaveCommandLine) {
+				if (ioctl(fDeviceFileNo, TIOCMGET, &flags)) {
+					AERROR("failed to read modem line status");
+					break;
+				}
+				if (!(flags & fCommandLineMask)) {
+					SetWaitCommandAssertState();
+					continue;
+				}
+			} else {
+				if (now > fCommandFrameTimeout) {
+					SetWaitCommandAssertState();
+					continue;
+				}
+				tv.tv_usec = 1000;
 			}
 			break;
 
 		case eWaitCommandAssert:
-			if (ioctl(fDeviceFileNo, TIOCMGET, &flags)) {
-				AERROR("failed to read modem line status");
-				break;
-			}
-			if (flags & fCommandLineMask) {
-				UTRACE_CMD_STATE("eWaitCommandAssert -> eReceiveCommandFrame");
-				fCommandReceiveState = eReceiveCommandFrame;
-				fCommandReceiveCount = 0;
-				fCommandFrameTimeout = MiscUtils::GetCurrentTimePlusMsec(15);
-				continue;
+			if (fHaveCommandLine) {
+				if (ioctl(fDeviceFileNo, TIOCMGET, &flags)) {
+					AERROR("failed to read modem line status");
+					break;
+				}
+				if (flags & fCommandLineMask) {
+					UTRACE_CMD_STATE("eWaitCommandAssert -> eReceiveCommandFrame");
+					SetReceiveCommandState();
+					continue;
+				}
 			} else {
-				tcflush(fDeviceFileNo, TCIFLUSH);
+				tv.tv_usec = 1000;
 			}
 			break;
 
 		case eReceiveCommandFrame:
-			tv.tv_usec = 1000;
-			FD_SET(fDeviceFileNo, &read_set);
-			if (fDeviceFileNo > maxfd) {
-				maxfd = fDeviceFileNo;
-			}
-			break;
-		case eWaitCommandDeassert:
-			if (ioctl(fDeviceFileNo, TIOCMGET, &flags)) {
-				AERROR("failed to read modem line status");
-				break;
-			}
-			if (!(flags & fCommandLineMask)) {
-				UTRACE_CMD_STATE("eWaitCommandDeassert -> eCommandOK");
-				fCommandReceiveState = eCommandOK;
-				fLastCommandOK = true;
-				return 0;
-			}
-			break;
-		case eCommandOK:
-			UTRACE_CMD_STATE("eCommandOK -> eWaitCommandIdle");
-			fCommandReceiveState = eWaitCommandIdle;
-			continue;
-		}
-
-		sel = select(maxfd + 1, &read_set, NULL, NULL, &tv);
-
-		if (sel < 0) {
-			// error
-			fCommandReceiveState = eCommandHardError;
-			return 2;
-		}
-
-		if (sel > 0) {
-			if (FD_ISSET(fDeviceFileNo, &read_set)) {
-				int cnt = read(fDeviceFileNo, fCmdBuf + fCommandReceiveCount, 10);
-				if (cnt < 0) {
-					AERROR("failed to read command frame data");
-					fCommandReceiveState = eCommandHardError;
-					continue;
-				}
-				fCommandReceiveCount += cnt;
-				UTRACE_CMD_DATA("got %d command frame bytes (%d total)",
-					cnt, fCommandReceiveCount
-				);
-			}
-			if (otherReadPollDevice >= 0 && FD_ISSET(otherReadPollDevice, &read_set)) {
-				return 1;
-			}
-		}
-
-		MiscUtils::TimestampType now = MiscUtils::GetCurrentTime();
-
-		if (fCommandReceiveState == eReceiveCommandFrame) {
 			if (fCommandReceiveCount == eCmdRawLength) {
 				if (CmdBufChecksumOK()) {
-					UTRACE_CMD_STATE("eReceiveCommandFrame -> eWaitCommandDeassert");
 					UTRACE_CMD_BUF_OK;
-					fCommandReceiveState = eWaitCommandDeassert;
+					SetWaitCommandDeassertState();
 					continue;
 				} else {
 					UTRACE_CMD_ERROR("command frame checksum error");
 					UTRACE_CMD_BUF_ERROR;
-					fCommandReceiveState = eCommandSoftError;
+					SetCommandSoftErrorState();
 					continue;
 				}
 			}
 
 			if (fCommandReceiveCount > eCmdRawLength) {
 				UTRACE_CMD_ERROR("too many command frame data bytes (%d)", fCommandReceiveCount);
-				fCommandReceiveState = eCommandHardError;
+				SetCommandHardErrorState();
 				continue;
 			}
 
-			if (now >= fCommandFrameTimeout) {
+			if (now > fCommandFrameTimeout) {
 				UTRACE_CMD_ERROR("receive timeout expired, got %d bytes", fCommandReceiveCount);
 				UTRACE_CMD_BUF_ERROR;
 				if (fCommandReceiveCount < 4) {
-					fCommandReceiveState = eCommandHardError;
+					SetCommandSoftErrorState();
 				} else {
-					fCommandReceiveState = eCommandSoftError;
+					SetCommandHardErrorState();
 				}
 				continue;
+			}
+
+			tv.tv_usec = 1000;
+			break;
+		case eWaitCommandDeassert:
+			if (fHaveCommandLine) {
+				if (ioctl(fDeviceFileNo, TIOCMGET, &flags)) {
+					AERROR("failed to read modem line status");
+					break;
+				}
+				if (!(flags & fCommandLineMask)) {
+					UTRACE_CMD_STATE("eWaitCommandDeassert -> eCommandOK");
+					SetCommandOKState();
+					return 0;
+				}
+			} else {
+				if (now > fCommandFrameTimeout) {
+					UTRACE_CMD_STATE("eWaitCommandDeassert (none) -> eCommandOK");
+					SetCommandOKState();
+					return 0;
+				}
+			}
+			break;
+		case eCommandOK:
+			SetWaitCommandIdleState();
+			continue;
+		}
+
+		sel = select(maxfd + 1, &read_set, NULL, NULL, &tv);
+
+		if (sel < 0) {
+			SetCommandHardErrorState();
+			return 2;
+		}
+
+		if (sel > 0) {
+			if (FD_ISSET(fDeviceFileNo, &read_set)) {
+				switch (fCommandReceiveState) {
+				case eReceiveCommandFrame:
+					cnt = read(fDeviceFileNo, fCmdBuf + fCommandReceiveCount, 10);
+					if (cnt < 0) {
+						AERROR("failed to read command frame data");
+						SetCommandHardErrorState();
+						continue;
+					}
+					fCommandReceiveCount += cnt;
+					UTRACE_CMD_DATA("got %d command frame bytes (%d total)",
+						cnt, fCommandReceiveCount
+					);
+					break;
+				case eWaitCommandIdle:
+					tcflush(fDeviceFileNo, TCIFLUSH);
+					if (!fHaveCommandLine) {
+						fCommandFrameTimeout = MiscUtils::GetCurrentTimePlusUsec(eNoCommandLineIdleTimeout);
+					}
+					break;
+				case eWaitCommandAssert:
+					if (fHaveCommandLine) {
+						tcflush(fDeviceFileNo, TCIFLUSH);
+					} else {
+						SetReceiveCommandState();
+					}
+					break;
+				default:
+					AERROR("unexpected input in state %d, flushing it", fCommandReceiveState);
+					SetCommandHardErrorState();
+					break;
+				}
+			}
+			if (otherReadPollDevice >= 0 && FD_ISSET(otherReadPollDevice, &read_set)) {
+				return 1;
 			}
 		}
 
@@ -471,7 +559,7 @@ int UserspaceSIOWrapper::GetCommandFrame(SIO_command_frame& frame)
 		frame.aux2 = fCmdBuf[3];
 		frame.reception_timestamp = fCommandFrameTimestamp;
 		frame.missed_count = 0;
-		fCommandReceiveState = eWaitCommandAssert;
+		SetWaitCommandAssertState();
 		return 0;
 	} else {
 		return ENOMSG;

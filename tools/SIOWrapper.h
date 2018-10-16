@@ -49,7 +49,8 @@ public:
 	enum ESIOServerCommandLine {
 		eCommandLine_RI = 0,
 		eCommandLine_DSR = 1,
-		eCommandLine_CTS = 2
+		eCommandLine_CTS = 2,
+		eCommandLine_None = 3
 	};
 	// false sets default cable type (command connected to RI),
 	// true sets alternative type (command connected to DSR).

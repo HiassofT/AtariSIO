@@ -172,6 +172,10 @@ static void process_args(RCPtr<DeviceManager>& manager, CursesFrontend* frontend
 					manager->SetSioServerMode(SIOWrapper::eCommandLine_CTS);
 					ALOG("using alternative SIO2PC/nullmodem cable type (command=CTS)");
 					break;
+				case 'N':
+					manager->SetSioServerMode(SIOWrapper::eCommandLine_None);
+					ALOG("using SIO2PC cable without command line");
+					break;
 				case 'F':
 					manager->EnableStrictFormatChecking(true);
 					ALOG("disable non-standard disk formats\n");
@@ -404,12 +408,13 @@ int main(int argc, char** argv)
 	if (wantHelp) {
 		printf("atariserver %s\n", VERSION_STRING);
 		printf("(c) 2002-2018 Matthias Reichl <hias@horus.com>\n");
-		printf("usage: [-f device] [-cChmsStX] [-o file] [-P c|l|r file]\n");
+		printf("usage: [-f device] [-cChmNsStX] [-o file] [-P c|l|r file]\n");
 		printf("       [ [-12345678] [-p] (-V dens dir)|file  ... ]\n");
 		printf("-h            display help\n");
 		printf("-f device     use alternative AtariSIO device (default: /dev/atarisio0)\n");
 		printf("-c            use alternative SIO2PC cable (command=DSR)\n");
 		printf("-C            use alternative SIO2PC/nullmodem cable (command=CTS)\n");
+		printf("-N            use SIO2PC cable without command line connected\n");
 		printf("-F            disable non-standard disk formats\n");
 		printf("-m            monochrome mode\n");
 		printf("-o file       save trace output to <file>\n");

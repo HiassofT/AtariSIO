@@ -159,6 +159,7 @@ private:
 
 	int InternalExtSIO(Ext_SIO_parameters& params);
 
+	bool fHaveCommandLine;
 	int fCommandLineMask;
 	int fCommandLineLow;
 	int fCommandLineHigh;
@@ -201,15 +202,28 @@ private:
 		eCommandOK,
 		eCommandSoftError,
 		eCommandHardError
+	} fCommandReceiveState;
+
+	void SetWaitCommandIdleState();
+	void SetWaitCommandAssertState();
+	void SetReceiveCommandState();
+	void SetWaitCommandDeassertState();
+	void SetCommandOKState();
+	void SetCommandSoftErrorState();
+	void SetCommandHardErrorState();
+
+	enum {
+		eCommandFrameReceiveTimeout = 15000,
+		eNoCommandLineIdleTimeout = 15000,
+		eNoCommandLineDeassertDelay = 3000
 	};
+
 
 	static const uint8_t cAckByte = 0x41;
 	static const uint8_t cNakByte = 0x4e;
 	static const uint8_t cCompleteByte = 0x43;
 	static const uint8_t cErrorByte = 0x45;
 
-
-	ECommandReceiveState fCommandReceiveState;
 	int fCommandReceiveCount;
 	bool fLastCommandOK;
 
