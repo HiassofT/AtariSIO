@@ -410,7 +410,7 @@ int UserspaceSIOWrapper::WaitForCommandFrame(int otherReadPollDevice)
 			if (fLastCommandOK) {
 				fLastCommandOK = false;
 				SetWaitCommandIdleState();
-				printerTimeout = MiscUtils::GetCurrentTimePlusSec(15);
+				printerTimeout = now + MiscUtils::SecToTimestamp(15);
 				continue;
 			}
 			// fallthrough
@@ -418,7 +418,7 @@ int UserspaceSIOWrapper::WaitForCommandFrame(int otherReadPollDevice)
 		case eCommandHardError:
 			fLastCommandOK = false;
 			SetWaitCommandIdleState();
-			printerTimeout = MiscUtils::GetCurrentTimePlusSec(15);
+			printerTimeout = now + MiscUtils::SecToTimestamp(15);
 			TrySwitchbaud();
 			continue;
 			
