@@ -21,6 +21,15 @@
 #include "FileTracer.h"
 #include "Error.h"
 
+//#define TRACE_TIMESTAMPS
+
+#ifdef TRACE_TIMESTAMPS
+#include "MiscUtils.h"
+static MiscUtils::TimestampType lastTraceTimestamp;
+static MiscUtils::TimestampType currentTraceTimestamp;
+static char traceTimestampString[100];
+#endif
+
 FileTracer::FileTracer(const char* filename)
 	: fNeedCloseFile(true)
 {
@@ -28,12 +37,18 @@ FileTracer::FileTracer(const char* filename)
 	if (fFile == 0) {
 		throw FileOpenError(filename);
 	}
+#ifdef TRACE_TIMESTAMPS
+	lastTraceTimestamp = MiscUtils::GetCurrentTime();
+#endif
 }
 
 FileTracer::FileTracer(FILE* file)
 	: fNeedCloseFile(false),
 	  fFile(file)
 {
+#ifdef TRACE_TIMESTAMPS
+	lastTraceTimestamp = MiscUtils::GetCurrentTime();
+#endif
 }
 
 FileTracer::~FileTracer()
@@ -41,4 +56,16 @@ FileTracer::~FileTracer()
 	if (fNeedCloseFile) {
 		fclose(fFile);
 	}
+}
+
+void FileTracer::ReallyStartTraceLine()
+{
+#ifdef TRACE_TIMESTAMPS
+	currentTraceTimestamp = MiscUtils::GetCurrentTime();
+	snprintf(traceTimestampString, 100, "[ %llu / +%10llu ] ", 
+		currentTraceTimestamp,
+		currentTraceTimestamp - lastTraceTimestamp);
+	lastTraceTimestamp = currentTraceTimestamp;
+	AddString(traceTimestampString);
+#endif
 }

@@ -43,6 +43,8 @@ public:
 	}
 
 protected:
+	virtual void ReallyStartTraceLine();
+
 	virtual void ReallyEndTraceLine()
 	{
 		fputs("\n", fFile);
