@@ -338,7 +338,6 @@ static void SetDefaultTraceLevels(const RCPtr<AbstractTracer>& tracer)
 	sioTracer->SetTraceGroup(SIOTracer::eTraceInfo, true, tracer);
 	sioTracer->SetTraceGroup(SIOTracer::eTraceWarning, true, tracer);
 	sioTracer->SetTraceGroup(SIOTracer::eTraceError, true, tracer);
-	sioTracer->SetTraceGroup(SIOTracer::eTraceDebug, true, tracer);
 }
 
 #ifdef ALL_IN_ONE
@@ -459,6 +458,7 @@ int main(int argc, char** argv)
 				tracer = new FileTracer(traceFile);
 				sioTracer->AddTracer(tracer);
 				SetDefaultTraceLevels(tracer);
+				sioTracer->SetTraceGroup(SIOTracer::eTraceDebug, true, tracer);
 			}
 			catch (ErrorObject& err) {
 				AERROR("%s", err.AsCString());
