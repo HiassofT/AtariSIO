@@ -59,6 +59,22 @@
 	if (UTRACE_MASK & 0x10) \
 		DPRINTF(x)
 
+#define UTRACE_SIO_BEGIN(x...) \
+	if (UTRACE_MASK & 0x20) \
+		DPRINTF("begin " x)
+
+#define UTRACE_SIO_END(x...) \
+	if (UTRACE_MASK & 0x40) \
+		DPRINTF("end " x)
+
+#define UTRACE_TRANSMIT(x...) \
+	if (UTRACE_MASK & 0x80) \
+		DPRINTF(x)
+
+#define UTRACE_WAIT_TRANSMIT(x...) \
+	if (UTRACE_MASK & 0x100) \
+		DPRINTF(x)
+
 #define CMD_BUF_TRACE \
 	"[ %02x %02x %02x %02x %02x ]", \
 		fCmdBuf[0], fCmdBuf[1], fCmdBuf[2], fCmdBuf[3], fCmdBuf[4]
@@ -481,13 +497,11 @@ int UserspaceSIOWrapper::WaitForCommandFrame(int otherReadPollDevice)
 					break;
 				}
 				if (!(flags & fCommandLineMask)) {
-					UTRACE_CMD_STATE("eWaitCommandDeassert -> eCommandOK");
 					SetCommandOKState();
 					return 0;
 				}
 			} else {
 				if (now > fCommandFrameTimeout) {
-					UTRACE_CMD_STATE("eWaitCommandDeassert (none) -> eCommandOK");
 					SetCommandOKState();
 					return 0;
 				}
@@ -583,9 +597,10 @@ void UserspaceSIOWrapper::WaitTransmitComplete()
 	int cnt;
 	unsigned int lsr;
 
+	UTRACE_WAIT_TRANSMIT("begin WaitTransmitComplete");
 	//tcdrain(fDeviceFileNo);
-	cnt = 10;
-	while (cnt--) {
+	cnt = 0;
+	while (cnt++ < 10) {
 		if (ioctl(fDeviceFileNo, TIOCSERGETLSR, &lsr)) {
 			break;
 		}
@@ -594,8 +609,10 @@ void UserspaceSIOWrapper::WaitTransmitComplete()
 		}
 		NanoSleep(100000);
 	}
+	UTRACE_WAIT_TRANSMIT("checked lsr %d times", cnt);
 	// one byte could still be in the transmitter holding register
 	NanoSleep(TimeForBytes(1) * 1500);
+	UTRACE_WAIT_TRANSMIT("end WaitTransmitComplete");
 }
 
 int UserspaceSIOWrapper::TransmitBuf(uint8_t* buf, unsigned int length, bool waitTransmit)
@@ -612,6 +629,8 @@ int UserspaceSIOWrapper::TransmitBuf(uint8_t* buf, unsigned int length, bool wai
 
 	MiscUtils::TimestampType now = MiscUtils::GetCurrentTime();
 	MiscUtils::TimestampType endTime = now + to;
+
+	UTRACE_TRANSMIT("begin TransmitBuf %d", length);
 
 	while (pos < length) {
 		FD_ZERO(&write_set);
@@ -636,13 +655,16 @@ int UserspaceSIOWrapper::TransmitBuf(uint8_t* buf, unsigned int length, bool wai
 			pos += cnt;
 		}
 	}
+	UTRACE_TRANSMIT("tcdrain");
 	// DPRINTF("TransmitBuf(%d) OK", length);
 	tcdrain(fDeviceFileNo);
 
 	if (waitTransmit) {
+		UTRACE_TRANSMIT("WaitTransmitComplete");
 		WaitTransmitComplete();
 	}
 
+	UTRACE_TRANSMIT("end TransmitBuf %d", length);
 	return 0;
 }
 
@@ -715,43 +737,55 @@ int UserspaceSIOWrapper::ReceiveByte(unsigned int additionalTimeout)
 
 int UserspaceSIOWrapper::SendCommandACK()
 {
+	UTRACE_SIO_BEGIN("SendCommandACK");
 	MicroSleep(eDelayT2);
 	fLastResult = TransmitByte(cAckByte, true);
+	UTRACE_SIO_END("SendCommandACK");
 	return fLastResult;
 }
 
 int UserspaceSIOWrapper::SendCommandNAK()
 {
+	UTRACE_SIO_BEGIN("SendCommandNAK");
 	MicroSleep(eDelayT2);
 	fLastResult = TransmitByte(cNakByte);
+	UTRACE_SIO_END("SendCommandNAK");
 	return fLastResult;
 }
 
 int UserspaceSIOWrapper::SendDataACK()
 {
+	UTRACE_SIO_BEGIN("SendDataACK");
 	MicroSleep(eDelayT4);
 	fLastResult = TransmitByte(cAckByte, true);
+	UTRACE_SIO_END("SendDataACK");
 	return fLastResult;
 }
 
 int UserspaceSIOWrapper::SendDataNAK()
 {
+	UTRACE_SIO_BEGIN("SendDataNAK");
 	MicroSleep(eDelayT4);
 	fLastResult = TransmitByte(cNakByte);
+	UTRACE_SIO_END("SendDataNAK");
 	return fLastResult;
 }
 
 int UserspaceSIOWrapper::SendComplete()
 {
+	UTRACE_SIO_BEGIN("SendComplete");
 	MicroSleep(eDelayT5);
 	fLastResult = TransmitByte(cCompleteByte);
+	UTRACE_SIO_END("SendComplete");
 	return fLastResult;
 }
 
 int UserspaceSIOWrapper::SendError()
 {
+	UTRACE_SIO_BEGIN("SendError");
 	MicroSleep(eDelayT5);
 	fLastResult = TransmitByte(cErrorByte);
+	UTRACE_SIO_END("SendError");
 	return fLastResult;
 }
 
@@ -761,6 +795,7 @@ int UserspaceSIOWrapper::SendDataFrame(uint8_t* buf, unsigned int length)
 		fLastResult = EATARISIO_ERROR_BLOCK_TOO_LONG;
 		return fLastResult;
 	}
+	UTRACE_SIO_BEGIN("SendDataFrame");
 	memcpy(fBuf, buf, length);
 	fBuf[length] = CalculateChecksum(fBuf, length);
 
@@ -768,12 +803,15 @@ int UserspaceSIOWrapper::SendDataFrame(uint8_t* buf, unsigned int length)
 
 	MicroSleep(eDataDelay);
 	fLastResult = TransmitBuf(fBuf, length+1);
+	UTRACE_SIO_END("SendDataFrame");
 	return fLastResult;
 }
 
 int UserspaceSIOWrapper::ReceiveDataFrame(uint8_t* buf, unsigned int length)
 {
+	UTRACE_SIO_BEGIN("ReceiveDataFrame");
 	fLastResult = ReceiveBuf(fBuf, length+1, eDelayT3);
+	UTRACE_SIO_END("ReceiveDataFrame");
 	// DPRINTF("ReceiveBuf(%d): %d", length+1, fLastResult);
 
 	if (fLastResult) {
