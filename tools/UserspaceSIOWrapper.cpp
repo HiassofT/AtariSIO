@@ -919,9 +919,9 @@ void UserspaceSIOWrapper::TrySwitchbaud()
 {
 	if (fDoAutobaud) {
 		if (fBaudrate == fStandardBaudrate) {
-			SetBaudrate(fHighspeedBaudrate);
+			SetBaudrate(fHighspeedBaudrate, true);
 		} else {
-			SetBaudrate(fStandardBaudrate);
+			SetBaudrate(fStandardBaudrate, true);
 		}
 	}
 	tcflush(fDeviceFileNo, TCIOFLUSH);
