@@ -437,7 +437,6 @@ int UserspaceSIOWrapper::WaitForCommandFrame(int otherReadPollDevice)
 					SetWaitCommandAssertState();
 					continue;
 				}
-				tv.tv_usec = 1000;
 			}
 			break;
 
@@ -454,8 +453,6 @@ int UserspaceSIOWrapper::WaitForCommandFrame(int otherReadPollDevice)
 				} else {
 					tcflush(fDeviceFileNo, TCIFLUSH);
 				}
-			} else {
-				tv.tv_usec = 1000;
 			}
 			break;
 
