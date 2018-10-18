@@ -451,6 +451,8 @@ int UserspaceSIOWrapper::WaitForCommandFrame(int otherReadPollDevice)
 					UTRACE_CMD_STATE("eWaitCommandAssert -> eReceiveCommandFrame");
 					SetReceiveCommandState();
 					continue;
+				} else {
+					tcflush(fDeviceFileNo, TCIFLUSH);
 				}
 			} else {
 				tv.tv_usec = 1000;
@@ -541,9 +543,8 @@ int UserspaceSIOWrapper::WaitForCommandFrame(int otherReadPollDevice)
 					}
 					break;
 				case eWaitCommandAssert:
-					if (fHaveCommandLine) {
-						tcflush(fDeviceFileNo, TCIFLUSH);
-					} else {
+					// command line case is handled in switch before
+					if (!fHaveCommandLine) {
 						SetReceiveCommandState();
 					}
 					break;
