@@ -346,7 +346,7 @@ void UserspaceSIOWrapper::SetReceiveCommandState()
 	UTRACE_CMD_STATE("State ReceiveCommandFrame, cmd = %d", fHaveCommandLine);
 	fCommandReceiveState = eReceiveCommandFrame;
 	fCommandReceiveCount = 0;
-	fCommandFrameTimeout = MiscUtils::GetCurrentTimePlusMsec(eCommandFrameReceiveTimeout);
+	fCommandFrameTimeout = MiscUtils::GetCurrentTimePlusUsec(eCommandFrameReceiveTimeout);
 }
 
 void UserspaceSIOWrapper::SetWaitCommandDeassertState()
