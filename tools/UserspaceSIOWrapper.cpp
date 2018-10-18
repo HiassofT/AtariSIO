@@ -823,7 +823,7 @@ int UserspaceSIOWrapper::SendDataFrame(uint8_t* buf, unsigned int length)
 int UserspaceSIOWrapper::ReceiveDataFrame(uint8_t* buf, unsigned int length)
 {
 	UTRACE_SIO_BEGIN("ReceiveDataFrame");
-	fLastResult = ReceiveBuf(fBuf, length+1, eDelayT3);
+	fLastResult = ReceiveBuf(length+1, eDelayT3);
 	UTRACE_SIO_END("ReceiveDataFrame");
 	// DPRINTF("ReceiveBuf(%d): %d", length+1, fLastResult);
 
