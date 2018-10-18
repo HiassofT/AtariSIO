@@ -548,6 +548,10 @@ int UserspaceSIOWrapper::WaitForCommandFrame(int otherReadPollDevice)
 						SetReceiveCommandState();
 					}
 					break;
+				case eWaitCommandDeassert:
+					UTRACE_CMD_ERROR("data received in WaitCommandDeassert");
+					SetCommandHardErrorState();
+					break;
 				default:
 					AERROR("unexpected input in state %d, flushing it", fCommandReceiveState);
 					SetCommandHardErrorState();
