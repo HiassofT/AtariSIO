@@ -135,7 +135,7 @@ private:
 	int TransmitBuf(unsigned int length, bool waitTransmit = false);
 	int TransmitByte(uint8_t byte, bool waitTransmit = false);
 
-	void WaitTransmitComplete();
+	void WaitTransmitComplete(unsigned int bytes = 0);
 
 	int ReceiveBuf(uint8_t* buf, unsigned int length, unsigned int additionalTimeout = 0);
 	int ReceiveBuf(unsigned int length, unsigned int additionalTimeout = 0);

@@ -594,21 +594,30 @@ bool UserspaceSIOWrapper::NanoSleep(unsigned long nsec) {
 	return nanosleep(&ts, NULL);
 }
 
-void UserspaceSIOWrapper::WaitTransmitComplete()
+void UserspaceSIOWrapper::WaitTransmitComplete(unsigned int bytes)
 {
 	int cnt;
 	unsigned int lsr;
 
+	if (!bytes) {
+		// optimize for speed switch after get sio byte
+		bytes = 2;
+	}
 	UTRACE_WAIT_TRANSMIT("begin WaitTransmitComplete()");
 
 	// tcdrain can block for 2-3 additional jiffies if there's data
 	// to transmit, so wait a short time before calling it.
-	// 1.5msec seems to be a good value, it's enough to transmit
-	// the ACK/Complete or the speed byte + checksum so short
-	// transfers won't be hit by the ~20-30msec delay on systems with
-	// CONFIG_HZ_100 (eg RPi).
 
-	MicroSleep(1500);
+	MiscUtils::TimestampType delay = TimeForBytes(bytes) * 15/10;
+	if (delay < 500) {
+		delay = 500;
+	}
+
+	if (delay > 5000) {
+		delay = 5000;
+	}
+
+	MicroSleep(delay);
 
 	UTRACE_WAIT_TRANSMIT("tcdrain start");
 	tcdrain(fDeviceFileNo);
@@ -675,7 +684,7 @@ int UserspaceSIOWrapper::TransmitBuf(uint8_t* buf, unsigned int length, bool wai
 
 	if (waitTransmit) {
 		UTRACE_TRANSMIT("WaitTransmitComplete");
-		WaitTransmitComplete();
+		WaitTransmitComplete(length);
 	}
 
 	UTRACE_TRANSMIT("end TransmitBuf %d", length);
@@ -814,7 +823,7 @@ int UserspaceSIOWrapper::SendDataFrame(uint8_t* buf, unsigned int length)
 	fBuf[length] = CalculateChecksum(fBuf, length);
 
 	// wait for complete to be transmitted
-	WaitTransmitComplete();
+	WaitTransmitComplete(1);
 
 	MicroSleep(eDataDelay);
 	fLastResult = TransmitBuf(fBuf, length+1);
