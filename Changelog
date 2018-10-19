@@ -219,3 +219,6 @@ AtariSIO changelog:
   - atariserver: implement "no command line" configuration in userspace
     SIO driver
   - atariserver: enable userspace SIO driver by default
+
+2018-10-19:
+  - atariserver: improve userspace SIO timing
