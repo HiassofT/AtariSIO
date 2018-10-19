@@ -222,3 +222,4 @@ AtariSIO changelog:
 
 2018-10-19:
   - atariserver: improve userspace SIO timing
+  - include RPi devicetree overlays to enable rts+cts in contrib/rpi

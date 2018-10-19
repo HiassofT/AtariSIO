@@ -1,0 +1,26 @@
+/dts-v1/;
+/plugin/;
+
+/ {
+    compatible = "brcm,bcm2708";
+
+    fragment@0 {
+        target = <&uart0>;
+        __overlay__ {
+                pinctrl-names = "default";
+                pinctrl-0 = <&uart0_gpio14 &uart0_ctsrts_gpio16>;
+		status = "okay";
+        };
+    };
+
+    fragment@1 {
+        target = <&uart1>;
+        __overlay__ {
+		status = "disabled";
+        };
+    };
+};
+
+/* compile with:
+   dtc -@ -H epapr -O dtb -o dual.dtbo -Wno-unit_address_vs_reg dual.dts
+*/
