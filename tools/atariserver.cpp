@@ -340,6 +340,38 @@ static void SetDefaultTraceLevels(const RCPtr<AbstractTracer>& tracer)
 	sioTracer->SetTraceGroup(SIOTracer::eTraceError, true, tracer);
 }
 
+void usage()
+{
+	printf("atariserver %s\n", VERSION_STRING);
+	printf("(c) 2002-2018 Matthias Reichl <hias@horus.com>\n");
+	printf("usage: [-f device] [-cChmNsStX] [-o file] [-P c|l|r file]\n");
+	printf("       [ [-12345678] [-p] (-V dens dir)|file  ... ]\n");
+	printf("-h            display help\n");
+	printf("-f device     use alternative AtariSIO device (default: /dev/atarisio0)\n");
+	printf("-c            use alternative SIO2PC cable (command=DSR)\n");
+	printf("-C            use alternative SIO2PC/nullmodem cable (command=CTS)\n");
+	printf("-N            use SIO2PC cable without command line connected\n");
+	printf("-F            disable non-standard disk formats\n");
+	printf("-m            monochrome mode\n");
+	printf("-o file       save trace output to <file>\n");
+	printf("-p            write protect the next image\n");
+	printf("-s mode       set high speed mode:i 0 = off, 1 = on, 2 = on with pauses\n");
+	printf("-S baud,div   high speed SIO parameters: baudrate and pokey divisor\n");
+	printf("-X            enable XF551 commands\n");
+	printf("-t            increase SIO trace level (default:0, max:3)\n");
+	printf("-T percent    set tape baudrate to x%% of nominal speed (1-200)\n");
+	printf("-1..-8        set current drive number (default: 1)\n"); 
+	printf("-V dens dir   create virtual drive of given density, the second parameter\n");
+	printf("              specifies the directory. dens is s|e|d|(<number>s|d)|S|D\n");
+	printf("-P c|l|r file install printer handler\n");
+	printf("              first option is EOL conversion: r=raw(no conversion), l=LF, c=CR+LF\n");
+	printf("              path is either a filename or |print-command, eg |lpr\n");
+	printf("<filename>    load <filename> into current drive number, and then\n");
+	printf("              increment drive number by one\n");
+	printf("              if the filename ends with '.cas' or '.cas.gz', the\n");
+	printf("              CAS-image is loaded and tape emulation is started\n");
+}
+
 #ifdef ALL_IN_ONE
 int atariserver_main(int argc, char** argv)
 #else
@@ -348,6 +380,10 @@ int main(int argc, char** argv)
 {
 	RCPtr<DeviceManager> manager;
 	char* atarisioDevName = getenv("ATARISERVER_DEVICE");
+	if (argc > 1 && (!strcmp(argv[1],"-h") || !strcmp(argv[1],"--help") ) ) {
+		usage();
+		return 0;
+	}
 	if (argc > 2 && (strcmp(argv[1],"-f") == 0)) {
 		atarisioDevName = argv[2];
 		argv[1] = 0;
@@ -405,34 +441,7 @@ int main(int argc, char** argv)
 	}
 
 	if (wantHelp) {
-		printf("atariserver %s\n", VERSION_STRING);
-		printf("(c) 2002-2018 Matthias Reichl <hias@horus.com>\n");
-		printf("usage: [-f device] [-cChmNsStX] [-o file] [-P c|l|r file]\n");
-		printf("       [ [-12345678] [-p] (-V dens dir)|file  ... ]\n");
-		printf("-h            display help\n");
-		printf("-f device     use alternative AtariSIO device (default: /dev/atarisio0)\n");
-		printf("-c            use alternative SIO2PC cable (command=DSR)\n");
-		printf("-C            use alternative SIO2PC/nullmodem cable (command=CTS)\n");
-		printf("-N            use SIO2PC cable without command line connected\n");
-		printf("-F            disable non-standard disk formats\n");
-		printf("-m            monochrome mode\n");
-		printf("-o file       save trace output to <file>\n");
-		printf("-p            write protect the next image\n");
-		printf("-s mode       set high speed mode:i 0 = off, 1 = on, 2 = on with pauses\n");
-		printf("-S baud,div   high speed SIO parameters: baudrate and pokey divisor\n");
-		printf("-X            enable XF551 commands\n");
-		printf("-t            increase SIO trace level (default:0, max:3)\n");
-		printf("-T percent    set tape baudrate to x%% of nominal speed (1-200)\n");
-		printf("-1..-8        set current drive number (default: 1)\n"); 
-		printf("-V dens dir   create virtual drive of given density, the second parameter\n");
-		printf("              specifies the directory. dens is s|e|d|(<number>s|d)|S|D\n");
-		printf("-P c|l|r file install printer handler\n");
-		printf("              first option is EOL conversion: r=raw(no conversion), l=LF, c=CR+LF\n");
-		printf("              path is either a filename or |print-command, eg |lpr\n");
-		printf("<filename>    load <filename> into current drive number, and then\n");
-		printf("              increment drive number by one\n");
-		printf("              if the filename ends with '.cas' or '.cas.gz', the\n");
-		printf("              CAS-image is loaded and tape emulation is started\n");
+		usage();
 		return 0;
 	}
 
