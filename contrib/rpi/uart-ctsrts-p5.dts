@@ -1,0 +1,22 @@
+/dts-v1/;
+/plugin/;
+
+/*
+   Enable /dev/ttyAMA0 RTS and CTS signals on P5 pads
+   of original (non-plus) RPi
+   CTS is available on pin 5 of P5 pads (GPIO 30)
+   RTS is available on pin 6 of P5 pads (GPIO 31)
+*/
+
+/ {
+    compatible = "brcm,bcm2708";
+
+    fragment@0 {
+        target = <&uart0>;
+        __overlay__ {
+                pinctrl-names = "default";
+                pinctrl-0 = <&uart0_gpio14 &uart0_ctsrts_gpio30>;
+        };
+    };
+};
+

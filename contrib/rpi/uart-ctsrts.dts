@@ -1,6 +1,12 @@
 /dts-v1/;
 /plugin/;
 
+/*
+   Enable /dev/ttyAMA0 RTS and CTS signals on 40-pin GPIO header
+   CTS is available on pin 36 of J8 header (GPIO 16)
+   RTS is available on pin 11 of J8 header (GPIO 17)
+*/
+
 / {
     compatible = "brcm,bcm2708";
 
@@ -9,18 +15,6 @@
         __overlay__ {
                 pinctrl-names = "default";
                 pinctrl-0 = <&uart0_gpio14 &uart0_ctsrts_gpio16>;
-		status = "okay";
-        };
-    };
-
-    fragment@1 {
-        target = <&uart1>;
-        __overlay__ {
-		status = "disabled";
         };
     };
 };
-
-/* compile with:
-   dtc -@ -H epapr -O dtb -o dual.dtbo -Wno-unit_address_vs_reg dual.dts
-*/
