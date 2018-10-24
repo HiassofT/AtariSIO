@@ -73,6 +73,11 @@
 #define my_unlock_kernel()	do { } while (0)
 #endif
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,0,0)
+#include <linux/device.h>
+#include <linux/printk.h>
+#endif
+
 #include <linux/poll.h>
 #include <linux/serial_reg.h>
 #include <linux/miscdevice.h>
