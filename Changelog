@@ -223,3 +223,9 @@ AtariSIO changelog:
 2018-10-19:
   - atariserver: improve userspace SIO timing
   - include RPi devicetree overlays to enable rts+cts in contrib/rpi
+
+2018-10-25:
+  - add RPi DT overlays for original RPi2 with 26-pin GPIO header.
+    uart-rts enables only RTS on GPIO17, uart-ctsrts-p5 enables RTS
+    and CTS on the P5 pads
+  - atarisio: fix compilation on 4.4 and older kernels
