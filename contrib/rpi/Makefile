@@ -1,4 +1,5 @@
-OVERLAYS = uart-ctsrts.dtbo uart-ctsrts-p5.dtbo miniuart-ctsrts.dtbo
+OVERLAYS = uart-ctsrts.dtbo uart-ctsrts-p5.dtbo uart-rts.dtbo \
+	miniuart-ctsrts.dtbo
 
 DTC ?= dtc
 

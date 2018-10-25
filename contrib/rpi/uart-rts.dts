@@ -1,0 +1,29 @@
+/dts-v1/;
+/plugin/;
+
+/*
+   Enable /dev/ttyAMA0 RTS signal on 26/40-pin GPIO header
+   RTS is available on pin 11 of J8 header (GPIO 17)
+*/
+
+/ {
+    compatible = "brcm,bcm2708";
+
+    fragment@0 {
+        target = <&gpio>;
+        __overlay__ {
+		uart0_rts_gpio17: uart0_rts_gpio17 {
+			brcm,pins = <17>;
+			brcm,function = <7>; // alt 3
+		};
+        };
+    };
+
+    fragment@1 {
+        target = <&uart0>;
+        __overlay__ {
+                pinctrl-names = "default";
+                pinctrl-0 = <&uart0_gpio14 &uart0_rts_gpio17>;
+        };
+    };
+};
