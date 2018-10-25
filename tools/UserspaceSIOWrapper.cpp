@@ -147,7 +147,7 @@ UserspaceSIOWrapper::UserspaceSIOWrapper(int fileno)
 	}
 	tcflush(fDeviceFileNo, TCIOFLUSH);
 
-	if (SetSIOServerMode(ESIOServerCommandLine::eCommandLine_RI)) {
+	if (SetSIOServerMode(eCommandLine_RI)) {
 		throw new DeviceInitError("cannot set SIO server mode");
 	}
 }
