@@ -31,6 +31,7 @@
 #include <linux/serial.h>
 
 #include "UserspaceSIOWrapper.h"
+#include "Termios2.h"
 #include "AtariDebug.h"
 #include "Error.h"
 
@@ -105,8 +106,8 @@ bool UserspaceSIOWrapper::InitSerialDevice()
                 AWARN("enabling low latency mode failed");
         }
 
-	struct termios2 tio;
-	if (ioctl(fDeviceFileNo, TCGETS2, &tio)) {
+	struct termios tio;
+	if (ioctl(fDeviceFileNo, TCGETS, &tio)) {
 		return false;
 	}
 	// equivalent of cfmakeraw 
@@ -117,7 +118,7 @@ bool UserspaceSIOWrapper::InitSerialDevice()
 	tio.c_cflag |= CS8 | CLOCAL | CREAD | B19200 | B19200 << LINUX_IBSHIFT;
 	tio.c_cc[VMIN] = 0;
 	tio.c_cc[VTIME] = 0;
-	if (ioctl(fDeviceFileNo, TCSETS2, &tio)) {
+	if (ioctl(fDeviceFileNo, TCSETS, &tio)) {
 		AERROR("error configuring serial port");
 		return false;
 	}
@@ -132,7 +133,7 @@ UserspaceSIOWrapper::UserspaceSIOWrapper(int fileno)
 	  fDoAutobaud(false),
 	  fLastCommandOK(true)
 {
-	if (ioctl(fDeviceFileNo, TCGETS2, &fOriginalTermios)) {
+	if (ioctl(fDeviceFileNo, TCGETS, &fOriginalTermios)) {
 		fDeviceFileNo = -1;
 		throw new DeviceInitError("cannot get current serial port settings");
 	}
@@ -155,7 +156,7 @@ UserspaceSIOWrapper::UserspaceSIOWrapper(int fileno)
 UserspaceSIOWrapper::~UserspaceSIOWrapper()
 {
 	if (fDeviceFileNo >= 0) {
-		ioctl(fDeviceFileNo, TCSETS2, &fOriginalTermios);
+		ioctl(fDeviceFileNo, TCSETS, &fOriginalTermios);
 	}
 
 	struct serial_struct ss;
@@ -880,38 +881,70 @@ int UserspaceSIOWrapper::SendDataFrameXF551(uint8_t* /* buf */, unsigned int /* 
 
 int UserspaceSIOWrapper::SetBaudrate(unsigned int baudrate, bool now)
 {
-	struct termios2 tios2;
+	bool standardSpeed = true;
+	speed_t speed;
+	
 	UTRACE_BAUDRATE("change baudrate from %d to %d, now = %d", fBaudrate, baudrate, now);
 
 	if (!now) {
 		WaitTransmitComplete();
 	}
 
-	int fLastResult = ioctl(fDeviceFileNo, TCGETS2, &tios2);
-	if (fLastResult < 0) {
-		return fLastResult;
-	}
-	tios2.c_cflag &= ~(CBAUD | CBAUD << LINUX_IBSHIFT);
 	switch (baudrate) {
-#if 0
+	case 600:
+		speed = B600;
+		break;
+	case 1200:
+		speed = B1200;
+		break;
+	case 2400:
+		speed = B2400;
+		break;
+	case 4800:
+		speed = B4800;
+		break;
+	case 9600:
+		speed = B9600;
+		break;
 	case 19200:
-		tios2.c_cflag |= B19200 | B19200 << LINUX_IBSHIFT;
+		speed = B19200;
 		break;
 	case 38400:
-		tios2.c_cflag |= B38400 | B38400 << LINUX_IBSHIFT;
+		speed = B38400;
 		break;
 	case 57600:
-		tios2.c_cflag |= B57600 | B57600 << LINUX_IBSHIFT;
+		speed = B57600;
 		break;
-#endif
 	default:
-		tios2.c_cflag |= BOTHER | BOTHER << LINUX_IBSHIFT;
+		standardSpeed = false;
 		break;
-	};
-	tios2.c_ispeed = baudrate;
-	tios2.c_ospeed = baudrate;
+	}
 
-	fLastResult = ioctl(fDeviceFileNo, now ? TCSETS2 : TCSETSW2, &tios2);
+	if (standardSpeed) {
+		struct termios tios;
+
+		fLastResult = ioctl(fDeviceFileNo, TCGETS, &tios);
+		if (fLastResult < 0) {
+			return fLastResult;
+		}
+		cfsetispeed(&tios, speed);
+		cfsetospeed(&tios, speed);
+
+		fLastResult = ioctl(fDeviceFileNo, now ? TCSETS : TCSETSW, &tios);
+	} else {
+		struct termios2 tios2;
+
+		fLastResult = ioctl(fDeviceFileNo, TCGETS2, &tios2);
+		if (fLastResult < 0) {
+			return fLastResult;
+		}
+		tios2.c_cflag &= ~(CBAUD | CBAUD << LINUX_IBSHIFT);
+		tios2.c_cflag |= BOTHER | BOTHER << LINUX_IBSHIFT;
+		tios2.c_ispeed = baudrate;
+		tios2.c_ospeed = baudrate;
+		fLastResult = ioctl(fDeviceFileNo, now ? TCSETS2 : TCSETSW2, &tios2);
+	}
+
 	if (!fLastResult) {
 		fBaudrate = baudrate;
 	}

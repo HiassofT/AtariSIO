@@ -22,7 +22,6 @@
 */
 
 #include <termios.h>
-#include "Termios2.h"
 #include "SIOWrapper.h"
 #include "MiscUtils.h"
 
@@ -168,7 +167,7 @@ private:
 	bool fDoAutobaud;
 	unsigned int fTapeOldBaudrate;
 
-	struct termios2 fOriginalTermios;
+	struct termios fOriginalTermios;
 
 	enum {
 		eDelayT0 = 1000,
