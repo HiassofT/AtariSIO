@@ -1,6 +1,6 @@
 AtariSIO driver and utilities V0.30
 
-Copyright (C) 2002-2009 Matthias Reichl <hias@horus.com>
+Copyright (C) 2002-2018 Matthias Reichl <hias@horus.com>
 
 This program is proteced under the terms of the GNU General Public
 License, version 2. Please read LICENSE for further details.
@@ -16,7 +16,7 @@ The new kernel driver supports multiple interfaces (4 per default)
 which are now named /dev/atarisio0 ... /dev/atarisio3 instead of
 just /dev/atarisio.
 
-If you are using kernel 2.6, edit the atarisio-modprobe.conf file
+If you are using kernel 2.6 or newer, edit the atarisio-modprobe.conf file
 and copy it to /etc/modprobe.d/atarisio.conf. The default config
 enables atarisio on your first serial port (/dev/ttyS0) with
 all features. If you have udev installed, also add 'atarisio-udev.rules'
@@ -52,7 +52,7 @@ module configuration templates (atarisio-ttySx).
 
 1. You need several things to compile and use AtariSIO:
 
-   * a 2.2.x, 2.4.x, or 2.6.x  version of the Linux kernel, with
+   * a 2.2.x - 4.x version of the Linux kernel, with
      enabled module support
    * the kernel headers, matching your running linux kernel
    * glibc 2.1 or newer
@@ -95,28 +95,38 @@ module configuration templates (atarisio-ttySx).
    The old two-chip SIO2PC interface (with a MAX232 and an LS368)
    is NOT supported, and probably never will be.
 
-2. Edit the Makefile
+2. Set build options
 
-   Sorry, no autoconf yet - you'll have to do the config manually.
+   The provided Makefile should work out of the box on most
+   Linux distributions and will pick up header and library
+   locations automatically via pkg-config.
 
-   If you are using kernel 2.6.x, uncomment the "USE_KBUILD_26 = 1"
-   line, if you are using kernel 2.2.x or 2.4.x, leave this line
-   commented out.
+   The defaults can be changed by setting several make variables.
 
-   Set "KDIR" to the directory containing your linux kernel source
-   (or, at least, the kernel headers).  Usually this is
-   /usr/src/linux/.
+   Note that you have to set these variables both on "make"
+   and "make install" calls. eg use "make USE_KBUILD=0"
+   and "make install USE_KBUILD=0" if you build AtariSIO for an
+   old 2.2 or 2.4 kernel.
+
+   USE_KBUILD (default 1):
+   Use kbuild (the kernel build system) to compile the module.
+   Set to 0 if you use kernel 2.2 or 2.4
+
+   KDIR (default /lib/modules/KERNELVERSION/build):
+   Location of the kernel headers / source.
 
    On some systems with non-standard linux header files (eg Red Hat
    Linux) you may need to set the kernel version ("VERSION") or
    the kernel module directory ("MDIR") manually.
 
-   Change the installation directory "INST_DIR", if needed
-   (default is /usr/local).
+   INST_DIR (default /usr/local)
+   Installation directory
 
    In case you don't have zlib installed on your system, or if
    you don't want .gz-file support, comment out the definition of
    "ZLIB_CXX_FLAGS" and "ZLIB_LD_FLAGS".
+
+   KERNEL_CC (default gcc) - not needed when using kbuild:
 
    If you don't use kernel 2.6.x with the kernel build system,
    the most important part in Makefile configuration is selecting
