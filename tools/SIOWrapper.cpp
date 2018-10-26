@@ -286,7 +286,7 @@ void SIOWrapper::InitializeBaudrates()
 {
 	fStandardBaudrate = GetBaudrateForPokeyDivisor(ATARISIO_POKEY_DIVISOR_STANDARD);
 	if (!fStandardBaudrate) {
-		throw new DeviceInitError("no baudrate for standard SIO speed");
+		throw DeviceInitError("no baudrate for standard SIO speed");
 	}
 	fHighspeedBaudrate = GetBaudrateForPokeyDivisor(ATARISIO_POKEY_DIVISOR_3XSIO);
 	if (!fHighspeedBaudrate) {

@@ -135,21 +135,21 @@ UserspaceSIOWrapper::UserspaceSIOWrapper(int fileno)
 {
 	if (ioctl(fDeviceFileNo, TCGETS, &fOriginalTermios)) {
 		fDeviceFileNo = -1;
-		throw new DeviceInitError("cannot get current serial port settings");
+		throw DeviceInitError("cannot get current serial port settings");
 	}
 	if (!InitSerialDevice()) {
-		throw new DeviceInitError("cannot initialize serial port");
+		throw DeviceInitError("cannot initialize serial port");
 	}
 
 	InitializeBaudrates();
 
 	if (SetBaudrate(fStandardBaudrate)) {
-		throw new DeviceInitError("cannot set standard baudrate");
+		throw DeviceInitError("cannot set standard baudrate");
 	}
 	tcflush(fDeviceFileNo, TCIOFLUSH);
 
 	if (SetSIOServerMode(eCommandLine_RI)) {
-		throw new DeviceInitError("cannot set SIO server mode");
+		throw DeviceInitError("cannot set SIO server mode");
 	}
 }
 
