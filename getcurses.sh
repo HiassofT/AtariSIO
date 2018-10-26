@@ -7,13 +7,13 @@ if [ $# -ne 1 ] ; then
 	exit 1
 fi
 
-CFLAGS=$(pkg-config $1 ncurses panel)
+CFLAGS=$(pkg-config $1 ncurses panel 2>/dev/null)
 if [ $? -eq 0 ] ; then
 	echo "$CFLAGS"
 	exit 0
 fi
 
-CFLAGS=$(pkg-config $1 ncursesw panelw)
+CFLAGS=$(pkg-config $1 ncursesw panelw 2>/dev/null)
 if [ $? -eq 0 ] ; then
 	echo "$CFLAGS"
 	exit 0
