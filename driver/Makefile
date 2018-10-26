@@ -9,9 +9,9 @@ ifeq ($(KERNELRELEASE),)
 
 # first call to Makefile
 
-ifeq ($(USE_KBUILD_26),)
+ifneq ($(USE_KBUILD),1)
 
-# use standard build procedure
+# use old build procedure
 
 default: atarisio.o
 
@@ -38,7 +38,6 @@ else
 PWD=$(shell pwd)
 
 default:
-	@echo "using kernel 2.6 build system"
 	make -C $(KDIR) SUBDIRS=$(PWD) modules
 
 allclean: clean

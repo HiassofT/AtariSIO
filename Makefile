@@ -5,10 +5,10 @@
 ########################################################################
 
 ########################################################################
-# use kernel 2.6/3.x build system (comment out if you use kernel 2.2/2.4)
+# use kernel build system (comment out if you use kernel 2.2/2.4)
 ########################################################################
 
-USE_KBUILD_26 = 1
+USE_KBUILD = 1
 
 ########################################################################
 # location of your kernel source (header) files
@@ -124,7 +124,7 @@ CXXFLAGS = $(CFLAGS)
 LDFLAGS = -g
 #LDFLAGS = -g -static
 
-export KERNEL_CC MODFLAGS KDIR MDIR USE_KBUILD_26
+export KERNEL_CC MODFLAGS KDIR MDIR USE_KBUILD
 export CC CXX CFLAGS CXXFLAGS LDFLAGS STRIP
 export INST_DIR
 export ENABLE_ATP ALL_IN_ONE ENABLE_USERSPACE
