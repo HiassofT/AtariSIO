@@ -35,7 +35,15 @@
 #include "AtariDebug.h"
 #include "Error.h"
 
+#ifdef DEFAULT_DEVICE
+#define MY_STR(s) #s
+#define MY_STR2(s) MY_STR(s)
+static const char* defaultDeviceName = MY_STR2(DEFAULT_DEVICE);
+#undef MY_STR
+#undef MY_STR2
+#else
 static const char* defaultDeviceName = "/dev/atarisio0";
+#endif
 
 SIOWrapper* SIOWrapper::CreateSIOWrapper(const char* devName)
 {

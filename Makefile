@@ -44,6 +44,12 @@ INST_DIR = /usr/local
 #INST_DIR = /opt/hias
 
 ########################################################################
+# Default device for atariserver/atarixfer
+########################################################################
+
+#DEFAULT_DEVICE = /dev/atarisio0
+
+########################################################################
 # set compile and link options for using the ncurses library
 # the wrapper script uses "ncurses5-config" if available
 ########################################################################
@@ -126,7 +132,7 @@ LDFLAGS = -g
 
 export KERNEL_CC MODFLAGS KDIR MDIR USE_KBUILD
 export CC CXX CFLAGS CXXFLAGS LDFLAGS STRIP
-export INST_DIR
+export INST_DIR DEFAULT_DEVICE
 export ENABLE_ATP ALL_IN_ONE ENABLE_USERSPACE
 export ZLIB_CFLAGS ZLIB_LDFLAGS
 export NCURSES_CFLAGS NCURSES_LDFLAGS
