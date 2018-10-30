@@ -230,10 +230,15 @@ AtariSIO changelog:
     and CTS on the P5 pads
   - atarisio: fix compilation on 4.4 and older kernels
 
-2018-10-26:
+2018-10-30:
   - atariserver: fix compilation with older gcc versions
   - silence warnings/errors from pkg-config
   - Makefile: rename USE_KBUILD_26 to USE_KBUILD, fix building with
     USE_KBUILD=0
   - atariserver/atarixfer: use termios2 ioctl only on non-standard speeds
   - atariserver/atarixfer: fix error reporting on device init errors
+  - atariserver/atarixfer: allow setting default atarisio/serial device at
+    compile time.
+    The default /dev/atarisio0 can be changed by setting the DEFAULT_DEVICE
+    make variable, eg "make DEFAULT_DEVICE=/dev/ttyUSB0"
+  - atariserver: shorten labels in status line, display highspeed pokey divisor
