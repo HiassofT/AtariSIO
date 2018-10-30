@@ -499,7 +499,7 @@ void CursesFrontend::DisplayStatusLine()
 		waddstr(fStatusLineWindow, "off");
 	}
 
-	wprintw(fStatusLineWindow, "  trace level: %d", fTraceLevel);
+	wprintw(fStatusLineWindow, "  trace: %d", fTraceLevel);
 
 	waddstr(fStatusLineWindow, "  RC: ");
 
