@@ -110,7 +110,7 @@ public:
 	void ProcessExchangeDrives();
 	void ProcessUnloadDrive();
 	void ProcessSetTraceLevel();
-	void ProcessSetCableType();
+	void ProcessSetCommandLine();
 	void ProcessSetHighSpeed();
 	void ProcessSetXF551Mode();
 	void ProcessShowDirectory();

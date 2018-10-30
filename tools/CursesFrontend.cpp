@@ -464,7 +464,7 @@ void CursesFrontend::SetTopLineFilename(const char* string, bool appendSlash)
 void CursesFrontend::DisplayStatusLine()
 {
 	wmove(fStatusLineWindow, 0, 0);
-	waddstr(fStatusLineWindow, " cable type: ");
+	waddstr(fStatusLineWindow, " command: ");
 
 	switch (fDeviceManager->GetSioServerMode()) {
 	case SIOWrapper::eCommandLine_RI:
@@ -2332,13 +2332,13 @@ void CursesFrontend::ProcessFlushPrinterData()
 	UpdateScreen();
 }
 
-void CursesFrontend::ProcessSetCableType()
+void CursesFrontend::ProcessSetCommandLine()
 {
 	werase(fBottomLineWindow);
 	wmove(fBottomLineWindow, 0, 0);
 	waddstr(fBottomLineWindow,"'r'=RING, 'd'=DSR, 'c'=CTS, 'n'=none, 'q'=abort");
 	ClearInputLine();
-	waddstr(fInputLineWindow, "set cable type: ");
+	waddstr(fInputLineWindow, "set command line: ");
 	ShowCursor(true);
 	UpdateScreen();
 
@@ -2651,7 +2651,7 @@ static const char* const helpText[] =
 		"F     flush queued printer data",
 	        "t     set trace level",
 	        "T     tape emulation",
-		"C     set cable type",
+		"C     set command line",
 		"s     set SIO high speed mode",
 		"S     set high speed pokey divisor/baudrate",
 		"X     enable/disable XF551 commands",

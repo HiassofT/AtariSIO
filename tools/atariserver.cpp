@@ -170,7 +170,7 @@ static void process_args(RCPtr<DeviceManager>& manager, CursesFrontend* frontend
 					break;
 				case 'C':
 					manager->SetSioServerMode(SIOWrapper::eCommandLine_CTS);
-					ALOG("using alternative SIO2PC/nullmodem cable type (command=CTS)");
+					ALOG("using alternative SIO2PC cable type (command=CTS)");
 					break;
 				case 'N':
 					manager->SetSioServerMode(SIOWrapper::eCommandLine_None);
@@ -349,8 +349,8 @@ void usage()
 	printf("-h            display help\n");
 	printf("-f device     use alternative AtariSIO device (default: /dev/atarisio0)\n");
 	printf("-c            use alternative SIO2PC cable (command=DSR)\n");
-	printf("-C            use alternative SIO2PC/nullmodem cable (command=CTS)\n");
-	printf("-N            use SIO2PC cable without command line connected\n");
+	printf("-C            use alternative SIO2PC cable (command=CTS)\n");
+	printf("-N            use alternative SIO2PC cable without command line\n");
 	printf("-F            disable non-standard disk formats\n");
 	printf("-m            monochrome mode\n");
 	printf("-o file       save trace output to <file>\n");
@@ -533,7 +533,7 @@ int main(int argc, char** argv)
 			frontend->ProcessCreateDrive();
 			break;
 		case 'C':
-			frontend->ProcessSetCableType();
+			frontend->ProcessSetCommandLine();
 			break;
 		case 'd':
 			frontend->ProcessShowDirectory();
