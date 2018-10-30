@@ -485,10 +485,10 @@ void CursesFrontend::DisplayStatusLine()
 		waddstr(fStatusLineWindow, "low");
 		break;
 	case DeviceManager::eHighSpeedOn:
-		waddstr(fStatusLineWindow, "high");
+		wprintw(fStatusLineWindow, "high  div: %d", fDeviceManager->GetHighSpeedPokeyDivisor());
 		break;
 	case DeviceManager::eHighSpeedWithPause:
-		waddstr(fStatusLineWindow, "high/pause");
+		wprintw(fStatusLineWindow, "high/pause  div: %d", fDeviceManager->GetHighSpeedPokeyDivisor());
 		break;
 	}
 
@@ -2484,6 +2484,7 @@ void CursesFrontend::ProcessSetHighSpeedParameters()
 	}
 
 	ShowCursor(false);
+	DisplayStatusLine();
 	ShowStandardHint();
 	UpdateScreen();
 }
