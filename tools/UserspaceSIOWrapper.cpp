@@ -76,6 +76,10 @@
 	if (UTRACE_MASK & 0x100) \
 		DPRINTF(x)
 
+#define UTRACE_WAIT_COMMAND(x...) \
+	if (UTRACE_MASK & 0x200) \
+		DPRINTF(x)
+
 #define CMD_BUF_TRACE \
 	"[ %02x %02x %02x %02x %02x ]", \
 		fCmdBuf[0], fCmdBuf[1], fCmdBuf[2], fCmdBuf[3], fCmdBuf[4]
@@ -447,12 +451,13 @@ int UserspaceSIOWrapper::WaitForCommandFrame(int otherReadPollDevice)
 					AERROR("failed to read modem line status");
 					break;
 				}
+
 				if (flags & fCommandLineMask) {
-					UTRACE_CMD_STATE("eWaitCommandAssert -> eReceiveCommandFrame");
 					SetReceiveCommandState();
 					continue;
 				} else {
 					tcflush(fDeviceFileNo, TCIFLUSH);
+					UTRACE_WAIT_COMMAND("WaitCommandAssert: flushed input");
 				}
 			}
 			break;
