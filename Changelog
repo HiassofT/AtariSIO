@@ -242,3 +242,7 @@ AtariSIO changelog:
     The default /dev/atarisio0 can be changed by setting the DEFAULT_DEVICE
     make variable, eg "make DEFAULT_DEVICE=/dev/ttyUSB0"
   - atariserver: shorten labels in status line, display highspeed pokey divisor
+
+2018-11-01:
+  - atariserver/atarixfer: check command frame age before sending ACK/NAK
+  - atariserver/atarixfer: relax send and receive timing
