@@ -176,11 +176,15 @@ private:
 		eDelayT2Max = 20000,
 		eCommandExpire = 10000,
 		eDelayT3Min = 1000,
-		eDelayT3 = 2000,
+		eDelayT3Max = 1600,
 		eDelayT4 = 1000,
 		eDelayT4Max = 16000,
 		eDelayT5 = 300,
 		eDataDelay = 150 // between complete and data frame
+	};
+	enum {
+		eReceiveHeadroom = 50000,
+		eSendHeadroom = 50000
 	};
 		
 

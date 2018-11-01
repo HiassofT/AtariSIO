@@ -654,8 +654,8 @@ void UserspaceSIOWrapper::WaitTransmitComplete(unsigned int bytes)
 
 int UserspaceSIOWrapper::TransmitBuf(uint8_t* buf, unsigned int length, bool waitTransmit)
 {
-	// timeout with 30% margin
-	MiscUtils::TimestampType to = TimeForBytes(length) * 13 / 10 + eDelayT3;
+	// timeout with 20% margin
+	MiscUtils::TimestampType to = TimeForBytes(length) * 12 / 10 + eDelayT3Max + eSendHeadroom;
 
 	unsigned int pos = 0;
 	int cnt;
@@ -716,8 +716,8 @@ int UserspaceSIOWrapper::TransmitByte(uint8_t byte, bool waitTransmit)
 
 int UserspaceSIOWrapper::ReceiveBuf(uint8_t* buf, unsigned int length, unsigned int additionalTimeout)
 {
-	// timeout with 30% margin
-	MiscUtils::TimestampType to = TimeForBytes(length) * 13 / 10 + additionalTimeout;
+	// timeout with 20% margin
+	MiscUtils::TimestampType to = TimeForBytes(length) * 12 / 10 + additionalTimeout;
 
 	unsigned int pos = 0;
 	int cnt;
@@ -861,7 +861,7 @@ int UserspaceSIOWrapper::SendDataFrame(uint8_t* buf, unsigned int length)
 int UserspaceSIOWrapper::ReceiveDataFrame(uint8_t* buf, unsigned int length)
 {
 	UTRACE_SIO_BEGIN("ReceiveDataFrame");
-	fLastResult = ReceiveBuf(length+1, eDelayT3);
+	fLastResult = ReceiveBuf(length+1, eDelayT3Max + eReceiveHeadroom);
 	UTRACE_SIO_END("ReceiveDataFrame");
 	// DPRINTF("ReceiveBuf(%d): %d", length+1, fLastResult);
 
@@ -886,7 +886,7 @@ int UserspaceSIOWrapper::SendRawFrame(uint8_t* buf, unsigned int length)
 
 int UserspaceSIOWrapper::ReceiveRawFrame(uint8_t* buf, unsigned int length)
 {
-	fLastResult = ReceiveBuf(buf, length, eDelayT3);
+	fLastResult = ReceiveBuf(buf, length, eDelayT3Max + eReceiveHeadroom);
 	return fLastResult;
 }
 
@@ -1218,7 +1218,7 @@ int UserspaceSIOWrapper::InternalExtSIO(Ext_SIO_parameters& params)
 				goto retry_sio;
 			}
 
-			ret = ReceiveByte(eDelayT4Max);
+			ret = ReceiveByte(eDelayT4Max + eReceiveHeadroom);
 			UTRACE_1050_2_PC("Receive data ACK returned %d", ret);
 			if (ret < 0) {
 				ret = -ret;
@@ -1238,7 +1238,7 @@ int UserspaceSIOWrapper::InternalExtSIO(Ext_SIO_parameters& params)
 		}
 
 		// wait for complete
-		ret = ReceiveByte(params.timeout*1000*1000);
+		ret = ReceiveByte(params.timeout*1000*1000 + eReceiveHeadroom);
 		UTRACE_1050_2_PC("Receive command complete returned %d", ret);
 
 		if (ret < 0) {
@@ -1262,7 +1262,7 @@ int UserspaceSIOWrapper::InternalExtSIO(Ext_SIO_parameters& params)
 		// receive data
 		if ((params.data_length > 0) &&
 		    (params.direction & ATARISIO_EXTSIO_DIR_RECV)) {
-			ret = ReceiveBuf(params.data_length+1, 10000);
+			ret = ReceiveBuf(params.data_length+1, eReceiveHeadroom);
 			UTRACE_1050_2_PC("Receiving %d data bytes returned %d",
 				params.data_length, ret);
 
