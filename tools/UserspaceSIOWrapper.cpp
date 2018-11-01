@@ -370,6 +370,7 @@ void UserspaceSIOWrapper::SetWaitCommandDeassertState()
 void UserspaceSIOWrapper::SetCommandOKState()
 {
 	UTRACE_CMD_STATE("State CommandOK, cmd = %d", fHaveCommandLine);
+	fCommandFrameTimestamp = MiscUtils::GetCurrentTime();
 	fCommandReceiveState = eCommandOK;
 	fLastCommandOK = true;
 }
@@ -772,19 +773,33 @@ int UserspaceSIOWrapper::ReceiveByte(unsigned int additionalTimeout)
 
 int UserspaceSIOWrapper::SendCommandACK()
 {
-	UTRACE_SIO_BEGIN("SendCommandACK");
-	MicroSleep(eDelayT2);
-	fLastResult = TransmitByte(cAckByte, true);
-	UTRACE_SIO_END("SendCommandACK");
+	MiscUtils::TimestampType now = MiscUtils::GetCurrentTime();
+	if (now >= fCommandFrameTimestamp + eCommandExpire) {
+		UTRACE_CMD_ERROR("SendCommandACK: command frame is too old (%lu usec)",
+			(unsigned long) (now - fCommandFrameTimestamp));
+		fLastResult = EATARISIO_COMMAND_TIMEOUT;
+	} else {
+		UTRACE_SIO_BEGIN("SendCommandACK");
+		MicroSleep(eDelayT2Min);
+		fLastResult = TransmitByte(cAckByte, true);
+		UTRACE_SIO_END("SendCommandACK");
+	}
 	return fLastResult;
 }
 
 int UserspaceSIOWrapper::SendCommandNAK()
 {
-	UTRACE_SIO_BEGIN("SendCommandNAK");
-	MicroSleep(eDelayT2);
-	fLastResult = TransmitByte(cNakByte);
-	UTRACE_SIO_END("SendCommandNAK");
+	MiscUtils::TimestampType now = MiscUtils::GetCurrentTime();
+	if (now >= fCommandFrameTimestamp + eCommandExpire) {
+		UTRACE_CMD_ERROR("SendCommandNAK: command frame is too old (%lu usec)",
+			(unsigned long) (now - fCommandFrameTimestamp));
+		fLastResult = EATARISIO_COMMAND_TIMEOUT;
+	} else {
+		UTRACE_SIO_BEGIN("SendCommandNAK");
+		MicroSleep(eDelayT2Min);
+		fLastResult = TransmitByte(cNakByte);
+		UTRACE_SIO_END("SendCommandNAK");
+	}
 	return fLastResult;
 }
 

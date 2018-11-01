@@ -172,8 +172,9 @@ private:
 	enum {
 		eDelayT0 = 1000,
 		eDelayT1 = 850,
-		eDelayT2 = 100,
+		eDelayT2Min = 100,
 		eDelayT2Max = 20000,
+		eCommandExpire = 10000,
 		eDelayT3Min = 1000,
 		eDelayT3 = 2000,
 		eDelayT4 = 1000,
