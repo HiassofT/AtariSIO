@@ -80,6 +80,10 @@
 	if (UTRACE_MASK & 0x200) \
 		DPRINTF(x)
 
+#define UTRACE_RECEIVE_BUF(x...) \
+	if (UTRACE_MASK & 0x400) \
+		DPRINTF(x)
+
 #define CMD_BUF_TRACE \
 	"[ %02x %02x %02x %02x %02x ]", \
 		fCmdBuf[0], fCmdBuf[1], fCmdBuf[2], fCmdBuf[3], fCmdBuf[4]
@@ -729,6 +733,8 @@ int UserspaceSIOWrapper::ReceiveBuf(uint8_t* buf, unsigned int length, unsigned 
 		FD_SET(fDeviceFileNo, &read_set);
 		now = MiscUtils::GetCurrentTime();
 		if (now >= endTime) {
+			UTRACE_RECEIVE_BUF("receive timeout, got %d of %d bytes",
+				pos, length);
 			return EATARISIO_COMMAND_TIMEOUT;
 		}
 		MiscUtils::TimestampToTimeval(endTime - now, tv);
