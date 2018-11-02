@@ -491,9 +491,9 @@ int UserspaceSIOWrapper::WaitForCommandFrame(int otherReadPollDevice)
 				UTRACE_CMD_ERROR("receive timeout expired, got %d bytes", fCommandReceiveCount);
 				UTRACE_CMD_BUF_ERROR;
 				if (fCommandReceiveCount < 4) {
-					SetCommandSoftErrorState();
-				} else {
 					SetCommandHardErrorState();
+				} else {
+					SetCommandSoftErrorState();
 				}
 				continue;
 			}
