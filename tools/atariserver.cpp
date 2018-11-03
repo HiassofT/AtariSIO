@@ -356,7 +356,7 @@ void usage()
 	printf("-o file       save trace output to <file>\n");
 	printf("-p            write protect the next image\n");
 	printf("-s mode       set high speed mode:i 0 = off, 1 = on, 2 = on with pauses\n");
-	printf("-S baud,div   high speed SIO parameters: baudrate and pokey divisor\n");
+	printf("-S div[,baud] high speed SIO pokey divisor (default 8) and optionally baudrate\n");
 	printf("-X            enable XF551 commands\n");
 	printf("-t            increase SIO trace level (default:0, max:3)\n");
 	printf("-T percent    set tape baudrate to x%% of nominal speed (1-200)\n");
