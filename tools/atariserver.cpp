@@ -293,6 +293,9 @@ illegal_v:
 						AERROR("invalid usage of -V");
 					}
 					break;
+				case 'Q':
+					frontend->SetAskBeforeQuit(true);
+					break;
 				default:
 illegal_option:
 					AERROR("illegal option \"%s\"", argv[i]);
@@ -366,6 +369,7 @@ void usage()
 	printf("-P c|l|r file install printer handler\n");
 	printf("              first option is EOL conversion: r=raw(no conversion), l=LF, c=CR+LF\n");
 	printf("              path is either a filename or |print-command, eg |lpr\n");
+	printf("-Q            ask before quitting atariserver\n");
 	printf("<filename>    load <filename> into current drive number, and then\n");
 	printf("              increment drive number by one\n");
 	printf("              if the filename ends with '.cas' or '.cas.gz', the\n");

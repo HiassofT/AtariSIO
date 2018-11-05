@@ -143,6 +143,16 @@ public:
 
 	enum { eVirtualDriveKey = 22 }; // control-V
 
+	inline void SetAskBeforeQuit(bool flag)
+	{
+		fAskBeforeQuit = flag;
+	}
+
+	inline bool GetAskBeforeQuit()
+	{
+		return fAskBeforeQuit;
+	}
+
 private:
 	friend class FileSelect;
 	void ShowHint(const char* string);
@@ -309,6 +319,8 @@ private:
 
 	bool fAlreadyReportedCursorOnProblem;
 	bool fAlreadyReportedCursorOffProblem;
+
+	bool fAskBeforeQuit;
 };
 
 #endif

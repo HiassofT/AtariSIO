@@ -48,7 +48,8 @@ CursesFrontend::CursesFrontend(RCPtr<DeviceManager>& manager, bool useColor)
 	  fCasWindowStatus(true),
 	  fGotSigWinCh(false),
 	  fAlreadyReportedCursorOnProblem(false),
-	  fAlreadyReportedCursorOffProblem(false)
+	  fAlreadyReportedCursorOffProblem(false),
+	  fAskBeforeQuit(false)
 {
 	// init curses
 
@@ -1559,10 +1560,15 @@ void CursesFrontend::ProcessDeactivateDrive()
 bool CursesFrontend::ProcessQuit()
 {
 	bool ret = true;
-	if (fDeviceManager->CheckForChangedImages()) {
+	bool changedDrives = fDeviceManager->CheckForChangedImages();
+	if (changedDrives || fAskBeforeQuit) {
 		ShowYesNoHint();
 		ClearInputLine();
-		waddstr(fInputLineWindow, "there are changed images - really quit? ");
+		if (changedDrives) {
+			waddstr(fInputLineWindow, "there are changed images - really quit? ");
+		} else {
+			waddstr(fInputLineWindow, "really quit? ");
+		}
 		ShowCursor(true);
 		UpdateScreen();
 
