@@ -156,10 +156,7 @@ static void reserve_stack_memory()
 {
 #define RESERVE_STACK_SIZE 100000
 	char dummy_string[RESERVE_STACK_SIZE];
-	int i;
-	for (i=0;i<RESERVE_STACK_SIZE;i++) {
-		dummy_string[i]=0;
-	}
+	memset(dummy_string, 0, RESERVE_STACK_SIZE);
 }
 
 static bool uids_set = false;

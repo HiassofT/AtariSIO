@@ -55,6 +55,7 @@ static bool xf551_format_detection = false;
 
 static bool continue_on_errors = false;
 
+/*
 static void my_sig_handler(int sig)
 {
 	switch (sig) {
@@ -68,6 +69,7 @@ static void my_sig_handler(int sig)
 		exit(0);
 	}
 }
+*/
 
 static void print_error(int error)
 {

@@ -415,6 +415,9 @@ void CursesFrontend::SetTopLineString(const char* string)
 	unsigned int y,x;
 	getyx(fTopLineWindow, y, x);
 
+	// suppress unused warning
+	(void)y;
+
 	if (string && (x < fScreenWidth)) {
 		unsigned int len = strlen(string);
 		if (x+len > fScreenWidth) {
@@ -430,6 +433,9 @@ void CursesFrontend::SetTopLineFilename(const char* string, bool appendSlash)
 	mvwaddstr(fTopLineWindow, 0, 0, "atariserver " VERSION_STRING " -- ");
 	unsigned int y,x;
 	getyx(fTopLineWindow, y, x);
+
+	// suppress unused warning
+	(void)y;
 
 	if (x < fScreenWidth) {
 
