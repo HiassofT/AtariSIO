@@ -1138,6 +1138,11 @@ int UserspaceSIOWrapper::SendCommandFrame(Ext_SIO_parameters& params)
 	fCmdBuf[1] = params.command;
 	fCmdBuf[2] = params.aux1;
 	fCmdBuf[3] = params.aux2;
+
+	if (params.highspeed_mode == ATARISIO_EXTSIO_SPEED_TURBO) {
+		fCmdBuf[3] |= 0x80;
+	}
+
 	fCmdBuf[4] = CalculateChecksum(fCmdBuf, 4);
 
 	while (retry < eCommandFrameRetries) {
@@ -1159,6 +1164,10 @@ int UserspaceSIOWrapper::SendCommandFrame(Ext_SIO_parameters& params)
 			SetCommandLine(false);
 			MilliSleep(20);
 			goto next_retry;
+		}
+
+		if (params.highspeed_mode == ATARISIO_EXTSIO_SPEED_TURBO) {
+			SetBaudrateIfDifferent(fHighspeedBaudrate);
 		}
 
 		MicroSleep(eDelayT1);
