@@ -1,187 +1,78 @@
-AtariSIO driver and utilities V0.30
+AtariSIO driver and utilities V0.30 installation instructions
 
-Copyright (C) 2002-2018 Matthias Reichl <hias@horus.com>
+1. Installation requirements
 
-This program is proteced under the terms of the GNU General Public
-License, version 2. Please read LICENSE for further details.
+   The following packages are required to build AtariSIO:
 
-Visit http://www.horus.com/~hias/atari/ for new versions of AtariSIO.
-
-
-********************************************************************
-*  IMPORTANT NOTE IF YOU ARE UPGRADING FROM AtariSIO VERSION 0.30  *
-********************************************************************
-
-The new kernel driver supports multiple interfaces (4 per default)
-which are now named /dev/atarisio0 ... /dev/atarisio3 instead of
-just /dev/atarisio.
-
-If you are using kernel 2.6 or newer, edit the atarisio-modprobe.conf file
-and copy it to /etc/modprobe.d/atarisio.conf. The default config
-enables atarisio on your first serial port (/dev/ttyS0) with
-all features. If you have udev installed, also add 'atarisio-udev.rules'
-to your udev configuration so that permissions are set automatically.
-Refer to the udev documentation, usually the udev rules can be found
-in /etc/udev/rules.d and the file should be named '95-atarisio.rules'
-(or something like this).
-
-If you are using kernel 2.4 together with devfs, you need to update
-your modules.conf or /etc/modutils/atarisio file with the current
-version shipped with this release.
-
-If you are using a kernel with a static /dev filesystem (i.e. if
-you don't use devfs or udev), remove the old /dev/atarisio node
-and run "make devices" to create the new /dev/atarisioX nodes.
-
-
-********************************************************************
-*  IMPORTANT NOTE IF YOU ARE UPGRADING FROM AtariSIO VERSION 0.20  *
-********************************************************************
-
-If you previously used AtariSIO V0.20 together with devfs and
-set devfsd to save permissions in "/dev-state/", please stop
-devfsd, remove the file "atarisio" in "/dev-state/" and start
-devfsd again. The devfs code has been changed and otherwise
-AtariSIO won't work!
-
-Since version 0.30 the AtariSIO kernel module supports
-disabling of the serial driver, so the "setserial ... uart none"
-hack is no longer needed. Please use one of the supplied new
-module configuration templates (atarisio-ttySx).
-
-
-1. You need several things to compile and use AtariSIO:
-
-   * a 2.2.x - 4.x version of the Linux kernel, with
-     enabled module support
-   * the kernel headers, matching your running linux kernel
-   * glibc 2.1 or newer
+   * common build tools (gcc, make, ...)
    * libncurses 5.2 or newer
-   * libreadline (if you want to use the "old" (non-ncurses)
-     atariserver frontend
-   * zlib is useful, so you can transparently access compressed
-     disk images
+   * zlib
+   * kernel headers if you want to build the AtariSIO kernel driver
 
-   Depending on your Linux distribution you may also need to install
-   the development packages for glibc/libncurses/libreadline/zlib.
+   On Debian / Ubuntu you can install these with
 
-   If you are using a Debian based distribution, install these packages:
-   * build-essential
-   * libncurses5-dev
-   * zlib1g-dev
-   * linux-headers-2.6-XXX (matching your installed linux-image-XXX
-     package, for example linux-headers-2.6-686)
+   apt-get install build-essential libncurses5-dev zlib1g-dev
 
-   Furthermore, you'll need a fully 16550 compatible serial port.
-   If you have a serial port on your mainboard, it most certainly
-   will work, but eg. a USB-to-serial converter doesn't work.
-   Since 2009 16C950 serial cards are supported, too, and work
-   even better than 16550 cards (for example you can use up to 126kbit
-   in atariserver and access highspeed capable disk drives at
-   full speed with atarixfer).
+   plus, optionally, 
 
-   Then, you need a SIO2PC interface and/or a 1050-2-PC interface
-   cable to connect your Atari (1050) to your PC. I won't describe
-   how to build such a cable in this document, so just download
-   SIO2PC and read it's documentation.
+   apt-get install linux-headers-XXX
 
-   AtariSIO supports the following interfaces:
-   - one chip SIO2PC (with MAX232), command connected to RI
-   - one chip SIO2PC, command connected to DSR
-   - one chip SIO2PC, command connected to RTS
-   - 1050-2-PC (with MAX232), command connected to RTS
-   - Ape ProSystem cable (with 14C89), command connected to DTR
+   where XXX matches the kernel version you are using (eg linux-headers-amd64)
 
-   The old two-chip SIO2PC interface (with a MAX232 and an LS368)
-   is NOT supported, and probably never will be.
+2. Quick install guide
 
-2. Set build options
+   Building AtariSIO tools plus kernel driver:
+
+   make
+   sudo make install
+
+   Building only the tools, without the kernel driver:
+
+   make tools
+   sudo make tools-install
+
+   This will install the AtariSIO tools in /usr/local/bin and
+   (optionally) the kernel driver in /lib/modules/....
+
+   Note: by default atariserver and atarixfer are installed 
+   setuid root (so they ran run with realtime scheduling priorities)
+   and accessible only to members of the group "users". So make
+   sure your user is a member of that group or change the
+   permissions manually after installation.
+
+3. Changing build / installation options
 
    The provided Makefile should work out of the box on most
    Linux distributions and will pick up header and library
    locations automatically via pkg-config.
 
-   The defaults can be changed by setting several make variables.
+   Several common options can be tweaked by setting make variables.
+   Make sure to pass those variables both to "make" and "make install".
 
-   Note that you have to set these variables both on "make"
-   and "make install" calls. eg use "make USE_KBUILD=0"
-   and "make install USE_KBUILD=0" if you build AtariSIO for an
-   old 2.2 or 2.4 kernel.
+   For example:
+   make tools DEFAULT_DEVICE=/dev/ttyAMA0
+   sudo make tools-install DEFAULT_DEVICE=/dev/ttyAMA0
 
-   USE_KBUILD (default 1):
-   Use kbuild (the kernel build system) to compile the module.
-   Set to 0 if you use kernel 2.2 or 2.4
+   DEFAULT_DEVICE: atarisio / serial device to use in atariserver/atarixfer
+   Default is /dev/atarisio0.
+   Change it to eg /dev/ttyUSB0 if you intend to use atariserver/atarixfer
+   mainly with a USB serial adapter.
 
-   KDIR (default /lib/modules/KERNELVERSION/build):
-   Location of the kernel headers / source.
+   INST_DIR: Installation directory prefix
+   Default is /usr/local
 
-   On some systems with non-standard linux header files (eg Red Hat
-   Linux) you may need to set the kernel version ("VERSION") or
-   the kernel module directory ("MDIR") manually.
+   KDIR: Location of the kernel headers / source.
+   Default is  /lib/modules/KERNELVERSION/build
 
-   INST_DIR (default /usr/local)
-   Installation directory
+   USE_KBUILD: Use kernel build system to build kernel driver
+   Default is 1 (enabled), set it to 0 to enable manual compilation
+   of the kernel driver for ancient 2.2/2.4 kernels.
 
-   In case you don't have zlib installed on your system, or if
-   you don't want .gz-file support, comment out the definition of
-   "ZLIB_CXX_FLAGS" and "ZLIB_LD_FLAGS".
+   KERNEL_CC: compiler to use for kernel 2.2/2.4 compilation
+   Default is to use gcc.
 
-   KERNEL_CC (default gcc) - not needed when using kbuild:
+4. Activate the kernel driver
 
-   If you don't use kernel 2.6.x with the kernel build system,
-   the most important part in Makefile configuration is selecting
-   the right gcc version for compiling the kernel module. You must
-   not use a different major gcc version than it was used to compile
-   the linux kernel, otherwise your system may crash!
-   
-   First of all do a "cat /proc/version" to get the gcc version used
-   for compiling the kernel.
-
-   If "gcc --version" reports the same version number, everything
-   is fine.
-
-   If the version numbers don't match, find out how the gcc with
-   the right version number is named and edit the "KERNEL_CC"
-   definition in the Makefile.
-
-3. Type "make dep" and "make"
-
-   This should compile all programs without warnings.
-   If you get something like
-   /tmp/xxx.s:9: Warning: ignoring changed section attributes for .modinfo
-   just ignore it, It's harmless.
-
-   If you want to use the old-style (non-curses) atariserver frontend
-   type "make atariserver-nocurses". You'll then have to install it
-   manually, since "make install" doesn't include it.
-
-4. Become root and type "make install"
-
-   This will copy the kernel driver atarisio.o to the "misc" directory
-   of your kernel modules (eg. /lib/modules/2.4.26/misc) and
-   install atariserver and atarixfer in the installation directory.
-
-   If you are NOT using udev/devfs, you have to create the device nodes
-   /dev/atarisio0..3 by typing "make devices". The default permissions
-   are set to "660", you may want to change them to something more
-   appropriate.
-
-   At the moment I'm using a major number of 10 and a minor number of
-   240..243 for the (character) device drivers. These numbers are reserved
-   for experimental use. In case this number pair is already by
-   another driver, you can change the minor number of atarisio with
-   the module parameter "minor=...". You'll also have to change
-   the minor number in the modules.conf / modutils / modprobe.d file and
-   on the /dev/atarisioX device nodes (if you don't use udev/devfs),
-   of course.
-
-   Please note that atariserver and atarixfer are installed setuid root.
-   You can also run these utilities with normal user privileges, but then
-   they won't be able to take advantage of realtime scheduling priorities.
-   In other words: performance might be better when run with root privileges.
-
-5. Activate the kernel driver
-   
    Due to the design of the linux kernel, the serial port chip can
    only be accessed when the built-in linux serial driver for that
    port is disabled. Until AtariSIO V0.20 this had to be done
@@ -206,23 +97,18 @@ module configuration templates (atarisio-ttySx).
    you are responsible to disable the serial driver and properly
    set the "io=" and "irq=" parameters!
 
-   Have a look at the supplied "atarisio-ttySx" files, choose the
-   one matching your setup, and add it to your module configuration:
+   The atarisio-modprobe.conf file contains a ready-to-use configuration
+   that will use the first serial port (/dev/ttyS0) plus several
+   other examples. Change that to your needs and copy it to
+   /etc/modprobe.d/atarisio.conf
 
-   * If you are using modutils (standard for 2.2 and 2.4 kernels),
-     the configuration is usually stored in /etc/modules.conf
-     or (for example in Debian Woody) in the /etc/modutils/ directory.
-     In the latter case, running "update-modules" will automatically
-     build the modules.conf file from the /etc/modutils/ directory.
+   A template udev configuration file, to setup permissions of
+   the /dev/atarisioX device(s), is provided in atarisio-udev.rules.
+   Change that to your needs and copy it to
+   /etc/udev/rules.d/90-atarisio.rules
 
-   * If you are using the module-init-tools package (required for
-     kernel 2.6), the configuration is usually stored in
-     /etc/modprobe.conf or in the /etc/modprobe.d/ directory.
-     Again, run "update-modules" after you have copied the
-     atarisio-ttySx file to this directory.
-
-   Now load the module with "modprobe atarisio". It should load in fine
-   and a line similar this should be added to your syslog:
+   Now load the module with "modprobe atarisio". It should load fine
+   and a line similar this should be added to dmesg:
 
    atarisio0: minor=240 port=/dev/ttyS0 io=0x03f8 irq=4
 
@@ -234,22 +120,12 @@ module configuration templates (atarisio-ttySx).
    please consult the documentation of your Linux distribution about
    the proper location.
    
-   If you are using devfs, have a look into the "/dev/" directory.
-   There should be a link "/dev/atarisio0" to "/dev/misc/atarisio0" and
-   a device node named "atarisio0" in the directory "/dev/misc/".
-
-   In case of troubles have a look at the syslog-output of atarisio.
+   In case of troubles have a look at atarisio lines in dmesg.
    Loading atarisio will usually fail in one of the following cases:
    - if you passed a non-existant serial port device
    - if it could not disable the linux serial driver
    - if you don't have a 16550(A) (compatible) UART
    - if the IO port region is used by another driver
-
-   Note: The supplied modutils-ttySx templates contain all information
-   needed by the kernel module autoloader to automatically load the
-   atarisio module as soon as "/dev/atarisio0" is accessed. So there's
-   no need to manually load the atarisio module (if your kernel supports
-   autoloading, of course).
 
    If you want support for more than one SIO2PC / 1050-2-PC interface
    just pass a comma separated list of serial devices / io-ports / irqs
@@ -257,50 +133,25 @@ module configuration templates (atarisio-ttySx).
 
    options atarisio port=/dev/ttyS0,/dev/ttyS1
 
-   (in your modules.conf file) or - directly on the command line:
+   (in your /etc/modprobe.d/atarisio.conf file) or on the command line:
 
    modprobe atarisio port=/dev/ttyS0,/dev/ttyS1
 
    This will enable /dev/atarisio0 on your first serial port and
    /dev/atarisio1 on your second serial port.
    
-6. Troubleshooting
+5. Troubleshooting
 
    If you didn't install the kernel module correctly, the utilities
    will most likely bail out with an error message saying
    "unable to open /dev/atarisioX". If that's the case, look into
-   syslog ("/var/log/syslog" or "/var/log/messages") if you can
-   find some error messages from atarisio, and re­check the last
-   steps.
+   dmesg if you can find some error messages from atarisio, and
+   re­check the last  steps.
 
    You'll also get "unable to open /dev/atarisioX" if another
    program is using /dev/atarisioX.
 
-   If your system locks up when using atariserver although you have
-   been using the same gcc version as it was used for kernel compilation,
-   this might be due to a gcc problem. Especially several older
-   non-official gcc snapshot releases are known to cause troubles.
-   In this case, try using another gcc version, for example 2.95.
-
    If you run "make clean" all object files and executables will
    be deleted, but not the 6502 binary files (*.bin). To remove
    these files, too, run "make allclean". Note: you need to have
-   ATasm 1.05 (or newer) installed to assemble the 6502 code.
-
-7. Uninstalling
-
-   If you've got enough of AtariSIO, just become root and use
-   "make uninstall" to remove it.
-
-8. Building the text-mode (non-curses) atariserver program
-
-   In case you want to use the old (pre-0.30) version of atariserver,
-   edit "tools/Makefile" and add "atariserver-nocurses" to the list
-   of EXECUTABLES at the very beginning of the Makefile.
-   atariserver-nocurses is not installed automatically (by calling
-   "make install", so you have to copy it by hand to the
-   installation directory.
-
-   Please note that the old version is not supported any more, new
-   features will only be available in the newer (curses) version of
-   atariserver.
+   ATasm 1.08 (or newer) installed to assemble the 6502 code.

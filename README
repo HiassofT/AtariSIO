@@ -22,49 +22,52 @@ Other docs
 Information about the tools (dir2atr, ataricom, adir) can
 be found in "README-tools".
 
+README.RPi contains information specific to the Raspberry Pi
+(installation instructions and wiring of GPIO-to-SIO connection).
+
 
 About Atarisio
 ==============
 
-AtariSIO basically consists of two parts:
-- a kernel module to handle the low-level part of the Atari SIO
-  protocol, and
-- a set of utilities (atarserver emulates Atari floppy disk
-  drives, atarixfer can read/write floppy disks from/to a
-  floppy drive connected to the PC)
+AtariSIO consists of multiple parts:
+
+- atariserver, a tool to emulate Atari floppy drives and printers
+- atarixfer, a tool to read/write disk images from/to Atari floppy drives
+- an optimized kernel driver for 16550 and 16950 UARTs to handle
+  the timing critical low-level part of the Atari SIO protocol
 - a set of utilities to handle ATR (and other) disk images
   (adir to list the directory of an image and dir2atr to
   create a disk image from a directory of files on your PC)
 
 AtariSIO supports the following interfaces:
-- one chip SIO2PC (with MAX232), command connected to RI
-- one chip SIO2PC, command connected to DSR
-- one chip SIO2PC, command connected to RTS
+
+- one chip SIO2PC serial cables with the SIO command line connected
+  to RI, DSR or RTS
 - 1050-2-PC (with MAX232), command connected to RTS
 - Ape ProSystem cable (with 14C89), command connected to DTR
-   
-The old two-chip SIO2PC interface (with a MAX232 and an LS368)
-is NOT supported, and probably never will be.
+- Direct GPIO connection to Raspberry Pi UART using a 3.3v<->5V level
+  shifter
+- FTDI FT232 based SIO2PC and 1050-2-PC adapters and cables
+- other USB serial adapters (eg Prolific PL2303) may work as well
+  in SIO2PC mode but in general can't be used in 1050-2-PC mode
+  because of hardware / timing restrictions
 
-At the moment atariserver supports 3 (and a half :-) different
-SIO speeds:
-- standard 19200 bit/sec
-- 38400 bit/sec in XF551 compatibility mode
-- 57600 bit/sec
-- 57600 bit/sec with short pauses between bytes
+Highspeed SIO support:
 
-The 57600 bit/sec speed is usually called "high speed SIO". This
-speed is supported by most high speed SIO routines.
+atariserver and atarixfer support all "Ultra speed" SIO transfer
+speeds down to Pokey divisor 0 (about 125kbit/sec) but will be limited
+by the capabilities of the UART and the driver.
 
-The 57600 bit/sec speed with pauses is only needed if the
-high-speed SIO routine of your Atari reacts slightly too slow,
-resulting in sporadic (sometimes also frequent) "hangs".
-
-38400 bit/sec is only available if the XF551 compatibility mode
-is enabled in atariserver. When enabling this mode, most highspeed
-SIO routines will autodetect atariserver as an XF551 and therefore
-limit the data transfer rate to 38400 bit/sec. To use 57600 bit/sec
-the XF551 mode has to be turned off.
+- 16550 UARTs can only operate at 19.2, 38.4 and 57.6 kbit/sec.
+  With the AtariSIO kernel driver also the XF551 and Happy Warp
+  speed protocols (at 38.4 kbit/sec) are supported.
+- 16950 UARTs can only operate at 19.2, 38.4 and 57.6 kbit/sec
+  when using the standard Linux serial driver.
+  With the AtariSIO kernel driver all transfer speeds plus
+  XF551, Happy Warp and 1050 Turbo modes are supported.
+- FTDI FT232 and Prolific PL2303 based USB serial adapters and
+  the Raspberry Pi UART support all transfer speeds but not the
+  XF551 or Happy Warp mode.
 
 
 Utilities
@@ -85,173 +88,194 @@ In case the image-file has a non-recognized extension (eg. .exe),
 an ATR image containing the file is created on the fly. This allows
 you to directly load .COM/.EXE/.BAS/... files.
 
-Starting with version V0.30 AtariSIO supports multiple interfaces
-on a single computer. This feature can be used it you want, for example,
-to permanently connect a SIO2PC interface to your first serial port
-and a 1050-2-PC interface to your second serial port. Or you could
-connect 2 SIO2PC interfaces, run 2 atariserver instances on your PC
-to emulate peripherals for 2 Ataris.
+Starting with version V0.30 the AtariSIO kernel driver supports
+multiple interfaces on a single computer. This allows you to
+connect eg a SIO2PC and 1050-2-PC interface to two serial ports
+and access these via /dev/atarisio0 (the default) and /dev/atarisio1.
 
-Although this feature seems to be very nice at the first sight, there's
-a slight drawback: The SIO protocol is extremely timing critical, so
-having 2 atariserver instances running in parallel on the same machine will
-most certainly fail (since both instances are fighting about CPU cycles).
-It might work on a multiprocessor system (if each atariserver process is
-able to run on a separate, physical CPU core), but I haven't tested it yet.
-So, at the moment, don't expect this to work reliably. But, if you pay
-a little attention and make sure that both Ataris aren't doing SIO
-communications at the same time, it should work just fine.
+On both atariserver and atarixfer you can use the "-f DEVICE" command
+line option to select the interface to use, or you can set the
+ATARISERVER_DEVICE and/or ATARIXFER_DEVICE environment variables.
+
+
+Differences between AtariSIO kernel driver and Linux serial drivers
+====================================================================
+
+If you are running AtariSIO on a x86 PC and have a 16550 or 16950 UART
+then using the AtariSIO kernel driver is the preferred method.
+It offers better timing, higher reliability and more features than
+the alternative of using the standard Linux serial API.
+
+The kernel driver supports XF551 and Happy Warp modes, which requires
+switching the baudrate in a very tight timeframe. It also supports playing
+back CAS files with FSK blocks (copy-protect information).
+
+When using a 16950 UART the AtariSIO kernel driver can configure
+it to match the non-standard Pokey baudrates almost exactly, giving
+best possible compatibility with Atari floppy drives and highspeed
+SIO routines.
+
+If you want to use AtariSIO with an USB serial adapter or with the
+on-board UART of the Raspberry Pi the AtariSIO kernel driver cannot
+be used and atariserver/atarixfer have to use a userspace SIO protocol
+implementation that uses the standard Linux serial API.
+
+The serial API and some of the (USB) serial drivers have some quirks
+which means it's in general not possible to match the SIO timing
+specs as closely as the kernel driver. But for general SIO2PC and
+1050-2-PC use the timing will be good enough.
+
+One limitation is that XF551 / Happy Warp modes won't work as it's
+not possible to switch the baudrate from 19.2 to 38.4 kbit/sec at
+the correct time (there's only a ~200us window for that).
+
+Another limitation is that command frame detection and automatic
+baud rate switching can't use the same technique as the kernel driver
+and is thus a little bit less reliable (but in general still good
+enough).
+
+USB 2.0 controllers with a USB 1.1 OHCI companion controller (eg the
+ones used in AMD chipsets) can have problems detecting command frames
+at low Pokey divisors (about 3-4 and below). This is caused by the
+rather high latency of these controllers. USB 2.0 controllers with
+a UHCI companion (eg in Intel chipsets) and USB 3.0 controllers don't
+suffer from this issue.
+
+One workaround for this issue is to put a USB 2.0 hub between the
+PC/laptop and the USB serial adapter.
+
+Another workaround is to disable use of the command line (a feature
+that is only available in the userspace implementation) which uses
+a timing based detection of command frames.
+
+Disabling use of the command line can also be beneficial on SBCs like
+the Raspberry Pi that don't expose any UART handshake signals on
+GPIO connectors.
+
+A benefit of the Raspberry Pi UART and most USB serial adapters is
+that they can match the non-standard Pokey baudrates closely enough
+to get low Pokey divisors and Happy/Speedy ultraspeed modes working.
 
 
 Using atarixfer
 ===============
 
 atarixfer is used to read/write disk images from/to a Atari drive
-connected to your Linux box with an 1050-2-PC cable. An APE
-ProSystem cable  will also work, but you have to add the
-command-line switch "-p".
+connected to your Linux box with an 1050-2-PC cable.
 
-If you want to write a disk image to a floppy disk, simply
-type "atarixfer -w filename.atr".
+atarixfer can operate in 2 modes, read and write mode, selectable
+by the "-r" and "-w" options:
 
-If you want to read a disk inserted into your 1050 and create
-a disk image from it, type "atarixfer -r filename.atr".
+-r imagefile  create ATR/XFD/DCM image of disk
+-w imagefile  write given ATR/XFD/DCM image to disk
 
-By default atarixfer uses /dev/atarisio0 (the first, and in most
-cases only, interface). If you configured the kernel driver to
-support multiple interfaces and want to use another interface
-either set the environment variable ATARIXFER_DEVICE (eg.
-to /dev/atarisio1) or add the option "-f /dev/atarisio1" to
-your command line. Please note: this must be the very first
-command line option! You can also use the command line option
-to override the settings of the environment variable.
+Several other options are available to tweak operation mode:
 
-That's it - currently there are no more options in atarixfer :-)
+-f device     use alternative AtariSIO device (default: /dev/atarisio0)
+              The device can also be set via the ATARIXFER_DEVICE
+              environment variable, the "-f" option overrides this.
+-d            enable debugging
+-e            continue on errors
+              The default is to abort on errors
+-p            use APE prosystem cable (default: 1050-2-PC cable)
+-R num        retry failed sector I/O 'num' times (0..100)
+              Default is no retry on errors
+-s            enable Happy Warp/XF551 speeds
+              Note: this only works with the AtariSIO kernel driver
+-S            enable Ultra/Turbo/Happy Warp/XF551 speeds
+              Happy Warp, XF551 and 1050 Turbo only work
+              with the AtariSIO kernel driver.
+              1050 Turbo Mode requires a 16950 UART and the AtariSIO
+              kernel driver.
+              Ultra Speed mode with a Happy 1050 or Speedy requires
+              a 16950 UART and the AtariSIO kernel driver, an FTDI
+              USB serial cable or the on-board Raspberry Pi UART.
+-t            enable relaxed data transmission
+-x            enable workaround for XF551 format detection bugs
+-1 ... -8     use drive number 1...8 (default is 1)
+
+Examples:
+
+Create disk image from an Happy drive with highspeed SIO using
+an FTDI USB adapter
+
+atarixfer -f /dev/ttyUSB0 -S -r myimage.atr
 
 
 Using atariserver
 =================
 
-atariserver is an SIO-server, like SIO2PC or APE for MSDOS-machines.
+atariserver is an SIO-server, like SIO2PC or APE.
 
-Starting with V0.30 atariserver comes with a new curses frontend.
-The old atariserver (with the text-only frontend) is still included
-in this package but has to be built and installed separately
-(read "INSTALL" for details).
+It offers a text-based (curses) user interface which allows
+interactive configuration, loading / saving of images etc.
+
+In addition to that most configuration settings, disk images
+etc can also be set via command line options. Read the user
+interface section below for more detailled information.
 
 1. Command line options
 
--h           display help
--f device    use alternative AtariSIO device (default: /dev/atarisio0)
--c           use alternative SIO2PC cable (command=DSR)
--C           use alternative SIO2PC cable (command=CTS)
--N           use alternative SIO2PC cable without command line
--m           monochrome mode
--o file      save trace output to <file>
--p           write protect the next image
--s           slow mode - disable highspeed SIO
--S           high speed SIO mode with pauses
--X           enable XF551 commands
--t           increase SIO trace level (default:0, max:3)
--1..-8       set current drive number (default: 1)
--V dens dir  create virtual drive of given density, the second parameter
-             specifies the directory. dens is s|e|d|(<number>s|d)|S|D
--P conv path install printer handler
-             conv is EOL conversion: r=raw(no conversion), l=LF, c=CR+LF
-             path is either a filename or |print-command, eg |lpr
-<filename>   load <filename> into current drive number, and then
-             increment drive number by one
-             if the filename ends with '.cas' or '.cas.gz', the
-             CAS-image is loaded and tape emulation is started
+-f device     use alternative AtariSIO device (default: /dev/atarisio0)
+              Note: if used, this has to be the very first option!
+              The device can also be set via the ATARISERVER_DEVICE
+              environment variable, the "-f" option overrides this.
+-C            use SIO2PC cable with command line on CTS
+-D            use SIO2PC cable with command line on DSR
+-N            use SIO2PC cable without command line
+-F            disable non-standard disk formats
+              If enabled atariserver will only accept standard
+              single / enhanced / double density disk images that
+              match what a 1050 with a Happy/Speedy/... upgrades support
+-m            monochrome mode
+-o file       save trace output to <file>
+              Setting this option will write all messages output in
+              the log window to a file.
+-s mode       set high speed mode: 0 = off, 1 = on, 2 = on with pauses
+              The default is 1 (high speed enabled)
+-S div,[baud] high speed SIO pokey divisor (default 8) and optionally baudrate
+-X            enable XF551 commands
+-t            increase SIO trace level (default:0, max:3)
+              Use this option multiple times to set a higher trace level
+-T percent    set tape baudrate to x% of nominal speed (1-200)
+-P mode file  install printer handler
+              mode sets EOL conversion: r=raw/none, l=LF, c=CR, b=CR+LF
+              path is either a filename or |print-command, eg |lpr
+-p            write protect the next image
+-1..-8        set drive number for next image / virtual drive
+-V dens dir   create virtual drive of given density, the second parameter
+              specifies the directory. dens is s|e|d|(<number>s|d)|S|D
+              s/e/d create a standard ~90/130/180k SD/ED/DD image.
+              <number>s and <number>d create a SD/DD image with given number
+              of sectors.
+              S and D create a SD/DD image, the number of sectors required
+              to store all files from the directory is calculated automatically.
+<filename>    load <filename> into current drive number, and then
+              increment drive number by one
+              if the filename ends with '.cas' or '.cas.gz', the
+              CAS-image is loaded and tape emulation is started
 
--h just prints the above help screen.
-
--f sets the AtariSIO device. This option is only needed if you
-   configured the kernel driver to support more than one interface
-   or if you want to use the userspace SIO implementation (when
-   using standard serial ports or USB serial adapters).
-   Note: this must be the very first command line option, otherwise
-   it will be ignored!
-   Without that option atariserver will check if the environment
-   variable ATARISERVER_DEVICE is set, if not the default device
-   /dev/atarisio0 will be used.
-
--c tells AtariSIO that your Atari is connected via an alternative
-   SIO2PC cable. The standard SIO2PC cable uses the RI pin for
-   command line input. Some Windows SIO emulators use a slightly
-   modified SIO2PC cable, using DSR instead of RI. If you are not
-   sure what kind of SIO2PC cable you have, just try starting
-   atariserver with and without the "-c" switch and test if your
-   Atari can boot from atariserver.
-   BTW: there's no performance benefit using the DSR line instead
-   of the RI line, both cables work identically with AtariSIO.
-
--C is similar to '-c' except that the CTS pin is used. This is
-   quite useful for testing purposes: connect two PCs with a
-   nullmodem-cable, start atariserver with '-C' on one machine
-   and atarixfer with '-p' on the other.
-
--N uses a special command detection mode without a command
-   line connected. Note: this only works with the userspace SIO
-   implementation (eg when using an USB serial adapter), the
-   kernel driver doesn't support this mode.
-
--m monochrome mode: disable colors, even if your terminal
-   reports color support.
-
--o set trace file: all output displayed in the log-window will
-   also be saved to the specified file.
-
--p loads the next image with "write protect" enabled. This
-   option is only valid for the next image, if you want to load
-   multiple write protected images, you have to specify this
-   options before each filename.
-
--s disables high speed (57600 bit/sec) SIO support. It sets
-   the baudrate to fixed 19200 bit/sec and also disables several
-   special commands like "get ultraspeed byte" or "flush disk"
-   that are only supported by high-speed drives like the
-   1050 speedy. Read the list of SIO commands at the end of this
-   README for more details.
-
--S high speed (57600 bit/sec) mode with pauses between bytes.
-   This is needed for some high speed SIO routines which are too
-   slow to handle sustained 57600 bit/sec transfers. The effective
-   speed will be approx. 48000 bit/sec.
-
--X enable XF551 compatibility mode: In XF551 mode atariserver
-   reacts on commands with the 7th bit set and automatically
-   switches to 38400 bit/sec transfer mode. Additionally, the
-   GetStatus command sets both bit 7 and 6 in case of an QD
-   (double sided, double density, 1440 sectors) disk, just like
-   the XF551.
-
--t increases the trace level. You may use this option up to
-   three times if you want more output. Read below for a
-   description of the various trace levels
-
--V dens dir: create virtual drive using the specified directory.
-   The density can be one of the following:
-   s, e, d : standard single/enhanced/double density format
-   <number>s, <number>d : create drive in SD/DD format (128/256
-   bytes per sector) using the specified number of sectors
-   S, D : SD/DD format, the number of sectors needed to store
-   all files is automatically calculated
-
--P conv path: install printer handler. To use the standard unix
-   print service, use: -P l "|lpr"
-   Read the section about printer support for more information.
-
-
-To load several images you could start atariserver with
+To load several images you can start atariserver with
 the following options (for example):
 
 atariserver dos.atr -3 -p data1.atr -V d filedir
 
 This will load dos.atr into D1:, data1.atr into D3: and create
 a virtual drive in double density (720 sectors) out of the
-directory filedir. Forthermore, D1: and D4: will be writeable,
-whereas D3: will be write protected.
+directory filedir. D1: and D4: will be writeable, whereas
+D3: will be write protected.
+
+
+2. Environment variables
+
+ATARISERVER_DEVICE
+
+Sets the device to use instead of the compile-time default (/dev/atarisio0).
+
+eg use /dev/ttyAMA0 by default:
+export ATARISERVER_DEVICE="/dev/ttyAMA0"
+
+ATRPATH
 
 If you set the environment variable ATRPATH atariserver will look
 for image files in the specified (colon separated) directories
@@ -261,11 +285,8 @@ For example:
 
 export ATRPATH=/home/atari/dos:/data/xl/magazines
 
-or (for csh users):
-setenv ATRPATH /home/atari/dos:/data/xl/magazines
 
-
-2. The user interface
+3. The user interface
 
 The atariserver screen is divided into several regions:
 
@@ -279,7 +300,11 @@ status of the 8 disk slots. From left to right the following
 information is displayed:
 - the slot number (D1: to D8:)
 - the size of the loaded image in sectors
-- the density of the image ('S' = SD, 'D' = DD)
+- the density of the image:
+  'S' = SD / 128 bytes per sector
+  'D' = DD / 256 bytes per sector
+  'Q' = QD/512 bytes per sector
+  '1'/'2'/'4'/'8' = 1/2/4/8 kbytes per sector
 - the write protect status ('W' = writable, 'P' = write protected)
 - the modification status (<blank> = unchanged, 'C' = changed since
   last load/write/create operation)
@@ -303,7 +328,7 @@ selection screen) show a big window instead of the drive status
 window, the status line, and the log window.
 
 
-3. User interface commands
+4. User interface commands
 
 You can always abort the current command by pressing '^G' (control-G).
 
@@ -313,7 +338,9 @@ atariserver easy to use :-)
 
 Here's an overview about the currently supported commands:
 
-'q'   Quit atariserver. 
+'h'  show help.
+
+'q'  quit atariserver. 
 
 'l'  load a disk image file (ATR/DCM/DI/XFD) into a drive slot.
      The drive slot must be empty or contain an unchanged disk
@@ -372,10 +399,11 @@ file you can view it's DOS2.x directory by pressing '^D'.
      '3' is 180k DD (720 sectors, 256 bytes per sector)
      '4' is 360k QD (1440 sectors, 256 bytes per sector)
 
-     'S' is 1-65535 SD sectors (128 bytes per sector)
-     'D' is 1-65535 DD sectors (256 bytes per sector)
+     's' is 1-65535 SD sectors (128 bytes per sector)
+     'd' is 1-65535 DD sectors (256 bytes per sector)
+     'f' is 1-65535 QD sectors (512 bytes per sector)
 
-     If you entered 'S' or 'D' you'll get asked how many sectors
+     If you entered 's', 'd' or 'f' you'll get asked how many sectors
      you'd like to have in the image. This input routine also supports
      cursor-movement and a history (like the filename input routine),
      but of course no filename-completion or file-selection mode :-)
@@ -383,26 +411,59 @@ file you can view it's DOS2.x directory by pressing '^D'.
 'u'  unload (free) a disk drive.
      Specify a drive number to unload, or 'a' for all drives.
 
-'x'  exchange two disk drive numbers.
-
-'p','P' write-(un)-protect a disk drive
-     Specify a drive number to (un)protect, or 'a' for all drives.
-     If you save a drive to an ATR image, the write protect
-     flag will also be saved. So this is a simple solution if you
-     want a certain image to be write protected permanently.
-     Note: this does not work with DCM, DI and XFD images, since these
-     image formats don't support a write protect flag!
+'x'  exchange (swap) two disk drive numbers.
 
 'd'  display the (DOS2.x) directory of an image.
      Please note that this function only works with DOS2.x compatible
      disk formats (like DOS2.x, MyDOS, Turbo-DOS, ...), but _not_
      with Sparta-DOS disks!
 
+'f'  format a drive
+     This clears all sector data of the image and initializes
+     it with an empty directory and DOS 2.x or MyDOS VTOC.
+
+'p','P' write-(un)-protect a disk drive
+     Specify a drive number to (un)protect, or 'a' for all drives.
+     If you save a drive to an ATR image, the write protect
+     flag will also be saved.
+
 't'  set trace level
 
 's'  set SIO speed (slow, high, high with pauses)
+     '0' disables highspeed and commands not supported
+         by stock drives (like the "get speed byte" command).
+     '1' enabled highspeed mode (this is the default).
+     '2' enables highspeed mode with relaxed timing and
+         pauses between each bytes. This is only needed for a few
+         older highspeed SIO routines on the Atari that are too slow
+         to cope with back-to-back byte transmissions.
+         Note: this mode is only available with the AtariSIO kernel driver,
+         selecting it with standard Linux serial drivers has no effect
+         (it will work identical to normal highspeed mode).
+
+'S'  set high speed pokey divisor/baudrate
+     By default atariserver uses Pokey divisor 8, also known as "3xSIO",
+     at (about) 57.6kbit/sec.
+     This option allows you to select a custom Pokey divisor in the
+     range 0-63.
+     Optionally you can specify the baudrate by appending ",BAUDRATE"
+     (eg "0,126000" to use Pokey divisor 0 at 126kbit/sec) to override
+     the default baudrates. This feature was mainly added for testing
+     purposes, in general you should stick to the default baudrates.
 
 'C'  set SIO2PC cable type / command line
+     'r' command line on RI/RING input (this is the default)
+     'd' command line on DSR input
+     'c' command line on CTS input
+     'n' no command line
+         Note: the "no command line" is only available when using
+         standard Linux serial drivers. The AtariSIO kernel driver
+         doesn't support this mode.
+         One drawback of the "no command line" mode though is that it
+         doesn't work as well as the modes with a command line if you
+         have other Atari peripherals connected to the SIO bus.
+         So better use this mode only if you have no other options
+         or if atariserver is the only SIO device on the bus.
 
 'a','A' activate/deactivate disk drives, printer or remote control
      Use this feature if you want to (temporarily) deactivate a
@@ -425,8 +486,21 @@ file you can view it's DOS2.x directory by pressing '^D'.
      previous/next part, home/end seek to the beginning/end.
      Use 'q' to exit tape emulation and return back to disk drive emulation.
 
+'i'  install printer handler See the section "Printer Support" for more info.
 
-4. SIO trace levels
+'I'  uninstall printer handler
+
+'F'  flush queued printer data
+     This writes out all temporarily buffered data to the printer file
+     or external program.
+
+'X'  enable/disable XF551 commands
+     If enabled atariserver will respond to XF551 commands using
+     the XF551 highspeed mode (about 38.4kbit/sec).
+     Note: this only works with the AtariSIO kernel driver.
+
+
+5. SIO trace levels
 
 By default (in debug level 0) atariserver will only print warnings
 and error messages related to user input.
@@ -441,7 +515,7 @@ In trace level 3 atariserver will (in addition to level 2) also
 dump the contents of the transmitted data blocks.
 
 
-5. Virtual drives
+6. Virtual drives
 
 Virtual drive support in atariserver is somewhat similar to the "PC mirror"
 feature of APE. It allows you to directly access files on your harddisk
@@ -486,7 +560,7 @@ MyPicoDos itself is not stored on the virtual drive, it is loaded directly
 from atariserver using the special SIO command $6D.
 
 
-6. Printer support
+7. Printer support
 
 Atariserver now also supports emulation of a printer. The printer
 data can either be saved to a file or be sent to an external program
@@ -516,7 +590,7 @@ external program instead of 155. If set to 'CR+LF' a carriage return
 followed by a linefeed (13+10) is sent.
 
 
-7. Remote control support
+8. Remote control support
 
 Atariserver can be fully controlled from the Atari using a very simple
 protocol. A separate SIO device ID ($61) is used, therefore the remote
@@ -660,35 +734,6 @@ to atariserver after reading the response so that the response buffer
 will be freed immediately.
 
 
-ATP format support
-==================
-
-Starting with V0.30, AtariSIO contains preliminary support for the
-ATP format, version 1.6. The ATP format is an attempt to design an
-open disk format suitable for storing copy protected disks (similar
-to the APE .pro format).
-
-At the moment the base classes for handling ATP images are already
-implemented, and atariserver contains some code to emulate the
-Atari 1050 timing. Please note that this code has not been tested
-too well, because there is no application to create an ATP
-image of a copy-protected disk yet. For now, all you can do is
-create an ATP image completely by hand, or convert an (unprotected,
-of course) ATR image into an ATP image and then start playing around
-with it.
-
-Currently, there are two small tools to start with:
-- atr2atp creates and ATP image from an ATR image and
-- atpdump dumps the internal structure and timing/status information
-          of an ATP image.
-
-If you are interested in the details of the ATP format and/or want
-to help creating an application to create ATP images of "real" Atari
-disks, please visit the Atari Preservation Project homepage:
-
-http://www.abbuc.de/app/
-
-
 Troubleshooting
 ===============
 
@@ -721,32 +766,6 @@ echo "2" > /sys/module/atarisio/parameters/debug
 
 Behind the scenes
 =================
-
-Atariserver emulates almost all commands of an enhanced 1050 drive.
-It supports standard (19200 bit/sec) and high-speed (57600 bit/sec)
-SIO. High-speed SIO even works on slower PC (like for example my
-old 486SX/33).
-
-Speaking of performance: When writing this document the Linux kernel
-threads are still non-preemptable. Kernel 2.6 should support this,
-but this feature still causes troubles.  Normally, the PC should be
-able to respond to a received command frame within some 10mSec. If
-another process is running, this process will be interrupted immediately
-(due to the use of realtime scheduling priorities). But if a kernel
-thread (like the kernel update daemon) is running, it won't get
-preempted and atariserver is not able to respond quickly enough. Usually
-this is not too bad, since the Atari will retry each command some 14
-times, so there's a good chance at least one of those retries will
-succeed. But under very bad circumstances the command may still
-fail and the Atari will get a timeout error (error 138). So, if
-you experience performance and/or reliability problems, try to shut
-down as many background processes as you can.
-
-Another source of performance problems are ATA harddisks (especially
-old, slow ones) in PIO mode. If possible, enable the (U)DMA mode.
-If DMA support doesn't work with your chipset, try to use
-'hdparm -u' to enable interrupt-unmasking. Read the hdparm manpage
-for more details.
 
 Compared to SIO2PC and APE, atariserver uses a slightly different
 philosophy when dealing with disk images. SIO2PC and APE both use
@@ -870,17 +889,11 @@ Credits
 
 Thanks to:
 
-Atari Bit Byter User Club (ABBUC) for the 6502 highspeed SIO code.
-
 Jindroush for the DCM codec and DI format documentation.
 
 Bill Kendrick, Christopher Lang, Thomas Havemeister, Ryan Underwood,
-Bohdan Milar, Steven Sheppard and many others for testing &
-submitting bugreports!
-
-Freddy Offenga, Stephan Dorndorf and all other members of the
-Atari Preservation Project for their work on the ATP format.
-
+Bohdan Milar, Steven Sheppard, Andreas Kahlenberger and many others
+for testing & submitting bugreports!
 
 You have reached the end of the document
 ========================================

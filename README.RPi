@@ -1,0 +1,175 @@
+Using AtariSIO on a Raspberry Pi
+
+On the Raspberry Pi atariserver/atarixfer can be used either with
+an FTDI based USB-serial adapter/cable or with the on-board UART(s).
+
+1. Building and installing AtariSIO in Raspbian:
+
+- install required Raspbian packages:
+    
+   sudo apt-get install build-essential libncurses5-dev zlib1g-dev
+
+- build AtariSIO tools:
+
+  - If you intend to mainly use a USB-serial adapter/cable:
+
+  make tools DEFAULT_DEVICE=/dev/ttyUSB0
+
+  - If you intend to mainly use the main on-board UART:
+
+  make tools DEFAULT_DEVICE=/dev/ttyAMA0
+
+  - If you intend to mainly use the secondary (mini) UART:
+
+  make tools DEFAULT_DEVICE=/dev/ttyS0
+
+- install AtariSIO tools and RPi device tree overlays
+
+  sudo make rpi-install
+
+- alternatively: install only AtariSIO tools without device
+  tree overlays
+
+  sudo make tools-install
+
+2. On-board UARTs of the Raspberry Pi
+
+The Raspberry Pi is equipped with two on-chip UARTs, the more
+capable PL011 UART ("/dev/ttyAMA0") and a less capable mini UART
+("/dev/ttyS0").
+
+Both of these UARTs support RTS and CTS handshake lines (which
+aren't available by default but can be easily enabled with
+a device tree overlay).
+
+As both of these UARTs can also support the rather non-standard
+Pokey baudrates it makes the RPi a nice platform to interface
+with the Atari SIO bus.
+
+The only thing that's needed is a 3.3V<->5V level shifter as
+the RPi is a 3.3V-only device and connecting it's GPIOs to
+the 5V SIO bus would (almost) immediately fry it.
+
+On the RPis without wifi/bluetooth (original RPi, RPi2 and RPi Zero)
+the PL011 UART (/dev/ttyAMA0) is enabled by default.
+
+On the RPis with wifi/bluetooth (RPI3B, RPi3B+, RPi Zero W)
+the PL011 UART is by default used to connect the bluetooth chip.
+
+If you don't need bluetooth, it's best to disable it via the
+following line in config.txt - the PL011 UART is then available
+on the GPIO header:
+
+dtoverlay=pi3-disable-bt
+
+If you need bluetooth you have 2 options:
+
+Either use the mini UART for the bluetooth connection - then the
+PL011 UART will be available on the GPIO:
+
+dtoverlay=pi3-miniuart-bt
+
+Or enable the mini UART (/dev/ttyS0) on the GPIO header:
+
+enable_uart=1
+
+Either way, enabling the mini UART comes at a cost: the RPi's core
+frequency will then be fixed at 250MHz and it can't clock up under
+load like it'd normally do - as that would also change the mini UART
+frequency (and as a consequence the baud rate). This basically means
+your RPi will run a bit slower if the mini UART is enabled.
+
+
+3. Enabling RTS/CTS handshake lines on the GPIO pins
+
+On the RPis with 40-pin GPIO header either add
+
+dtoverlay=uart-ctsrts
+
+or
+
+dtoverlay=miniuart-ctsrts
+
+to your config.txt - read the section above to understand the
+difference between the normal UART and the mini UART and choose
+the appropriate overlay.
+
+This will then enable RTS on pin 11 of the GPIO header and CTS on pin 36.
+
+On the original RPi with a 26-pin GPIO header only the RTS line is
+available on the GPIO header (also at pin 11). This can be enabled with
+
+dtoverlay=uart-rts
+
+Note: this means you can still use atarixfer / 1050-2-PC mode (which
+requires a command line, connected to RTS), but you have to use
+atariserver / SIO2PC in the "no command line" mode.
+
+As an alternative you can use
+
+dtoverlay=uart-ctsrts-p5
+
+to enable RTS on pin 6 of the P5 pads (next to the GPIO header)
+and CTS on pin 5 of the P5 pads.
+
+Note: keep in mind that the P5 pad numbering is left<->right
+swapped compared to the pin-numbering on the GPIO header. Pin 1
+is on the outside-facing row, pin 2 on the inward-facing row.
+
+
+4. GPIO wiring for SIO2PC mode
+
+Parts needed:
+- 3 3.3V<->5V level shifters
+- 1 1N4148 diode
+- Atari SIO connectors
+- wires
+
+Note: down-shifting (eg FET) level shifters work well, up-shifting
+to +5V on the high-side isn't strictly necessary.
+
+You can omit the 1N4148 diode if you don't plan to connect any other
+Atari peripherals to the SIO bus.
+
+If you want to connect other Atari peripherals the diode is mandatory!
+
+Wiring (the "<LS>" blocks are the level shifters)
+
+RPi GPIO pin                  Atari SIO pin
+GND   6 -------+------------  7  GND
+               |    1N4148
+TxD   8 ----- <LS> ---|<|---  3  Data In
+RxD  10 ----- <LS> ---------  5  Data Out
+CTS  36 ----- <LS> ---------  7  Command
+
+Notes:
+
+GND must also be connected to the level-shifters' ground pin.
+Depending on your level shifter you may also need to provide 3.3V
+(from RPi GPIO pin 1) and/or 5V (from RPi GPIO pin 2 or 4) supplies
+to your level shifter.
+
+The cathode of the diode must be connected to the level shifter,
+the anode to the Atari's SIO connector.
+
+5. GPIO wiring for 1050-2-PC mode
+
+Parts needed:
+- 3 3.3V<->5V level shifters
+- Atari SIO connectors
+- wires
+
+Wiring (the "<LS>" blocks are the level shifters)
+
+RPi GPIO pin                 Atari SIO pin
++5V   4 -------------------- 10  +5V / Ready 
+GND   6 -------+------------  7  GND
+TxD   8 ----- <LS> ---------  5  Data Out
+RxD  10 ----- <LS> ---------  3  Data In
+RTS  11 ----- <LS> ---------  7  Command
+
+GND must also be connected to the level-shifters' ground pin.
+Depending on your level shifter you may also need to provide 3.3V
+(from RPi GPIO pin 1) and/or 5V (from RPi GPIO pin 2 or 4) supplies
+to your level shifter.
+
