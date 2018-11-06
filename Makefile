@@ -194,6 +194,13 @@ driver-install:
 tools-install:
 	$(MAKE) -C tools install
 
+.PHONY: dtbo-install
+dtbo-install:
+	cp contrib/rpi/*.dtbo /boot/overlays
+
+.PHONY: rpi-install
+rpi-install: tools-install dtbo-install
+
 .PHONY: devices
 devices:
 	mknod -m 660 /dev/atarisio0 c 10 240
