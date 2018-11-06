@@ -164,12 +164,12 @@ static void process_args(RCPtr<DeviceManager>& manager, CursesFrontend* frontend
 					manager->EnableXF551Mode(true);
 					ALOG("enabling XF551 commands");
 					break;
-				case 'c':
-					manager->SetSioServerMode(SIOWrapper::eCommandLine_DSR);
-					ALOG("using alternative SIO2PC cable type (command=DSR)");
-					break;
 				case 'C':
 					manager->SetSioServerMode(SIOWrapper::eCommandLine_CTS);
+					ALOG("using alternative SIO2PC cable type (command=DSR)");
+					break;
+				case 'D':
+					manager->SetSioServerMode(SIOWrapper::eCommandLine_DSR);
 					ALOG("using alternative SIO2PC cable type (command=CTS)");
 					break;
 				case 'N':
@@ -347,29 +347,28 @@ void usage()
 {
 	printf("atariserver %s\n", VERSION_STRING);
 	printf("(c) 2002-2018 Matthias Reichl <hias@horus.com>\n");
-	printf("usage: [-f device] [-cChmNsStX] [-o file] [-P c|l|r file]\n");
-	printf("       [ [-12345678] [-p] (-V dens dir)|file  ... ]\n");
+	printf("usage: [-f device] [options...]\n");
 	printf("-h            display help\n");
 	printf("-f device     use alternative AtariSIO device (default: /dev/atarisio0)\n");
-	printf("-c            use alternative SIO2PC cable (command=DSR)\n");
-	printf("-C            use alternative SIO2PC cable (command=CTS)\n");
-	printf("-N            use alternative SIO2PC cable without command line\n");
+	printf("-C            use SIO2PC cable with command line on CTS\n");
+	printf("-D            use SIO2PC cable with command line on DSR\n");
+	printf("-N            use SIO2PC cable without command line\n");
 	printf("-F            disable non-standard disk formats\n");
 	printf("-m            monochrome mode\n");
 	printf("-o file       save trace output to <file>\n");
-	printf("-p            write protect the next image\n");
-	printf("-s mode       set high speed mode:i 0 = off, 1 = on, 2 = on with pauses\n");
+	printf("-s mode       set high speed mode: 0 = off, 1 = on, 2 = on with pauses\n");
 	printf("-S div[,baud] high speed SIO pokey divisor (default 8) and optionally baudrate\n");
 	printf("-X            enable XF551 commands\n");
 	printf("-t            increase SIO trace level (default:0, max:3)\n");
 	printf("-T percent    set tape baudrate to x%% of nominal speed (1-200)\n");
-	printf("-1..-8        set current drive number (default: 1)\n"); 
-	printf("-V dens dir   create virtual drive of given density, the second parameter\n");
-	printf("              specifies the directory. dens is s|e|d|(<number>s|d)|S|D\n");
-	printf("-P c|l|r file install printer handler\n");
-	printf("              first option is EOL conversion: r=raw(no conversion), l=LF, c=CR+LF\n");
+	printf("-P mode file  install printer handler\n");
+	printf("              mode sets EOL conversion: r=raw/none, l=LF, c=CR, b=CR+LF\n");
 	printf("              path is either a filename or |print-command, eg |lpr\n");
 	printf("-Q            ask before quitting atariserver\n");
+	printf("-p            write protect the next image\n");
+	printf("-1..-8        set drive number for next image / virtual drive\n"); 
+	printf("-V dens dir   create virtual drive of given density, the second parameter\n");
+	printf("              specifies the directory. dens is s|e|d|(<number>s|d)|S|D\n");
 	printf("<filename>    load <filename> into current drive number, and then\n");
 	printf("              increment drive number by one\n");
 	printf("              if the filename ends with '.cas' or '.cas.gz', the\n");
