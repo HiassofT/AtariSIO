@@ -1170,6 +1170,8 @@ int UserspaceSIOWrapper::SendCommandFrame(Ext_SIO_parameters& params)
 			SetBaudrateIfDifferent(fHighspeedBaudrate);
 		}
 
+		tcflush(fDeviceFileNo, TCIFLUSH);
+
 		MicroSleep(eDelayT1);
 
 		UTRACE_CMD_STATE("de-asserting command line");
