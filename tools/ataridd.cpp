@@ -1,7 +1,7 @@
 /*
    ataridd - dump sector range from Atari disk to file
 
-   Copyright (C) 2004 Matthias Reichl <hias@horus.com>
+   Copyright (C) 2004-2018 Matthias Reichl <hias@horus.com>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -80,21 +80,23 @@ int main(int argc, char** argv)
 	}
 
 	int c;
-
-	int prosys = 0;
 	int ret;
+
+	SIOWrapper::E1050CableType cable_type = SIOWrapper::e1050_2_PC;
+	const char* cable_desc = "1050-2-PC";
 
 	unsigned int start_sector = 1, end_sector=720;
 
-	printf("ataridd %s\n(c) 2002-2004 by Matthias Reichl <hias@horus.com>\n\n",VERSION_STRING);
-	while ((c = getopt(argc, argv, "ps:e:")) != -1) {
+	printf("ataridd %s\n(c) 2002-2018 by Matthias Reichl <hias@horus.com>\n\n",VERSION_STRING);
+	while ((c = getopt(argc, argv, "pls:e:")) != -1) {
 		switch (c) {
 		case 'p':
-			if (prosys == 0) {
-				prosys = 1;
-			} else {
-				goto usage;
-			}
+			cable_type = SIOWrapper::eApeProsystem;
+			cable_desc = "APE prosystem";
+			break;
+		case 'l':
+			cable_type = SIOWrapper::eLotharekSwitchable;
+			cable_desc = "Lotharek 1050-2-PC USB";
 			break;
 		case 's':
 			start_sector = (unsigned int) atoi(optarg);
@@ -125,14 +127,11 @@ int main(int argc, char** argv)
 		exit (1);
 	}
 	set_realtime_scheduling(0);
-	if (prosys) {
-		ret= SIO->SetCableType_APE_Prosystem();
-	} else {
-		ret = SIO->SetCableType_1050_2_PC();
-	}
+
+	ret = SIO->Set1050CableType(cable_type);
 
 	if (ret) {
-		printf("cannot set %s mode\n", prosys ? "prosystem" : "1050-2-PC");
+		printf("cannot set %s mode\n", cable_desc);
 		return 1;
 	}
 
@@ -177,7 +176,8 @@ int main(int argc, char** argv)
 		end_sector - start_sector + 1, argv[optind]);
 	return 0;
 usage:
-	printf("usage: [-p] [-s start_sector] [-e end_sector] imagefile\n\n");
+	printf("usage: [-pl] [-s start_sector] [-e end_sector] imagefile\n\n");
 	printf("  -p           use APE prosystem cable (default: 1050-2-PC cable)\n");
+	printf("  -l           use Lotharek 1050-2-PC USB cable");
 	return 1;
 }

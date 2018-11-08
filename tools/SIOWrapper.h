@@ -43,9 +43,14 @@ public:
 	 * configuration stuff
 	 */
 
-	virtual int SetCableType_1050_2_PC() = 0;
-	virtual int SetCableType_APE_Prosystem() = 0;
-	
+	enum E1050CableType {
+		e1050_2_PC,		// command on RTS
+		eApeProsystem,		// command on DTR
+		eLotharekSwitchable	// command on RTS, inverted
+	};
+
+	virtual int Set1050CableType(E1050CableType type) = 0;
+
 	enum ESIOServerCommandLine {
 		eCommandLine_RI = 0,
 		eCommandLine_DSR = 1,

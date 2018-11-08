@@ -35,9 +35,8 @@ public:
 	 */
 	virtual bool IsUserspaceWrapper() const;
 
-	virtual int SetCableType_1050_2_PC();
-	virtual int SetCableType_APE_Prosystem();
-	
+	virtual int Set1050CableType(E1050CableType type);
+
 	// false sets default cable type (command connected to RI),
 	// true sets alternative type (command connected to DSR).
 	virtual int SetSIOServerMode(ESIOServerCommandLine cmdLine = eCommandLine_RI);
@@ -117,7 +116,6 @@ private:
 	bool InitSerialDevice();
 	bool ClearControlLines();
 
-	bool Set1050ToPCMode(bool prosystem);
 	bool SetCommandLine(bool asserted);
 
 	int SendCommandFrame(Ext_SIO_parameters& params);
@@ -168,6 +166,7 @@ private:
 	unsigned int fTapeOldBaudrate;
 
 	struct termios fOriginalTermios;
+	bool fRestoreOriginalTermiosOnExit;
 
 	enum {
 		eDelayT0 = 1000,

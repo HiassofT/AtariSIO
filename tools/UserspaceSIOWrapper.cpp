@@ -139,6 +139,7 @@ UserspaceSIOWrapper::UserspaceSIOWrapper(int fileno)
 	  fTapeBaudrate(ATARISIO_TAPE_BAUDRATE),
 	  fBaudrate(0),
 	  fDoAutobaud(false),
+	  fRestoreOriginalTermiosOnExit(true),
 	  fLastCommandOK(true)
 {
 	if (ioctl(fDeviceFileNo, TCGETS, &fOriginalTermios)) {
@@ -163,7 +164,7 @@ UserspaceSIOWrapper::UserspaceSIOWrapper(int fileno)
 
 UserspaceSIOWrapper::~UserspaceSIOWrapper()
 {
-	if (fDeviceFileNo >= 0) {
+	if (fDeviceFileNo >= 0 && fRestoreOriginalTermiosOnExit) {
 		ioctl(fDeviceFileNo, TCSETS, &fOriginalTermios);
 	}
 
@@ -223,17 +224,51 @@ bool UserspaceSIOWrapper::SetCommandLine(bool asserted)
 }
 
 
-bool UserspaceSIOWrapper::Set1050ToPCMode(bool prosystem)
+int UserspaceSIOWrapper::Set1050CableType(E1050CableType type)
 {
-	bool ok;
 	fCommandLineMask = ~(TIOCM_RTS | TIOCM_DTR);
-	fCommandLineLow = TIOCM_RTS | TIOCM_DTR;
-	if (prosystem) {
+
+	fLastResult = 0;
+
+	switch (type) {
+	case e1050_2_PC:
+		fCommandLineLow  = TIOCM_RTS | TIOCM_DTR;
+		fCommandLineHigh =             TIOCM_DTR;
+		break;
+	case eApeProsystem:
+		fCommandLineLow  = TIOCM_RTS | TIOCM_DTR;
 		fCommandLineHigh = TIOCM_RTS;
-	} else {
-		fCommandLineHigh = TIOCM_DTR;
+		break;
+	case eLotharekSwitchable:
+		fCommandLineLow  = 0;
+		fCommandLineHigh = TIOCM_RTS;
+
+		// workaround for keeping command line deasserted after exit
+		fRestoreOriginalTermiosOnExit = false;
+
+		struct termios tio;
+		if (ioctl(fDeviceFileNo, TCGETS, &tio)) {
+			fLastResult = errno;
+			return fLastResult;
+		}
+		// don't clear control lines on close
+		tio.c_cflag &= ~(HUPCL);
+		if (ioctl(fDeviceFileNo, TCSETS, &tio)) {
+			fLastResult = errno;
+			return fLastResult;
+		}
+
+		break;
+	default:
+		fLastResult = EINVAL;
+		return fLastResult;
 	}
-	ok = SetCommandLine(false);
+
+	if (SetCommandLine(false)) {
+		fLastResult = 0;
+	} else {
+		fLastResult = 1;
+	}
 
 	SetBaudrate(fStandardBaudrate);
 
@@ -242,26 +277,6 @@ bool UserspaceSIOWrapper::Set1050ToPCMode(bool prosystem)
 
 	tcflush(fDeviceFileNo, TCIOFLUSH);
 
-	return ok;
-}
-
-int UserspaceSIOWrapper::SetCableType_1050_2_PC()
-{
-	if (Set1050ToPCMode(false)) {
-		fLastResult = 0;
-	} else {
-		fLastResult = 1;
-	}
-	return fLastResult;
-}
-
-int UserspaceSIOWrapper::SetCableType_APE_Prosystem()
-{
-	if (Set1050ToPCMode(true)) {
-		fLastResult = 0;
-	} else {
-		fLastResult = 1;
-	}
 	return fLastResult;
 }
 

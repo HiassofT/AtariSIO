@@ -435,7 +435,7 @@ int main(int argc, char** argv)
 #endif
 	}
 
-	if (SIO->SetCableType_1050_2_PC()) {
+	if (SIO->Set1050CableType(SIOWrapper::e1050_2_PC)) {
 		printf("cannot set cable type to 1050-2-pc\n");
 		return 1;
 	}

@@ -36,8 +36,7 @@ public:
 
 	int GetKernelDriverVersion();
 
-	virtual int SetCableType_1050_2_PC();
-	virtual int SetCableType_APE_Prosystem();
+	virtual int Set1050CableType(E1050CableType type);
 	
 	// false sets default cable type (command connected to RI),
 	// true sets alternative type (command connected to DSR).

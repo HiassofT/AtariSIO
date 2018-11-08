@@ -54,29 +54,28 @@ int KernelSIOWrapper::GetKernelDriverVersion()
 	};
 }
 
-int KernelSIOWrapper::SetCableType_1050_2_PC()
+int KernelSIOWrapper::Set1050CableType(E1050CableType type)
 {
 	if (fDeviceFileNo < 0) {
 		fLastResult = ENODEV;
-	} else {
+		return fLastResult;
+	}
+	switch (type) {
+	case e1050_2_PC:
 		fLastResult = ioctl(fDeviceFileNo, ATARISIO_IOC_SET_MODE, ATARISIO_MODE_1050_2_PC);
-		if (fLastResult == -1) {
-			fLastResult = errno;
-		}
-	}
-	return fLastResult;
-}
-
-int KernelSIOWrapper::SetCableType_APE_Prosystem()
-{
-	if (fDeviceFileNo < 0) {
-		fLastResult = ENODEV;
-	} else {
+		break;
+	case eApeProsystem:
 		fLastResult = ioctl(fDeviceFileNo, ATARISIO_IOC_SET_MODE, ATARISIO_MODE_PROSYSTEM);
-		if (fLastResult == -1) {
-			fLastResult = errno;
-		}
+		break;
+	default:
+		fLastResult = EINVAL;
+		return fLastResult;
 	}
+
+	if (fLastResult == -1) {
+		fLastResult = errno;
+	}
+
 	return fLastResult;
 }
 

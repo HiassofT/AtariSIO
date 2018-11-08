@@ -90,11 +90,11 @@ int main(int argc)
 		exit (1);
 	}
 	set_realtime_scheduling(0);
-	//ret= SIO->SetCableType_APE_Prosystem();
-	ret= SIO->SetCableType_1050_2_PC();
+	//ret= SIO->Set1050CableType(SIOWrapper::eApeProsystem);
+	ret= SIO->Set1050CableType(SIOWrapper::e1050_2_PC);
 
 	if (ret) {
-		printf("cannot set prosys mode\n");
+		printf("cannot set cable type\n");
 		return 1;
 	}
 

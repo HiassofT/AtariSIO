@@ -153,9 +153,9 @@ int main()
 	}
 	set_realtime_scheduling(0);
 	if (prosys) {
-		ret= SIO->SetCableType_APE_Prosystem();
+		ret = SIO->Set1050CableType(SIOWrapper::eApeProsystem);
 	} else {
-		ret = SIO->SetCableType_1050_2_PC();
+		ret = SIO->Set1050CableType(SIOWrapper::e1050_2_PC);
 	}
 
 	if (ret) {

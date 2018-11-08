@@ -487,8 +487,8 @@ static bool set_and_check_highspeed_baudrate(unsigned int baud)
 
 static bool check_ultraspeed()
 {
-	uint8_t pokey_div;
 	unsigned int baud;
+	uint8_t pokey_div;
 
         Ext_SIO_parameters params;
 
@@ -522,6 +522,7 @@ static bool check_ultraspeed()
 				printf("Happy command $48 (AUX=$20) failed\n");
 			}
 		}
+
 		if (set_and_check_highspeed_baudrate(baud)) {
 			highspeed_mode = ATARISIO_EXTSIO_SPEED_ULTRA;
 			return true;
@@ -630,17 +631,19 @@ int main(int argc, char** argv)
 
 	int mode=-1; /* 0=read, 1=write */
 	int finished = 0;
-	int prosys = 0;
+	SIOWrapper::E1050CableType cable_type = SIOWrapper::e1050_2_PC;
+	const char* cable_desc = "1050-2-PC";
 	int ret;
 	int use_highspeed = 0;
 	int relaxed_transmission = 0;
+	bool send_quit = false;
 
 	char* atarisioDevName = getenv("ATARIXFER_DEVICE");
 
 	printf("atarixfer %s\n", VERSION_STRING);
 	printf("(c) 2002-2018 Matthias Reichl <hias@horus.com>\n");
 	while(!finished) {
-		c = getopt(argc, argv, "prw12345678def:R:sStx");
+		c = getopt(argc, argv, "lprw12345678def:R:sStxq");
 		if (c == -1) {
 			break;
 		}
@@ -660,11 +663,12 @@ int main(int argc, char** argv)
 			}
 			break;
 		case 'p':
-			if (prosys == 0) {
-				prosys = 1;
-			} else {
-				goto usage;
-			}
+			cable_type = SIOWrapper::eApeProsystem;
+			cable_desc = "APE prosystem";
+			break;
+		case 'l':
+			cable_type = SIOWrapper::eLotharekSwitchable;
+			cable_desc = "Lotharek 1050-2-PC USB";
 			break;
 		case 'd':
 			debugging=1;
@@ -684,6 +688,9 @@ int main(int argc, char** argv)
 		case '7':
 		case '8':
 			drive_no=c - '0';
+			break;
+		case 'q':
+			send_quit = true;
 			break;
 		case 'R':
 			{
@@ -740,14 +747,10 @@ int main(int argc, char** argv)
 */
 		}
 
-		if (prosys) {
-			ret= SIO->SetCableType_APE_Prosystem();
-		} else {
-			ret = SIO->SetCableType_1050_2_PC();
-		}
+		ret = SIO->Set1050CableType(cable_type);
 
 		if (ret) {
-			printf("cannot set %s mode\n", prosys ? "prosystem" : "1050-2-PC");
+			printf("cannot set %s mode\n", cable_desc);
 			return 1;
 		}
 
@@ -766,6 +769,14 @@ int main(int argc, char** argv)
 		} else {
 			ret = write_image(argv[optind]);
 		}
+		if (send_quit) {
+			printf("stopping drive ... ");
+			if (SIO->ImmediateCommand(drive_no, 'Q', 0, 0, 7, highspeed_mode)) {
+				printf("failed\n");
+			} else {
+				printf("OK\n");
+			}
+		}
 		sioTracer->RemoveAllTracers();
 		return ret;
 	} else {
@@ -780,11 +791,13 @@ usage:
 	printf("  -d            enable debugging\n");
 	printf("  -e            continue on errors\n");
 	printf("  -p            use APE prosystem cable (default: 1050-2-PC cable)\n");
+	printf("  -l            use Lotharek 1050-2-PC USB cable\n");
 	printf("  -R num        retry failed sector I/O 'num' times (0..100)\n");
 	printf("  -s            enable Happy Warp/XF551 speeds\n");
 	printf("  -S            enable Ultra/Turbo/Happy Warp/XF551 speeds\n");
 	printf("  -t            enable relaxed data transmission\n");
 	printf("  -x            enable workaround for XF551 format detection bugs\n");
+	printf("  -q            send 'quit' command to flush buffer and stop motor\n");
 	printf("  -1 ... -8     use drive number 1...8\n");
 	return 1;
 }
