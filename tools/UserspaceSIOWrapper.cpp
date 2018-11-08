@@ -123,7 +123,7 @@ bool UserspaceSIOWrapper::InitSerialDevice()
 	tio.c_oflag &= ~OPOST;
 	tio.c_lflag &= ~(ECHO | ECHONL | ICANON | ISIG | IEXTEN);
 	tio.c_cflag &= ~(CSIZE | CSTOPB | PARENB | CBAUD | CBAUD << LINUX_IBSHIFT);
-	tio.c_cflag |= CS8 | CLOCAL | CREAD | B19200 | B19200 << LINUX_IBSHIFT;
+	tio.c_cflag |= HUPCL | CS8 | CLOCAL | CREAD | B19200 | B19200 << LINUX_IBSHIFT;
 	tio.c_cc[VMIN] = 0;
 	tio.c_cc[VTIME] = 0;
 	if (ioctl(fDeviceFileNo, TCSETS, &tio)) {
