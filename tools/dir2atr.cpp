@@ -135,7 +135,7 @@ int main(int argc, char**argv)
 	bool userDefBoot = false;
 	unsigned char userDefBootData[384];
 
-	char c;
+	int c;
 	while ( (c = getopt(argc, argv, "admpPb:B:")) != -1) {
 		switch(c) {
 		case 'a': autorun = true; break;
