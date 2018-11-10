@@ -166,11 +166,11 @@ static void process_args(RCPtr<DeviceManager>& manager, CursesFrontend* frontend
 					break;
 				case 'C':
 					manager->SetSioServerMode(SIOWrapper::eCommandLine_CTS);
-					ALOG("using alternative SIO2PC cable type (command=DSR)");
+					ALOG("using alternative SIO2PC cable type (command=CTS)");
 					break;
 				case 'D':
 					manager->SetSioServerMode(SIOWrapper::eCommandLine_DSR);
-					ALOG("using alternative SIO2PC cable type (command=CTS)");
+					ALOG("using alternative SIO2PC cable type (command=DSR)");
 					break;
 				case 'N':
 					manager->SetSioServerMode(SIOWrapper::eCommandLine_None);
