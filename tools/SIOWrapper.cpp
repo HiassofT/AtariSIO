@@ -47,6 +47,7 @@ static const char* defaultDeviceName = "/dev/atarisio0";
 
 SIOWrapper* SIOWrapper::CreateSIOWrapper(const char* devName)
 {
+	SIOWrapper* wrapper;
 	if (!devName) {
 		devName = defaultDeviceName;
 	}
@@ -59,19 +60,21 @@ SIOWrapper* SIOWrapper::CreateSIOWrapper(const char* devName)
 	version = ioctl(fileno, ATARISIO_IOC_GET_VERSION);
 	if (version < 0) {
 #ifdef ENABLE_USERSPACE
-		SIOWrapper* wrapper = new UserspaceSIOWrapper(fileno);
+		wrapper = new UserspaceSIOWrapper(fileno);
 		ALOG("using experimental userspace driver");
-		return wrapper;
 #else
 		throw ErrorObject("cannot get atarisio kernel driver version!");
 #endif
-	}
-	if ( (version >> 8) != (ATARISIO_VERSION >> 8) ||
-	     (version & 0xff) < (ATARISIO_VERSION & 0xff) ) {
-		throw ErrorObject("atarisio kernel driver version mismatch!");
 	} else {
-		return new KernelSIOWrapper(fileno);
+		if ( (version >> 8) != (ATARISIO_VERSION >> 8) ||
+		     (version & 0xff) < (ATARISIO_VERSION & 0xff) ) {
+			throw ErrorObject("atarisio kernel driver version mismatch!");
+		} else {
+			wrapper = new KernelSIOWrapper(fileno);
+		}
 	}
+	wrapper->SetSioTiming(wrapper->GetDefaultSioTiming());
+	return wrapper;
 }
 
 SIOWrapper::SIOWrapper(int fileno)

@@ -153,6 +153,13 @@ public:
 	virtual int SetAutobaud(unsigned int on) = 0;
 	virtual int SetHighSpeedPause(unsigned int on) = 0;
 
+	enum ESIOTiming {
+		eStrictTiming,
+		eRelaxedTiming
+	};
+	virtual int SetSioTiming(ESIOTiming timing) = 0;
+	virtual ESIOTiming GetDefaultSioTiming() = 0;
+
 	virtual int SetTapeBaudrate(unsigned int baudrate) = 0;
 	virtual int SendTapeBlock(uint8_t* buf, unsigned int length) = 0;
 

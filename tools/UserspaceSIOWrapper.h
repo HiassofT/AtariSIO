@@ -88,6 +88,9 @@ public:
 	virtual int SetAutobaud(unsigned int on);
 	virtual int SetHighSpeedPause(unsigned int on);
 
+	virtual int SetSioTiming(ESIOTiming timing);
+	virtual ESIOTiming GetDefaultSioTiming();
+
 	virtual int SetTapeBaudrate(unsigned int baudrate);
 	virtual int SendTapeBlock(uint8_t* buf, unsigned int length);
 
@@ -163,6 +166,7 @@ private:
 	unsigned int fTapeBaudrate;
 	unsigned int fBaudrate;
 	bool fDoAutobaud;
+	ESIOTiming fSioTiming;
 	unsigned int fTapeOldBaudrate;
 
 	struct termios fOriginalTermios;

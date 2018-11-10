@@ -465,6 +465,21 @@ int KernelSIOWrapper::SetHighSpeedPause(unsigned int on)
 	return fLastResult;
 }
 
+int KernelSIOWrapper::SetSioTiming(ESIOTiming timing)
+{
+	switch (timing) {
+	case eRelaxedTiming:
+		return SetHighSpeedPause(0);
+	default:
+		return SetHighSpeedPause(ATARISIO_HIGHSPEEDPAUSE_BOTH);
+	}
+}
+
+SIOWrapper::ESIOTiming KernelSIOWrapper::GetDefaultSioTiming()
+{
+	return SIOWrapper::eStrictTiming;
+}
+
 int KernelSIOWrapper::GetBaudrate()
 {
 	int baudrate;

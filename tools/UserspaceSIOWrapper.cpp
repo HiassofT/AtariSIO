@@ -139,6 +139,7 @@ UserspaceSIOWrapper::UserspaceSIOWrapper(int fileno)
 	  fTapeBaudrate(ATARISIO_TAPE_BAUDRATE),
 	  fBaudrate(0),
 	  fDoAutobaud(false),
+	  fSioTiming(SIOWrapper::eRelaxedTiming),
 	  fRestoreOriginalTermiosOnExit(true),
 	  fLastCommandOK(true)
 {
@@ -1041,6 +1042,17 @@ int UserspaceSIOWrapper::SetHighSpeedPause(unsigned int on)
 		fLastResult = 0;
 	}
 	return fLastResult;
+}
+
+int UserspaceSIOWrapper::SetSioTiming(ESIOTiming timing)
+{
+	fSioTiming = timing;
+	return 0;
+}
+
+SIOWrapper::ESIOTiming UserspaceSIOWrapper::GetDefaultSioTiming()
+{
+	return SIOWrapper::eRelaxedTiming;
 }
 
 int UserspaceSIOWrapper::GetBaudrate()
