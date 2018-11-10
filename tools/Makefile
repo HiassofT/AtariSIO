@@ -39,14 +39,7 @@ endif
 
 endif
 
-SIOWRAPPER_OBJS = SIOWrapper.o KernelSIOWrapper.o
-
-ifdef ENABLE_USERSPACE
-ifeq ($(ENABLE_USERSPACE),1)
-CXXFLAGS += -DENABLE_USERSPACE
-SIOWRAPPER_OBJS += UserspaceSIOWrapper.o
-endif
-endif
+SIOWRAPPER_OBJS = SIOWrapper.o KernelSIOWrapper.o UserspaceSIOWrapper.o
 
 ifneq ($(DEFAULT_DEVICE),)
 CXXFLAGS += -DDEFAULT_DEVICE=$(DEFAULT_DEVICE)

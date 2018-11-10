@@ -29,9 +29,7 @@
 
 #include "SIOWrapper.h"
 #include "KernelSIOWrapper.h"
-#ifdef ENABLE_USERSPACE
 #include "UserspaceSIOWrapper.h"
-#endif
 #include "AtariDebug.h"
 #include "Error.h"
 
@@ -59,12 +57,8 @@ SIOWrapper* SIOWrapper::CreateSIOWrapper(const char* devName)
 	int version;
 	version = ioctl(fileno, ATARISIO_IOC_GET_VERSION);
 	if (version < 0) {
-#ifdef ENABLE_USERSPACE
 		wrapper = new UserspaceSIOWrapper(fileno);
-		ALOG("using experimental userspace driver");
-#else
-		throw ErrorObject("cannot get atarisio kernel driver version!");
-#endif
+		ALOG("using userspace driver");
 	} else {
 		if ( (version >> 8) != (ATARISIO_VERSION >> 8) ||
 		     (version & 0xff) < (ATARISIO_VERSION & 0xff) ) {

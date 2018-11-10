@@ -110,14 +110,6 @@ KERNEL_CC ?= $(CC)
 #ENABLE_ATP=1
 
 ########################################################################
-# Experimental userspace SIO support:
-# Allows using atariserver with USB serial adapters but has
-# very limited functionality and isn't fully tested
-########################################################################
-
-ENABLE_USERSPACE=1
-
-########################################################################
 # don't change anything below here
 ########################################################################
 
@@ -133,7 +125,7 @@ LDFLAGS = -g
 export KERNEL_CC MODFLAGS KDIR MDIR USE_KBUILD
 export CC CXX CFLAGS CXXFLAGS LDFLAGS STRIP
 export INST_DIR DEFAULT_DEVICE
-export ENABLE_ATP ALL_IN_ONE ENABLE_USERSPACE
+export ENABLE_ATP ALL_IN_ONE
 export ZLIB_CFLAGS ZLIB_LDFLAGS
 export NCURSES_CFLAGS NCURSES_LDFLAGS
 
