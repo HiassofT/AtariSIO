@@ -442,7 +442,7 @@ struct atarisio_dev {
 		u8 IER;
 		u8 MCR;
 		u8 LCR;
-		u8 DL;  /* divisor */
+		uint16_t DL;  /* divisor */
 		u8 FCR;
 		u8 ACR;	/* for 16C950 UARTs */
 		u8 TCR;
