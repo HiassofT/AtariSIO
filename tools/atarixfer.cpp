@@ -596,10 +596,14 @@ static bool check_xf551()
 	return false;
 }
 
-static bool detect_highspeed_mode(bool include_16c950_modes)
+static bool detect_highspeed_mode(int highspeed_modes)
 {
+	if (highspeed_modes == 0) {
+		return false;
+	}
+
 	printf("checking highspeed capability\n");
-	if (include_16c950_modes) {
+	if (highspeed_modes & 2) {
 		if (check_ultraspeed()) {
 			return true;
 		}
@@ -607,11 +611,13 @@ static bool detect_highspeed_mode(bool include_16c950_modes)
 			return true;
 		}
 	}
-	if (check_happy_1050()) {
-		return true;
-	}
-	if (check_xf551()) {
-		return true;
+	if (highspeed_modes & 1) {
+		if (check_happy_1050()) {
+			return true;
+		}
+		if (check_xf551()) {
+			return true;
+		}
 	}
 	printf("no highspeed drive detected, using standard speed\n");
 	return false;
@@ -643,7 +649,7 @@ int main(int argc, char** argv)
 	printf("atarixfer %s\n", VERSION_STRING);
 	printf("(c) 2002-2018 Matthias Reichl <hias@horus.com>\n");
 	while(!finished) {
-		c = getopt(argc, argv, "lprw12345678def:R:sStxq");
+		c = getopt(argc, argv, "lprw12345678def:R:s:txq");
 		if (c == -1) {
 			break;
 		}
@@ -702,14 +708,14 @@ int main(int argc, char** argv)
 			}
 			break;
 		case 's':
-			use_highspeed = 1;
-			break;
-		case 'S':
-			use_highspeed = 2;
+			use_highspeed = strtol(optarg, NULL, 0);
+			if (use_highspeed < 0 || use_highspeed > 3) {
+				printf("invalid highspeed mode\n");
+				goto usage;
+			}
 			break;
 		case 't':
 			relaxed_transmission = 1;
-			break;
 		case 'x':
 			xf551_format_detection = true;
 			break;
@@ -761,9 +767,8 @@ int main(int argc, char** argv)
 			}
 		}
 
-		if (use_highspeed) {
-			detect_highspeed_mode(use_highspeed == 2);
-		}
+		detect_highspeed_mode(use_highspeed);
+
 		if (mode == 0) {
 			ret = read_image(argv[optind]);
 		} else {
@@ -793,8 +798,7 @@ usage:
 	printf("  -p            use APE prosystem cable (default: 1050-2-PC cable)\n");
 	printf("  -l            use Lotharek 1050-2-PC USB cable\n");
 	printf("  -R num        retry failed sector I/O 'num' times (0..100)\n");
-	printf("  -s            enable Happy Warp/XF551 speeds\n");
-	printf("  -S            enable Ultra/Turbo/Happy Warp/XF551 speeds\n");
+	printf("  -s mode       high speed: 0 = off, 1 = XF551/Warp, 2 = Ultra/Turbo, 3 = all\n");
 	printf("  -t            enable relaxed data transmission\n");
 	printf("  -x            enable workaround for XF551 format detection bugs\n");
 	printf("  -q            send 'quit' command to flush buffer and stop motor\n");
