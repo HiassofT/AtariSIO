@@ -246,3 +246,32 @@ AtariSIO changelog:
 2018-11-01:
   - atariserver/atarixfer: check command frame age before sending ACK/NAK
   - atariserver/atarixfer: relax send and receive timing
+
+2018-11-11:
+  - atariserver: add '-Q' option to always ask before quitting
+  - Makefile: add 'rpi-install' target to install tools and device tree
+    overlay files
+  - atariserver: change options to select command line:
+    use '-C' for CTS and '-D' for DSR
+  - atarixfer: fix occasional errors with Happy 1050 drive
+  - atarixfer: add support for 1050 Turbo mode with Linux serial drivers
+    (requires strict SIO timing to be enabled)
+  - contrib/lotharek: add tool to switch Lotharek's 1050-2-PC/SIO2PC
+    interface to 1050-2-PC mode
+  - atarixfer: add '-l' option to select Lotharek's 1050-2-PC/SIO2PC interface
+  - implement "strict" and "relaxed" SIO timing modes.
+    The kernel driver defaults to "strict", Linux serial drivers default
+    to "relaxed" mode. Strict timing on Linux drivers is needed to get
+    1050 Turbo drives working with atarixfer.
+  - atariserver: drop "highspeed with pauses" mode with kernel driver
+    and make that available via "relaxed" SIO timing.
+  - atariserver, atarixfer: add '-T s' option to select strict SIO timing
+    and '-T r' to select relaxed SIO timing mode
+  - atariserver/atarixfer: userspace SIO implementation is now build always
+  - atariserver: rename tape baudrate option from '-T' to '-B
+  - atariserver: drop "tape emulation" key, CAS files can now be loaded
+    via "load drive" option which start tape emulation mode
+  - atarisio: fix tape mode after 16c950 changes
+  - rework documentation, add RPi and Lotharek 1050-2-PC USB interface docs
+  - atarixfer: drop '-S' option, add paramter to '-s' so XF551/Warp and
+    Ultra/Turbo highspeed modes and be enabled separately
