@@ -1202,6 +1202,10 @@ DeviceManager::EDriveNumber CursesFrontend::InputDriveNumber(EDriveInputType typ
 			if ((ch == 'a') || (ch == 'A')) {
 				return DeviceManager::eAllDrives;
 			}
+		case eDriveInputStandardPlusCassette:
+			if ((ch == 'c') || (ch == 'C')) {
+				return DeviceManager::eCassette;
+			}
 		default:
 			break;
 		}
@@ -1340,6 +1344,9 @@ void CursesFrontend::ShowDriveInputHint(EDriveInputHintType type)
 	case eDriveInputHintAllPrinterRC:
 		waddstr(fBottomLineWindow,", 'a'=all drives 'p'=printer 'r'=remote control");
 		break;
+	case eDriveInputHintStandardPlusCassette:
+		waddstr(fBottomLineWindow,", 'c'=cassette");
+		break;
 	default:
 		break;
 	}
@@ -1457,6 +1464,9 @@ void CursesFrontend::ShowDriveNumber(DeviceManager::EDriveNumber d, bool allChan
 		break;
 	case DeviceManager::eRemoteControl:
 		waddstr(fInputLineWindow, "remote control");
+		break;
+	case DeviceManager::eCassette:
+		waddstr(fInputLineWindow, "cassette");
 		break;
 	default:
 		wprintw(fInputLineWindow, "%d", d);
@@ -1704,13 +1714,13 @@ void CursesFrontend::ProcessUnloadDrive()
 
 void CursesFrontend::ProcessLoadDrive()
 {
-	ShowDriveInputHint(eDriveInputHintStandard);
+	ShowDriveInputHint(eDriveInputHintStandardPlusCassette);
 	ClearInputLine();
 	waddstr(fInputLineWindow, "load drive: ");
 	ShowCursor(true);
 	UpdateScreen();
 
-	DeviceManager::EDriveNumber d = InputUnusedOrUnloadableDriveNumber(eDriveInputStandard);
+	DeviceManager::EDriveNumber d = InputUnusedOrUnloadableDriveNumber(eDriveInputStandardPlusCassette);
 
 	if (d == DeviceManager::eNoDrive) {
 		AbortInput();
@@ -1732,13 +1742,16 @@ void CursesFrontend::ProcessLoadDrive()
 
 	FileInput input(this, fDirCache);
 
-	input.SetEnableVirtualDriveKey(true);
+	if (d == DeviceManager::eCassette) {
+		ShowFileInputHint(false);
+	} else {
+		input.SetEnableVirtualDriveKey(true);
+		ShowFileInputHint(true);
+	}
 
 	char filename[PATH_MAX];
 	filename[0] = 0;
 	bool useVirtualDrive = false;
-
-	ShowFileInputHint(true);
 
 	StringInput::EInputResult res = 
 	input.InputString(fInputLineWindow, x, y, width, filename, PATH_MAX, eFileSelectKey, true, &fFilenameHistory);
@@ -1757,8 +1770,10 @@ void CursesFrontend::ProcessLoadDrive()
 		ClearInputLine();
 
 		FileSelect sel(this);
-		sel.SetEnableVirtualDriveKey(true);
-		sel.SetEnableDos2xDirectory(true);
+		if (d != DeviceManager::eCassette) {
+			sel.SetEnableVirtualDriveKey(true);
+			sel.SetEnableDos2xDirectory(true);
+		}
 		ShowAuxWindow(true);
 		bool ok;
 		if (filename[0] != 0) {
@@ -1779,6 +1794,12 @@ void CursesFrontend::ProcessLoadDrive()
 		AbortInput();
 		return;
 	}
+
+	if (d == DeviceManager::eCassette) {
+		ProcessTapeEmulation(filename);
+		return;
+	}
+
 	int len = strlen(filename);
 	if (useVirtualDrive) {
 		bool ok;
@@ -2663,7 +2684,6 @@ static const char* const helpText[] =
 		"I     uninstall printer handler",
 		"F     flush queued printer data",
 	        "t     set trace level",
-	        "T     tape emulation",
 		"C     set command line",
 		"s     set SIO high speed mode",
 		"S     set high speed pokey divisor/baudrate",
@@ -2875,64 +2895,8 @@ void CursesFrontend::ShowText(const char* title, const char* const * text)
 	ShowCursor(oldCursor);
 }
 
-void CursesFrontend::ProcessTapeEmulation(const char* loadfilename)
+void CursesFrontend::ProcessTapeEmulation(const char* filename)
 {
-	char filename[PATH_MAX];
-	filename[0] = 0;
-
-	ClearInputLine();
-	if (loadfilename) {
-		strncpy(filename, loadfilename, PATH_MAX-1);
-		filename[PATH_MAX-1] = 0;
-	} else {
-		waddstr(fInputLineWindow, "CAS image: ");
-		ShowCursor(true);
-		UpdateScreen();
-
-		unsigned int x,y, width;
-		getyx(fInputLineWindow, y, x);
-		if ( (x + 10) > fScreenWidth ) {
-			x = 0;
-			width = fScreenWidth;
-		} else {
-			width = fScreenWidth - x;
-		}
-
-		FileInput input(this, fDirCache);
-
-		ShowFileInputHint(false);
-
-		StringInput::EInputResult res = 
-		input.InputString(fInputLineWindow, x, y, width, filename, PATH_MAX, eFileSelectKey, true, &fCasHistory);
-		fDirCache->ClearDirectoryData();
-
-		if (res == StringInput::eInputAborted) {
-			AbortInput();
-			return;
-		}
-
-		if ( (res == StringInput::eInputStartSelect) || (filename[0] == 0) ) {
-			//DPRINTF("start select: path=\"%s\" filename=\"%s\"", input.GetPath(), input.GetFilename());
-			ClearInputLine();
-
-			FileSelect sel(this);
-			sel.SetEnableDos2xDirectory(true);
-			ShowAuxWindow(true);
-			bool ok;
-			if (filename[0] != 0) {
-				ok=sel.Select(fAuxWindow, input.GetPath(), input.GetFilename(), filename, PATH_MAX);
-			} else {
-				ok=sel.Select(fAuxWindow, NULL, NULL, filename, PATH_MAX);
-			}
-			ShowAuxWindow(false);
-			if (!ok) {
-				AbortInput();
-				return;
-			}
-			ClearInputLine();
-		}
-	}
-
 	if ( (filename[0] == 0) || (!fDeviceManager->LoadCasImage(filename)) ) {
 		AbortInput();
 		return;

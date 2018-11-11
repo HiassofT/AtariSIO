@@ -52,7 +52,8 @@ public:
 		eMinDriveNumber = eDrive1,
 		eMaxDriveNumber = eDrive8,
 		ePrinter = 9,
-		eRemoteControl = 10
+		eRemoteControl = 10,
+		eCassette = 11
 	};
 	enum {
 		ePrinterPosition = (ePrinter - eMinDriveNumber)

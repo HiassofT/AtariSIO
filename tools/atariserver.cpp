@@ -582,9 +582,6 @@ int main(int argc, char** argv)
 		case 't':
 			frontend->ProcessSetTraceLevel();
 			break;
-		case 'T':
-			frontend->ProcessTapeEmulation();
-			break;
 		case 'u':
 			frontend->ProcessUnloadDrive();
 			break;

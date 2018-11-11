@@ -121,7 +121,7 @@ public:
 	void ProcessUninstallPrinterHandler();
 	void ProcessFlushPrinterData();
 
-	void ProcessTapeEmulation(const char* loadfilename = 0);
+	void ProcessTapeEmulation(const char* filename);
 
 	void ProcessSetHighSpeedParameters();
 
@@ -206,7 +206,8 @@ private:
 	enum EDriveInputType {
 		eDriveInputStandard,
 		eDriveInputAll,
-		eDriveInputAllPrinterRC
+		eDriveInputAllPrinterRC,
+		eDriveInputStandardPlusCassette
 	};
 
 	DeviceManager::EDriveNumber InputDriveNumber(EDriveInputType type = eDriveInputStandard);
@@ -219,7 +220,8 @@ private:
 		eDriveInputHintStandard,
 		eDriveInputHintAll,
 		eDriveInputHintAllChanged,
-		eDriveInputHintAllPrinterRC
+		eDriveInputHintAllPrinterRC,
+		eDriveInputHintStandardPlusCassette
 	};
 	void ShowDriveInputHint(EDriveInputHintType type);
 
