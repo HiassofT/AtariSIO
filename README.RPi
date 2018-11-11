@@ -160,20 +160,25 @@ the anode to the Atari's SIO connector.
 
 Parts needed:
 - 3 3.3V<->5V level shifters
+- 1 4k7 resistor
 - Atari SIO connectors
 - wires
 
 Wiring (the "<LS>" blocks are the level shifters)
 
 RPi GPIO pin                 Atari SIO pin
-+5V   4 -------------------- 10  +5V / Ready 
-GND   6 -------+------------  7  GND
++5V   4 ------------+------- 10  +5V / Ready 
+               4k7  +/\/\+
+RxD  10 ----- <LS> ------+--  3  Data In
 TxD   8 ----- <LS> ---------  5  Data Out
-RxD  10 ----- <LS> ---------  3  Data In
 RTS  11 ----- <LS> ---------  7  Command
+GND   6 -------+------------  7  GND
 
 GND must also be connected to the level-shifters' ground pin.
 Depending on your level shifter you may also need to provide 3.3V
 (from RPi GPIO pin 1) and/or 5V (from RPi GPIO pin 2 or 4) supplies
 to your level shifter.
+
+The 4k7 pull-up resistor on the SIO data in line is required to
+get reliable operation in highspeed SIO mode.
 
