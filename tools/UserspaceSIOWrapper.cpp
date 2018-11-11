@@ -157,10 +157,6 @@ UserspaceSIOWrapper::UserspaceSIOWrapper(int fileno)
 		throw DeviceInitError("cannot set standard baudrate");
 	}
 	tcflush(fDeviceFileNo, TCIOFLUSH);
-
-	if (SetSIOServerMode(eCommandLine_RI)) {
-		throw DeviceInitError("cannot set SIO server mode");
-	}
 }
 
 UserspaceSIOWrapper::~UserspaceSIOWrapper()
