@@ -109,13 +109,13 @@ static void process_args(RCPtr<DeviceManager>& manager, CursesFrontend* frontend
 					}
 					trace_level++;
 					break;
-				case 'T':
+				case 'B':
 					if (i + 1 < argc) {
 						i++;
 						unsigned int p = atoi(argv[i]);
 						manager->SetTapeSpeedPercent(p);
 					} else {
-						AERROR("-T needs a parameter!");
+						AERROR("-B needs a parameter!");
 					}
 					break;
 				case 's':
@@ -360,7 +360,7 @@ void usage()
 	printf("-S div[,baud] high speed SIO pokey divisor (default 8) and optionally baudrate\n");
 	printf("-X            enable XF551 commands\n");
 	printf("-t            increase SIO trace level (default:0, max:3)\n");
-	printf("-T percent    set tape baudrate to x%% of nominal speed (1-200)\n");
+	printf("-B percent    set tape baudrate to x%% of nominal speed (1-200)\n");
 	printf("-P mode file  install printer handler\n");
 	printf("              mode sets EOL conversion: r=raw/none, l=LF, c=CR, b=CR+LF\n");
 	printf("              path is either a filename or |print-command, eg |lpr\n");
