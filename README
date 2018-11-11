@@ -180,17 +180,19 @@ Several other options are available to tweak operation mode:
 -p            use APE prosystem cable (default: 1050-2-PC cable)
 -R num        retry failed sector I/O 'num' times (0..100)
               Default is no retry on errors
--s            enable Happy Warp/XF551 speeds
-              Note: this only works with the AtariSIO kernel driver
--S            enable Ultra/Turbo/Happy Warp/XF551 speeds
-              Happy Warp, XF551 and 1050 Turbo only work
-              with the AtariSIO kernel driver.
+-s mode       high speed: 0 = off, 1 = XF551/Warp, 2 = Ultra/Turbo, 3 = all
+              Default is off.
+              Happy Warp, XF551 and 1050 Turbo only work with the
+              AtariSIO kernel driver.
               1050 Turbo Mode requires a 16950 UART and the AtariSIO
-              kernel driver.
+              kernel driver. It may also work on FTDI USB serial
+              cables if strict SIO timing is enabled.
               Ultra Speed mode with a Happy 1050 or Speedy requires
               a 16950 UART and the AtariSIO kernel driver, an FTDI
               USB serial cable or the on-board Raspberry Pi UART.
--t            enable relaxed data transmission
+-T timing     SIO timing: s = strict, r = relaxed
+              Default is strict timing on AtariSIO kernel driver
+              and relaxed timing on standard Linux serial drivers.
 -x            enable workaround for XF551 format detection bugs
 -1 ... -8     use drive number 1...8 (default is 1)
 
@@ -199,7 +201,7 @@ Examples:
 Create disk image from an Happy drive with highspeed SIO using
 an FTDI USB adapter
 
-atarixfer -f /dev/ttyUSB0 -S -r myimage.atr
+atarixfer -f /dev/ttyUSB0 -s 3 -r myimage.atr
 
 
 Using atariserver
@@ -231,13 +233,15 @@ interface section below for more detailled information.
 -o file       save trace output to <file>
               Setting this option will write all messages output in
               the log window to a file.
--s mode       set high speed mode: 0 = off, 1 = on, 2 = on with pauses
-              The default is 1 (high speed enabled)
+-s mode       high speed mode: 0 = off, 1 = on (default)
 -S div,[baud] high speed SIO pokey divisor (default 8) and optionally baudrate
+-T timing     SIO timing: s = strict, r = relaxed
+              Default is strict timing on AtariSIO kernel driver
+              and relaxed timing on standard Linux serial drivers.
 -X            enable XF551 commands
 -t            increase SIO trace level (default:0, max:3)
               Use this option multiple times to set a higher trace level
--T percent    set tape baudrate to x% of nominal speed (1-200)
+-B percent    set tape baudrate to x% of nominal speed (1-200)
 -P mode file  install printer handler
               mode sets EOL conversion: r=raw/none, l=LF, c=CR, b=CR+LF
               path is either a filename or |print-command, eg |lpr
@@ -342,7 +346,9 @@ Here's an overview about the currently supported commands:
 
 'q'  quit atariserver. 
 
-'l'  load a disk image file (ATR/DCM/DI/XFD) into a drive slot.
+'l'  load a disk image file (ATR/DCM/DI/XFD) into a drive slot
+     or start tape emulation by loading a CAS file.
+
      The drive slot must be empty or contain an unchanged disk
      image (in which case it will be automatically unloaded),
      otherwise you have to unload it first.
@@ -355,6 +361,12 @@ Here's an overview about the currently supported commands:
      (instead of 's', 'd') the size calculation is disabled.
      If the file extension is not one of .atr/.dcm/.di/.xfd,
      an ATR image containing the file will be created on the fly.
+
+     In tape emulation mode use '<space>' to toggle between pause/play,
+     cursor left/right to seek back/forward one block, up/down to seek
+     20 blocks, pageup/down to seek to the previous/next part or home/end
+     to seek to the beginning/end. With 'g' you can skip the current gap.
+     Use 'q' to exit tape emulation and return back to disk drive emulation.
 
 'w'  write the image of a disk drive into a disk image file.
      You may either specify a single drive number (1-8) or 'a' for
@@ -429,17 +441,10 @@ file you can view it's DOS2.x directory by pressing '^D'.
 
 't'  set trace level
 
-'s'  set SIO speed (slow, high, high with pauses)
+'s'  enable/disable high speed SIO
      '0' disables highspeed and commands not supported
          by stock drives (like the "get speed byte" command).
      '1' enabled highspeed mode (this is the default).
-     '2' enables highspeed mode with relaxed timing and
-         pauses between each bytes. This is only needed for a few
-         older highspeed SIO routines on the Atari that are too slow
-         to cope with back-to-back byte transmissions.
-         Note: this mode is only available with the AtariSIO kernel driver,
-         selecting it with standard Linux serial drivers has no effect
-         (it will work identical to normal highspeed mode).
 
 'S'  set high speed pokey divisor/baudrate
      By default atariserver uses Pokey divisor 8, also known as "3xSIO",
@@ -450,6 +455,18 @@ file you can view it's DOS2.x directory by pressing '^D'.
      (eg "0,126000" to use Pokey divisor 0 at 126kbit/sec) to override
      the default baudrates. This feature was mainly added for testing
      purposes, in general you should stick to the default baudrates.
+
+'T'  set strict / relaxed SIO timing
+     When using the AtariSIO kernel driver strict timing is the default.
+     Enabling relaxed timing is only needed for some older highspeed
+     SIO routines that are too slow to cope with back-to-back byte
+     transmissions.
+     When using standard Linux serial drivers the default is relaxed
+     timing. This adds additional delays when waiting for transmission
+     to finish which is required to work around transmission latencies
+     and quirks in some serial drivers.
+     Strict mode results in SIO timing closer to the official specifications
+     but can be problematic on some drivers / computers.
 
 'C'  set SIO2PC cable type / command line
      'r' command line on RI/RING input (this is the default)
@@ -478,13 +495,6 @@ file you can view it's DOS2.x directory by pressing '^D'.
      to a directory that is currently used as a virtual drive
      (new files don't show up automatically on virtual drives,
      the directory is only scanned when creating a virtual drive).
-
-'T'  start tape (CAS) emulation
-     First enter the filename of a CAS image (or use the file selector).
-     '<space>' toggles pause/play mode, cursor left/right seek back/forward
-     one block, up/down seeks 20 blocks, pageup/down seeks to the
-     previous/next part, home/end seek to the beginning/end.
-     Use 'q' to exit tape emulation and return back to disk drive emulation.
 
 'i'  install printer handler See the section "Printer Support" for more info.
 

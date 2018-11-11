@@ -50,6 +50,10 @@ The only thing that's needed is a 3.3V<->5V level shifter as
 the RPi is a 3.3V-only device and connecting it's GPIOs to
 the 5V SIO bus would (almost) immediately fry it.
 
+Note: Raspbian enables a serial console by default, you have
+to remove "console=serial0,115200" from /boot/cmdline.txt
+before you can use the serial port in AtariSIO.
+
 On the RPis without wifi/bluetooth (original RPi, RPi2 and RPi Zero)
 the PL011 UART (/dev/ttyAMA0) is enabled by default.
 
