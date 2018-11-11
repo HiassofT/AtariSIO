@@ -487,19 +487,25 @@ void CursesFrontend::DisplayStatusLine()
 	}
 
 	waddstr(fStatusLineWindow, "  speed: ");
-	switch (fDeviceManager->GetHighSpeedMode()) {
-	case DeviceManager::eHighSpeedOff:
+	if (fDeviceManager->GetHighSpeedMode()) {
+		wprintw(fStatusLineWindow, "high (%d)", fDeviceManager->GetHighSpeedPokeyDivisor());
+	} else {
 		waddstr(fStatusLineWindow, "low");
-		break;
-	case DeviceManager::eHighSpeedOn:
-		wprintw(fStatusLineWindow, "high  div: %d", fDeviceManager->GetHighSpeedPokeyDivisor());
-		break;
-	case DeviceManager::eHighSpeedWithPause:
-		wprintw(fStatusLineWindow, "high/pause  div: %d", fDeviceManager->GetHighSpeedPokeyDivisor());
-		break;
 	}
 
-	waddstr(fStatusLineWindow, "  XF551 cmds: ");
+	waddstr(fStatusLineWindow, "  timing: ");
+	switch (fDeviceManager->GetSioTiming()) {
+	case SIOWrapper::eStrictTiming:
+		waddstr(fStatusLineWindow, "strict");
+		break;
+	case SIOWrapper::eRelaxedTiming:
+		waddstr(fStatusLineWindow, "relaxed");
+		break;
+	default:
+		waddstr(fStatusLineWindow, "???");
+	}
+
+	waddstr(fStatusLineWindow, "  XF551: ");
 	if (fDeviceManager->GetXF551Mode()) {
 		waddstr(fStatusLineWindow, "on");
 	} else {
@@ -1396,11 +1402,11 @@ void CursesFrontend::ShowImageSizeHint(int minimumSectors)
 	wprintw(fBottomLineWindow,"'%d'..'65535' sectors, '^G'=abort", minimumSectors);
 }
 
-void CursesFrontend::ShowHighSpeedHint()
+void CursesFrontend::ShowSioTimingHint()
 {
 	werase(fBottomLineWindow);
 	wmove(fBottomLineWindow, 0, 0);
-	waddstr(fBottomLineWindow,"'0'=slow '1'=high '2'=high with pauses '^G','q'=abort");
+	waddstr(fBottomLineWindow,"'s'=strict 'r'=relaxed'^G'=abort");
 }
 
 void CursesFrontend::ShowHighSpeedParametersHint()
@@ -2422,9 +2428,39 @@ void CursesFrontend::ProcessSetCommandLine()
 
 void CursesFrontend::ProcessSetHighSpeed()
 {
-	ShowHighSpeedHint();
+	ShowYesNoHint();
 	ClearInputLine();
-	waddstr(fInputLineWindow, "set SIO speed: ");
+	waddstr(fInputLineWindow, "enable highspeed SIO: ");
+	ShowCursor(true);
+	UpdateScreen();
+
+	EYesNo yn = InputYesNo();
+
+	switch (yn) {
+	case eYN_Abort:
+		AbortInput();
+		return;
+	case eYN_Yes:
+		ShowYesNo(yn);
+		fDeviceManager->SetHighSpeedMode(true);
+		break;
+	case eYN_No:
+		ShowYesNo(yn);
+		fDeviceManager->SetHighSpeedMode(false);
+		break;
+	}
+
+	ShowCursor(false);
+	DisplayStatusLine();
+	ShowStandardHint();
+	UpdateScreen();
+}
+
+void CursesFrontend::ProcessSetSioTiming()
+{
+	ShowSioTimingHint();
+	ClearInputLine();
+	waddstr(fInputLineWindow, "set SIO timing: ");
 	ShowCursor(true);
 	UpdateScreen();
 
@@ -2435,24 +2471,23 @@ void CursesFrontend::ProcessSetHighSpeed()
 			AbortInput();
 			return;
 		}
-		if ( (ch == '0') || (ch == '1') || (ch == '2') ) {
+		if ( (ch == 'R') || (ch == 'r') ||
+		     (ch == 'S') || (ch == 's') ) {
 			break;
 		}
 		beep();
 	} while(1);
 
 	switch (ch) {
-	case '0':
-		waddstr(fInputLineWindow,"slow");
-		fDeviceManager->SetHighSpeedMode(DeviceManager::eHighSpeedOff);
+	case 'R':
+	case 'r':
+		waddstr(fInputLineWindow, "relaxed");
+		fDeviceManager->SetSioTiming(SIOWrapper::eRelaxedTiming);
 		break;
-	case '1':
-		waddstr(fInputLineWindow,"high");
-		fDeviceManager->SetHighSpeedMode(DeviceManager::eHighSpeedOn);
-		break;
-	case '2':
-		waddstr(fInputLineWindow,"high with pause");
-		fDeviceManager->SetHighSpeedMode(DeviceManager::eHighSpeedWithPause);
+	case 'S':
+	case 's':
+		waddstr(fInputLineWindow, "strict");
+		fDeviceManager->SetSioTiming(SIOWrapper::eStrictTiming);
 		break;
 	}
 
@@ -2685,8 +2720,9 @@ static const char* const helpText[] =
 		"F     flush queued printer data",
 	        "t     set trace level",
 		"C     set command line",
-		"s     set SIO high speed mode",
+		"s     enable/disable high speed SIO",
 		"S     set high speed pokey divisor/baudrate",
+		"T     set strict/relaxed SIO timing",
 		"X     enable/disable XF551 commands",
 		"^L    redraw screen",
 		"h     show help screen",

@@ -55,10 +55,11 @@ DeviceManager::DeviceManager(const char* devname)
 
 	fPokeyDivisor = ATARISIO_POKEY_DIVISOR_3XSIO;
 	fHighspeedBaudrate = fSIOWrapper->GetBaudrateForPokeyDivisor(fPokeyDivisor);
+	fSioTiming = fSIOWrapper->GetDefaultSioTiming();
 	if (fHighspeedBaudrate == 0) {
-		SetHighSpeedMode(eHighSpeedOff);
+		SetHighSpeedMode(false);
 	} else {
-		SetHighSpeedMode(eHighSpeedOn);
+		SetHighSpeedMode(true);
 	}
 
 	EnableXF551Mode(false);
@@ -887,45 +888,24 @@ bool DeviceManager::DriveNumberOK(EDriveNumber driveno) const
 	return true;
 }
 
-bool DeviceManager::SetHighSpeedMode(EHighSpeedMode mode)
+bool DeviceManager::SetHighSpeedMode(bool on)
 {
-	fHighSpeedMode = mode;
-	switch (mode) {
-	case eHighSpeedOff:
+	if (on) {
+		if (fSIOWrapper->SetBaudrate(fHighspeedBaudrate)) {
+			return false;
+		}
+		if (fSIOWrapper->SetAutobaud(1)) {
+			return false;
+		}
+	} else {
 		if (fSIOWrapper->SetBaudrate(fSIOWrapper->GetStandardBaudrate())) {
 			return false;
 		}
 		if (fSIOWrapper->SetAutobaud(0)) {
 			return false;
 		}
-		fUseHighSpeed = false;
-		break;
-	case eHighSpeedOn:
-		if (fSIOWrapper->SetBaudrate(fHighspeedBaudrate)) {
-			return false;
-		}
-		if (fSIOWrapper->SetAutobaud(1)) {
-			return false;
-		}
-		if (fSIOWrapper->SetHighSpeedPause(0)) {
-			return false;
-		}
-		fUseHighSpeed = true;
-		break;
-	case eHighSpeedWithPause:
-		if (fSIOWrapper->SetBaudrate(fHighspeedBaudrate)) {
-			return false;
-		}
-		if (fSIOWrapper->SetAutobaud(1)) {
-			return false;
-		}
-		//if (fSIOWrapper->SetHighSpeedPause(1)) {
-		if (fSIOWrapper->SetHighSpeedPause(ATARISIO_HIGHSPEEDPAUSE_BOTH)) {
-			return false;
-		}
-		fUseHighSpeed = true;
-		break;
 	}
+	fUseHighSpeed = on;
 
 	for (int i=eMinDriveNumber; i<=eMaxDriveNumber; i++) {
 		if (DriveInUse(EDriveNumber(i))) {
@@ -939,10 +919,21 @@ bool DeviceManager::SetHighSpeedMode(EHighSpeedMode mode)
 	return true;
 }
 
+bool DeviceManager::SetSioTiming(SIOWrapper::ESIOTiming timing)
+{
+	if (fSIOWrapper->SetSioTiming(timing)) {
+		AERROR("cannot set SIO timing");
+		return false;
+	}
+	fSioTiming = timing;
+	return true;
+}
+
 bool DeviceManager::SetHighSpeedParameters(unsigned int pokeyDivisor, unsigned int baudrate)
 {
 	if (pokeyDivisor >= 64) {
 		AERROR("illegal high speed pokey divisor %d", pokeyDivisor);
+		return false;
 	}
 	if (baudrate == 0) {
 		baudrate = fSIOWrapper->GetBaudrateForPokeyDivisor(pokeyDivisor);
@@ -964,7 +955,7 @@ bool DeviceManager::SetHighSpeedParameters(unsigned int pokeyDivisor, unsigned i
 			AWARN("UART doesn't support %d baud, using %d instead", baudrate, real_baudrate);
 		}
 	}
-	return SetHighSpeedMode(fHighSpeedMode);
+	return SetHighSpeedMode(fUseHighSpeed);
 }
 
 bool DeviceManager::EnableXF551Mode(bool on)

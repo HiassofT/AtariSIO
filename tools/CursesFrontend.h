@@ -112,6 +112,7 @@ public:
 	void ProcessSetTraceLevel();
 	void ProcessSetCommandLine();
 	void ProcessSetHighSpeed();
+	void ProcessSetSioTiming();
 	void ProcessSetXF551Mode();
 	void ProcessShowDirectory();
 	void ProcessShowHelp();
@@ -196,7 +197,7 @@ private:
 	void ShowTraceLevelHint();
 	void ShowCreateDriveHint(bool enableQD);
 	void ShowImageSizeHint(int minimumSectors);
-	void ShowHighSpeedHint();
+	void ShowSioTimingHint();
 	void ShowHighSpeedParametersHint();
 	void ShowCasHint();
 

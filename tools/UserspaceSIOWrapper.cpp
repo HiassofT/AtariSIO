@@ -635,9 +635,17 @@ void UserspaceSIOWrapper::WaitTransmitComplete(unsigned int bytes)
 	// tcdrain can block for 2-3 additional jiffies if there's data
 	// to transmit, so wait a short time before calling it.
 
-	MiscUtils::TimestampType delay = TimeForBytes(bytes) * 15/10;
-	if (delay < 500) {
-		delay = 500;
+	MiscUtils::TimestampType delay;
+	switch (fSioTiming) {
+	case eStrictTiming:
+		delay = 100 + TimeForBytes(bytes) * 105 / 100;
+		break;
+	default:
+		delay = 200 + TimeForBytes(bytes) * 15/10;
+		if (delay < 500) {
+			delay = 500;
+		}
+		break;
 	}
 
 	if (delay > 5000) {
@@ -663,8 +671,13 @@ void UserspaceSIOWrapper::WaitTransmitComplete(unsigned int bytes)
 	}
 	UTRACE_WAIT_TRANSMIT("checked lsr %d times", cnt);
 
-	// one byte could still be in the transmitter holding register
-	NanoSleep(TimeForBytes(1) * 1500);
+	switch (fSioTiming) {
+	case eStrictTiming:
+		break;
+	default:
+		// one byte could still be in the transmitter holding register
+		NanoSleep(TimeForBytes(1) * 1500);
+	}
 	UTRACE_WAIT_TRANSMIT("end WaitTransmitComplete");
 }
 

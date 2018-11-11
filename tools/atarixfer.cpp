@@ -641,7 +641,9 @@ int main(int argc, char** argv)
 	const char* cable_desc = "1050-2-PC";
 	int ret;
 	int use_highspeed = 0;
-	int relaxed_transmission = 0;
+	SIOWrapper::ESIOTiming sio_timing;
+	bool set_sio_timing = false;
+
 	bool send_quit = false;
 
 	char* atarisioDevName = getenv("ATARIXFER_DEVICE");
@@ -649,7 +651,7 @@ int main(int argc, char** argv)
 	printf("atarixfer %s\n", VERSION_STRING);
 	printf("(c) 2002-2018 Matthias Reichl <hias@horus.com>\n");
 	while(!finished) {
-		c = getopt(argc, argv, "lprw12345678def:R:s:txq");
+		c = getopt(argc, argv, "lprw12345678def:R:s:T:xq");
 		if (c == -1) {
 			break;
 		}
@@ -714,8 +716,21 @@ int main(int argc, char** argv)
 				goto usage;
 			}
 			break;
-		case 't':
-			relaxed_transmission = 1;
+		case 'T':
+			switch (optarg[0]) {
+			case 's':
+				sio_timing = SIOWrapper::eStrictTiming;
+				set_sio_timing = true;
+				break;
+			case 'r':
+				sio_timing = SIOWrapper::eRelaxedTiming;
+				set_sio_timing = true;
+				break;
+			default:
+				printf("invalid sio timing mode\n");
+				goto usage;
+			}
+			break;
 		case 'x':
 			xf551_format_detection = true;
 			break;
@@ -760,11 +775,13 @@ int main(int argc, char** argv)
 			return 1;
 		}
 
-		if (relaxed_transmission) {
-			ret = SIO->SetHighSpeedPause(ATARISIO_HIGHSPEEDPAUSE_BYTE_DELAY);
-			if (ret) {
-				printf("couldn't set relaxed data transmission: error %d\n", ret);
-			}
+		if (set_sio_timing) {
+			ret = SIO->SetSioTiming(sio_timing);
+		} else {
+			ret = SIO->SetSioTiming(SIO->GetDefaultSioTiming());
+		}
+		if (ret) {
+			printf("couldn't set SIO timing: %d\n", ret);
 		}
 
 		detect_highspeed_mode(use_highspeed);
@@ -799,7 +816,7 @@ usage:
 	printf("  -l            use Lotharek 1050-2-PC USB cable\n");
 	printf("  -R num        retry failed sector I/O 'num' times (0..100)\n");
 	printf("  -s mode       high speed: 0 = off, 1 = XF551/Warp, 2 = Ultra/Turbo, 3 = all\n");
-	printf("  -t            enable relaxed data transmission\n");
+	printf("  -T timing     SIO timing: s = strict, r = relaxed\n");
 	printf("  -x            enable workaround for XF551 format detection bugs\n");
 	printf("  -q            send 'quit' command to flush buffer and stop motor\n");
 	printf("  -1 ... -8     use drive number 1...8\n");

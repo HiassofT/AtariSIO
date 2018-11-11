@@ -123,19 +123,15 @@ static void process_args(RCPtr<DeviceManager>& manager, CursesFrontend* frontend
 						i++;
 						switch (argv[i][0]) {
 						case '0':
-							manager->SetHighSpeedMode(DeviceManager::eHighSpeedOff);
+							manager->SetHighSpeedMode(false);
 							ALOG("disabling high-speed SIO");
 							break;
 						case '1':
-							manager->SetHighSpeedMode(DeviceManager::eHighSpeedOn);
+							manager->SetHighSpeedMode(true);
 							ALOG("enabling high-speed SIO");
 							break;
-						case '2':
-							manager->SetHighSpeedMode(DeviceManager::eHighSpeedWithPause);
-							ALOG("enabling high-speed SIO mode with pauses");
-							break;
 						default:
-							AERROR("illegal parameter for -s: must be 0, 1 or 2");
+							AERROR("illegal parameter for -s: must be 0 or 1");
 							break;
 						}
 					} else {
@@ -158,6 +154,26 @@ static void process_args(RCPtr<DeviceManager>& manager, CursesFrontend* frontend
 						}
 					} else {
 						AERROR("-S needs a parameter!");
+					}
+					break;
+				case 'T':
+					if (i + 1 < argc) {
+						i++;
+						switch (argv[i][0]) {
+						case 's':
+							manager->SetSioTiming(SIOWrapper::eStrictTiming);
+							ALOG("using strict SIO timing");
+							break;
+						case 'r':
+							manager->SetSioTiming(SIOWrapper::eRelaxedTiming);
+							ALOG("using relaxed SIO timing");
+							break;
+						default:
+							AERROR("invalid SIO timing mode: must be s or r");
+							break;
+						}
+					} else {
+						AERROR("-T needs a parameter!");
 					}
 					break;
 				case 'X':
@@ -356,8 +372,9 @@ void usage()
 	printf("-F            disable non-standard disk formats\n");
 	printf("-m            monochrome mode\n");
 	printf("-o file       save trace output to <file>\n");
-	printf("-s mode       set high speed mode: 0 = off, 1 = on, 2 = on with pauses\n");
+	printf("-s mode       high speed mode: 0 = off, 1 = on (default)\n");
 	printf("-S div[,baud] high speed SIO pokey divisor (default 8) and optionally baudrate\n");
+	printf("-T timing     SIO timing: s = strict, r = relaxed\n");
 	printf("-X            enable XF551 commands\n");
 	printf("-t            increase SIO trace level (default:0, max:3)\n");
 	printf("-B percent    set tape baudrate to x%% of nominal speed (1-200)\n");
@@ -578,6 +595,9 @@ int main(int argc, char** argv)
 			break;
 		case 'S':
 			frontend->ProcessSetHighSpeedParameters();
+			break;
+		case 'T':
+			frontend->ProcessSetSioTiming();
 			break;
 		case 't':
 			frontend->ProcessSetTraceLevel();

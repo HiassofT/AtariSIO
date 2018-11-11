@@ -755,16 +755,10 @@ cd_usage:
 
 		AddResultString("");
 		fResult->AppendString("speed: ");
-		switch (fDeviceManager->GetHighSpeedMode()) {
-		case DeviceManager::eHighSpeedOff: 
-			fResult->AppendString("low");
-			break;
-		case DeviceManager::eHighSpeedOn:
+		if (fDeviceManager->GetHighSpeedMode()) {
 			fResult->AppendString("high");
-			break;
-		case DeviceManager::eHighSpeedWithPause:
-			fResult->AppendString("high/pause");
-			break;
+		} else {
+			fResult->AppendString("low");
 		}
 		fResult->AppendString("  XF551: ");
 		if (fDeviceManager->GetXF551Mode()) {
@@ -868,16 +862,15 @@ ad_usage:
 		return false;
 	}
 	if (strncasecmp(cmd,"sp",2)==0) { // set high speed mode
-		DeviceManager::EHighSpeedMode speed;
+		bool high;
 		switch (*arg) {
-		case '0': speed = DeviceManager::eHighSpeedOff; break;
-		case '1': speed = DeviceManager::eHighSpeedOn; break;
-		case '2': speed = DeviceManager::eHighSpeedWithPause; break;
+		case '0': high = false; break;
+		case '1': high = true; break;
 		default:
 			AddResultString("invalid speed mode");
 			goto sp_usage;
 		}
-		ret = fDeviceManager->SetHighSpeedMode(speed);
+		ret = fDeviceManager->SetHighSpeedMode(high);
 		if (!ret) {
 			AddResultString("setting speed failed");
 		}
@@ -885,7 +878,7 @@ ad_usage:
 		fCursesFrontend->UpdateScreen();
 		return ret;
 sp_usage:
-		AddResultString("usage: sp 0|1|2");
+		AddResultString("usage: sp 0|1");
 		return false;
 	}
 	if (strncasecmp(cmd,"xf",2)==0) { // set XF551 mode

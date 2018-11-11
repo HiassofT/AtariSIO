@@ -99,14 +99,11 @@ public:
 	PrinterHandler::EPrinterStatus GetPrinterRunningStatus() const;
 	const char* GetPrinterFilename() const;
 
-	enum EHighSpeedMode {
-		eHighSpeedOff,
-		eHighSpeedOn,
-		eHighSpeedWithPause
-	};
+	bool SetHighSpeedMode(bool on);
+	bool GetHighSpeedMode() const;
 
-	bool SetHighSpeedMode(EHighSpeedMode mode);
-	EHighSpeedMode GetHighSpeedMode() const;
+	bool SetSioTiming(SIOWrapper::ESIOTiming timing);
+	SIOWrapper::ESIOTiming GetSioTiming() const;
 
 	bool SetHighSpeedParameters(unsigned int pokeyDivsor, unsigned int baudrate);
 	inline uint8_t GetHighSpeedPokeyDivisor() const;
@@ -148,8 +145,9 @@ private:
 	RCPtr<AbstractSIOHandler> GetSIOHandler(EDriveNumber driveno) const;
 	RCPtr<const AbstractSIOHandler> GetConstSIOHandler(EDriveNumber driveno) const;
 
-	EHighSpeedMode fHighSpeedMode;
 	bool fUseHighSpeed;
+	SIOWrapper::ESIOTiming fSioTiming;
+
 	unsigned int fHighspeedBaudrate;
 	unsigned int fPokeyDivisor;
 	bool fUseStrictFormatChecking;
@@ -180,9 +178,14 @@ inline SIOWrapper::ESIOServerCommandLine DeviceManager::GetSioServerMode() const
 	return fCableType;
 }
 
-inline DeviceManager::EHighSpeedMode DeviceManager::GetHighSpeedMode() const
+inline bool DeviceManager::GetHighSpeedMode() const
 {
-	return fHighSpeedMode;
+	return fUseHighSpeed;
+}
+
+inline SIOWrapper::ESIOTiming DeviceManager::GetSioTiming() const
+{
+	return fSioTiming;
 }
 
 inline bool DeviceManager::GetXF551Mode() const
