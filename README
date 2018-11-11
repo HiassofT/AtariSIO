@@ -25,6 +25,8 @@ be found in "README-tools".
 README.RPi contains information specific to the Raspberry Pi
 (installation instructions and wiring of GPIO-to-SIO connection).
 
+README.lotharek contains information about using Lotharek's
+1050-2-PC/SIO2PC USB adapter
 
 About Atarisio
 ==============

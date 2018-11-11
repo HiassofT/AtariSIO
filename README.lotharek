@@ -1,0 +1,37 @@
+Using Lotharek's 1050-2-PC/SIO2PC USB interface with AtariSIO
+
+On powerup the interface is in SIO2PC mode and can be used with
+atariserver.
+
+To use the interface with atarixfer it has to be manually switched
+to 1050-2-PC mode.
+
+Note: you also have to use the '-l' option of atarixfer as the
+command-line signalling is inverted compared to the original
+serial 1050-2-PC interface.
+
+A tool to perform the switch is available in contrib/lotharek.
+
+To compile it you need the libftdi1 and libusb-1.0 libraries and
+development headers.
+
+In Debian, run this command to install them:
+sudo apt-get install libftdi1-dev libusb-1.0-0-dev
+
+Then build and install the tool as usual:
+
+make
+sudo make install
+
+This will install the tool "lotharek-switch" in /usr/local/bin
+
+To switch the interface to 1050-2-PC mode run it with the
+option "1050". eg:
+
+lotharek-switch 1050
+
+To switch the interface back to SIO2PC mode either unplug the
+interface and plug it back in or run the tool with the "sio" paramter. eg:
+
+lotharek-switch sio
+
