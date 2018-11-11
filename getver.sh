@@ -18,4 +18,4 @@ else
 fi
 fi
 
-grep UTS_RELEASE "$UTSFILE" | cut -d '"' -f2 | head -1
+grep UTS_RELEASE "$UTSFILE" 2>/dev/null | cut -d '"' -f2 | head -1
