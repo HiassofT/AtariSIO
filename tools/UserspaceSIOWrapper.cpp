@@ -1161,13 +1161,45 @@ int UserspaceSIOWrapper::SendCommandFrame(Ext_SIO_parameters& params)
 	int retry = 0;
 	int ret = 0;
 
+	uint8_t highspeed_mode = params.highspeed_mode;
+
 	fCmdBuf[0] = params.device + params.unit - 1;
 	fCmdBuf[1] = params.command;
 	fCmdBuf[2] = params.aux1;
 	fCmdBuf[3] = params.aux2;
 
-	if (params.highspeed_mode == ATARISIO_EXTSIO_SPEED_TURBO) {
+	switch (params.highspeed_mode) {
+	case ATARISIO_EXTSIO_SPEED_TURBO:
 		fCmdBuf[3] |= 0x80;
+		break;
+	case ATARISIO_EXTSIO_SPEED_WARP:
+		// warp speed only supported for read/write sector
+		switch (params.command) {
+		case 0x50:
+		case 0x52:
+		case 0x57:
+			// set bit 5 of command
+			fCmdBuf[1] |= 0x20;
+			break;
+		default:
+			highspeed_mode = ATARISIO_EXTSIO_SPEED_NORMAL;
+		}
+		break;
+	case ATARISIO_EXTSIO_SPEED_XF551:
+		// XF551 sends response to format commands always in standard speed
+		switch (params.command) {
+		case 0x21:
+		case 0x22:
+			highspeed_mode = ATARISIO_EXTSIO_SPEED_NORMAL;
+			break;
+		default:
+			break;
+		}
+		// set bit 7 of command
+		fCmdBuf[1] |= 0x80;
+		break;
+	default:
+		break;
 	}
 
 	fCmdBuf[4] = CalculateChecksum(fCmdBuf, 4);
@@ -1193,7 +1225,7 @@ int UserspaceSIOWrapper::SendCommandFrame(Ext_SIO_parameters& params)
 			goto next_retry;
 		}
 
-		if (params.highspeed_mode == ATARISIO_EXTSIO_SPEED_TURBO) {
+		if (highspeed_mode == ATARISIO_EXTSIO_SPEED_TURBO) {
 			SetBaudrateIfDifferent(fHighspeedBaudrate);
 		}
 
@@ -1209,6 +1241,15 @@ int UserspaceSIOWrapper::SendCommandFrame(Ext_SIO_parameters& params)
 			UTRACE_CMD_ERROR("waiting for command ACK returned %d\n", ret);
 			ret = -ret;
 			goto next_retry;
+		}
+
+		switch (highspeed_mode) {
+		case ATARISIO_EXTSIO_SPEED_WARP:
+		case ATARISIO_EXTSIO_SPEED_XF551:
+			SetBaudrateIfDifferent(fHighspeedBaudrate);
+			break;
+		default:
+			break;
 		}
 
 		UTRACE_CMD_DATA("got command ACK char %02x", ret);
