@@ -439,14 +439,14 @@ struct atarisio_dev {
 		unsigned int baudrate;
 		unsigned int exact_baudrate;
 		unsigned long baud_base;
-		u8 IER;
-		u8 MCR;
-		u8 LCR;
+		uint8_t IER;
+		uint8_t MCR;
+		uint8_t LCR;
 		uint16_t DL;  /* divisor */
-		u8 FCR;
-		u8 ACR;	/* for 16C950 UARTs */
-		u8 TCR;
-		u8 CPR;
+		uint8_t FCR;
+		uint8_t ACR;	/* for 16C950 UARTs */
+		uint8_t TCR;
+		uint8_t CPR;
 
 		unsigned int just_switched_baud; /* true if we just switched baud rates */
 		/* this flag is cleared after successful reception of a command frame */
@@ -499,7 +499,7 @@ static struct atarisio_dev* atarisio_devices[ATARISIO_MAXDEV];
 /*
  * helper functions to access the 16550
  */
-static inline void serial_out(struct atarisio_dev* dev, unsigned int offset, u8 value)
+static inline void serial_out(struct atarisio_dev* dev, unsigned int offset, uint8_t value)
 {
 	if (offset >=8) {
 		DBG_PRINTK(DEBUG_STANDARD, "illegal offset in serial_out\n");
@@ -508,7 +508,7 @@ static inline void serial_out(struct atarisio_dev* dev, unsigned int offset, u8 
 	}
 }
 
-static inline u8 serial_in(struct atarisio_dev* dev, unsigned int offset)
+static inline uint8_t serial_in(struct atarisio_dev* dev, unsigned int offset)
 {
 	if (offset >=8) {
 		DBG_PRINTK(DEBUG_STANDARD, "illegal offset in serial_in\n");
@@ -539,15 +539,15 @@ static void set_dl(struct atarisio_dev* dev, uint16_t dl)
  * http://www.oxsemi.com/products/serial/documents/HighPerformance_UARTs/OX16C950B/SER_AN_SWexamples.pdf
  */
 
-static inline void write_icr(struct atarisio_dev* dev, u8 index, u8 value)
+static inline void write_icr(struct atarisio_dev* dev, uint8_t index, uint8_t value)
 {
 	serial_out(dev, UART_SCR, index);
 	serial_out(dev, UART_ICR, value);
 }
 
-static inline u8 read_icr(struct atarisio_dev* dev, u8 index)
+static inline uint8_t read_icr(struct atarisio_dev* dev, uint8_t index)
 {
-	u8 ret;
+	uint8_t ret;
 
 	/* first enable read access to the ICRs */
 	write_icr(dev, UART_ACR, dev->serial_config.ACR | UART_ACR_ICRRD);
@@ -580,7 +580,7 @@ static void set_cpr(struct atarisio_dev* dev, uint8_t cpr)
  */
 static int detect_16c950(struct atarisio_dev* dev)
 {
-	u8 id1,id2,id3,rev;
+	uint8_t id1,id2,id3,rev;
 
 	/* according to 8250.c of the Linux kernel enhanced mode must be enabled
 	 * for the 16C952 rev B, otherwise detection will fail
@@ -698,8 +698,8 @@ static inline void reset_cmdframe_buf_data(struct atarisio_dev* dev)
 #if 0
 typedef struct {
 	unsigned int baudrate;
-	u8 tcr;
-	u8 cpr;
+	uint8_t tcr;
+	uint8_t cpr;
 	unsigned int divisor;
 } baudrate_entry_16c950; 
 
