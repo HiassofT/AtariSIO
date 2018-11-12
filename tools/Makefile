@@ -21,12 +21,12 @@ ifdef ALL_IN_ONE
 EXECUTABLES = atarisio
 CXXFLAGS += -DALL_IN_ONE
 else
-EXECUTABLES = atariserver atarixfer adir dir2atr measure-system-latency casinfo ataricom test-fsk test-transmit
-#	atariserver-nocurses
-#	ataridd smag24 
-#	speedy
-#	turbo
-#	serialwatcher
+EXECUTABLES = atariserver atarixfer adir dir2atr ataricom
+
+ifdef ENABLE_TESTS
+EXECUTABLES += measure-system-latency casinfo test-fsk test-transmit \
+	serialwatcher ataridd
+endif
 
 #MINGW_CXX=i586-mingw32msvc-g++
 MINGW_CXX=i686-w64-mingw32-g++
