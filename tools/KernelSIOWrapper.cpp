@@ -469,9 +469,9 @@ int KernelSIOWrapper::SetSioTiming(ESIOTiming timing)
 {
 	switch (timing) {
 	case eRelaxedTiming:
-		return SetHighSpeedPause(0);
-	default:
 		return SetHighSpeedPause(ATARISIO_HIGHSPEEDPAUSE_BOTH);
+	default:
+		return SetHighSpeedPause(0);
 	}
 }
 
