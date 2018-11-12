@@ -21,7 +21,7 @@ ifdef ALL_IN_ONE
 EXECUTABLES = atarisio
 CXXFLAGS += -DALL_IN_ONE
 else
-EXECUTABLES = atariserver atarixfer adir dir2atr measure-system-latency casinfo ataricom test-fsk
+EXECUTABLES = atariserver atarixfer adir dir2atr measure-system-latency casinfo ataricom test-fsk test-transmit
 #	atariserver-nocurses
 #	ataridd smag24 
 #	speedy
@@ -78,6 +78,9 @@ ATARIDD_OBJS = ataridd.o \
 
 SMAG24_OBJS = smag24.o \
 	$(COMMON_OBJS) $(SIOWRAPPER_OBJS) $(ATRIMAGE_OBJS) $(ATPIMAGE_OBJS)
+
+TEST_TRANSMIT_OBJS = test-transmit.o \
+	 $(COMMON_OBJS) $(SIOWRAPPER_OBJS)
 
 ATARISERVER_OBJS = atariserver.o CursesFrontend.o StringInput.o \
 	History.o Directory.o DirectoryCache.o \
@@ -157,6 +160,9 @@ atariserver-nocurses: $(ATARISERVER_NOCURSES_OBJS)
 
 measure-system-latency: $(MEASURE_SYSTEM_LATENCY_OBJS)
 	$(CXX) $(LDFLAGS) -o $@ $(MEASURE_SYSTEM_LATENCY_OBJS) $(COMMON_LIBS)
+
+test-transmit: $(TEST_TRANSMIT_OBJS)
+	$(CXX) $(LDFLAGS) -o $@ $(TEST_TRANSMIT_OBJS) $(COMMON_LIBS)
 
 test-fsk: $(TEST_FSK_OBJS)
 	$(CXX) $(LDFLAGS) -o $@ $(TEST_FSK_OBJS) $(COMMON_LIBS)

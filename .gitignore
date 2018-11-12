@@ -21,4 +21,5 @@ tools/casinfo
 tools/dir2atr
 tools/measure-system-latency
 tools/test-fsk
+tools/test-transmit
 
