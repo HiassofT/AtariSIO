@@ -151,8 +151,9 @@ static void print_timestamp(bool timestamp_printed)
 			last_timestamp = current_timestamp;
 			first = false;
 		}
-		printf("%10llu [ +%10llu ] ", current_timestamp - start_time,
-				current_timestamp - last_timestamp);
+		printf("%10lu [ +%10lu ] ", 
+				(unsigned long) (current_timestamp - start_time),
+				(unsigned long) (current_timestamp - last_timestamp));
 		last_timestamp = current_timestamp;
 	}
 	timestamp_printed = true;
@@ -228,7 +229,7 @@ int main(int argc, char** argv)
 			}
 			if (count > 0) {
 				print_timestamp(timestamp_printed);
-				printf("got %d bytes: ", count);
+				printf("got %d bytes: ", (int) count);
 				for (ssize_t i=0; i<count; i++) {
 					printf("%02x ", buf[i]);
 				}
