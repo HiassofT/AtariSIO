@@ -859,11 +859,6 @@ int AtrSIOHandler::ProcessCommandFrame(SIO_command_frame& frame, const RCPtr<SIO
 				LOG_SIO_SEND_DATA_FAILED();
 				break;
 			}
-
-			// set highspeed baudrate now, so the kernel driver doesn't
-			// have to detect the baudrate switch
-			wrapper->SetBaudrate(fHighSpeedBaudrate, false);
-
 		} else {
 			if (wrapper->SendCommandNAK()) {
 				LOG_SIO_CMD_NAK_FAILED();
