@@ -275,3 +275,8 @@ AtariSIO changelog:
   - rework documentation, add RPi and Lotharek 1050-2-PC USB interface docs
   - atarixfer: drop '-S' option, add paramter to '-s' so XF551/Warp and
     Ultra/Turbo highspeed modes and be enabled separately
+
+2018-11-13:
+  - atariserver/atarixfer: fix strict/relaxed SIO timing swapped with
+    kernel driver
+  - atariserver: fix issues with low pokey divisors on FTDI chips
