@@ -1149,11 +1149,13 @@ unsigned int UserspaceSIOWrapper::GetBaudrateForPokeyDivisor(unsigned int diviso
 {
 	switch (divisor) {
 	case 0:
-		return 125000;
 	case 1:
-		return 110500;
 	case 2:
-		return 98500;
+	case 3:
+	case 4:
+		// compensate for late pokey sampling, add 3 cycles to byte time
+		return (ATARISIO_ATARI_FREQUENCY_PAL * 10) /
+			(10 * (2 * (divisor + 7)) + 3);
 	case ATARISIO_POKEY_DIVISOR_STANDARD:
 		return 19200;
 	case ATARISIO_POKEY_DIVISOR_2XSIO_XF551:
