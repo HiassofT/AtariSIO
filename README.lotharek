@@ -10,6 +10,11 @@ Note: you also have to use the '-l' option of atarixfer as the
 command-line signalling is inverted compared to the original
 serial 1050-2-PC interface.
 
+Note: as of late 2018 the interface doesn't work out of the box
+with Atari 1050 drives as it doesn't provide +5V on SIO pin 10
+and so the 1050 won't react to any commands. As a workaround
+apply +5V on SIO pin 10 from an external source.
+
 A tool to perform the switch is available in contrib/lotharek.
 
 To compile it you need the libftdi1 and libusb-1.0 libraries and
