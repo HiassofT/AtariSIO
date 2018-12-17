@@ -135,6 +135,8 @@ int main(int argc, char**argv)
 	bool userDefBoot = false;
 	unsigned char userDefBootData[384];
 
+	int ret = 0;
+
 	int c;
 	while ( (c = getopt(argc, argv, "admpPb:B:")) != -1) {
 		switch(c) {
@@ -151,14 +153,14 @@ int main(int argc, char**argv)
 			if (BootTypeTable[idx].name) {
 				bootType = BootTypeTable[idx].bootType;
 			} else {
-				printf("unknown boot sector type \"%s\"\n", optarg);
+				printf("error: unknown boot sector type \"%s\"\n", optarg);
 				goto usage;
 			}
 			break;
 		case 'B':
 			FILE* bootfile = fopen(optarg, "rb");
 			if (bootfile == NULL) {
-				printf("cannot open boot sector file \"%s\"\n", optarg);
+				printf("error: cannot open boot sector file \"%s\"\n", optarg);
 				goto usage;
 			}
 			if (fread(userDefBootData, 1, 384, bootfile) != 384) {
@@ -199,7 +201,7 @@ int main(int argc, char**argv)
 	if (!autoSectors) {
 		sectors = atoi(argv[optind++]);
 		if (sectors < 720 || sectors > 65535) {
-			printf("illegal sector number - must be 720..65535\n");
+			printf("error: illegal number of sectors - must be 720..65535\n");
 			return 1;
 		}
 	}
@@ -224,6 +226,11 @@ int main(int argc, char**argv)
 		}
 
 		sectors = Dos2xUtils::EstimateDiskSize(directory, seclen, piconametype, bootType);
+		if (sectors > 65535) {
+			printf("error: calculated disk size %d is larger than maximum of 65535\n",
+				sectors);
+			return 1;
+		}
 		printf("calculated disk size is %d sectors\n", sectors);
 	}
 
@@ -235,16 +242,9 @@ int main(int argc, char**argv)
 	}
 
 	image = new AtrMemoryImage;
-	if (dd) {
-		if (!image->CreateImage(seclen, sectors)) {
-			printf("cannot create atr image\n");
-			return 1;
-		}
-	} else {
-		if (!image->CreateImage(seclen, sectors)) {
-			printf("cannot create atr image\n");
-			return 1;
-		}
+	if (!image->CreateImage(seclen, sectors)) {
+		printf("error: cannot create atr image\n");
+		return 1;
 	}
 
 	observer = new VirtualImageObserver(image);
@@ -253,25 +253,28 @@ int main(int argc, char**argv)
 
 	if (mydos) {
 		if (!dos2xutils->SetDosFormat(Dos2xUtils::eMyDos)) {
-			printf("cannot set MyDos format\n");
+			printf("error: cannot set MyDos format\n");
 			return 1;
 		}
 	} else {
 		if (!dos2xutils->SetDosFormat(Dos2xUtils::eDos2x)) {
-			printf("cannot set DOS 2.x format\n");
+			printf("error: cannot set DOS 2.x format\n");
 			return 1;
 		}
 	}
 	if (!dos2xutils->InitVTOC()) {
-		printf("creating directory failed\n");
+		printf("error: creating directory failed\n");
 		return 1;
 	}
 
 	if (!dos2xutils->AddBootFile(bootType)) {
-		printf("adding boot file failed\n");
+		printf("error: adding boot file failed\n");
 		return 1;
 	}
-	dos2xutils->AddFiles(piconametype);
+	if (!dos2xutils->AddFiles(piconametype)) {
+		printf("error: failed to add all files\n");
+		ret = 1;
+	}
 
 	if (userDefBoot) {
 		for (int i = 0; i < 3; i++) {
@@ -279,19 +282,23 @@ int main(int argc, char**argv)
 		}
 	} else {
 		if (!dos2xutils->WriteBootSectors(bootType, autorun)) {
-			printf("writing boot sectors failed\n");
+			printf("error: writing boot sectors failed\n");
+			ret = 1;
 		}
 	}
 
-	if (!image->WriteImageToFile(atrfilename)) {
+	if (image->WriteImageToFile(atrfilename)) {
+		printf("created image \"%s\"\n", atrfilename);
+	} else {
 		printf("error writing image to \"%s\"\n", atrfilename);
+		ret = 1;
 	}
 
 	dos2xutils = 0;
 	observer = 0;
 
 	SIOTracer::GetInstance()->RemoveAllTracers();
-	return 0;
+	return ret;
 usage:
 	printf("dir2atr %s\n", VERSION_STRING);
 	printf("(c) 2004-2018 Matthias Reichl <hias@horus.com>\n");
