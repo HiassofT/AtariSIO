@@ -1931,7 +1931,8 @@ static unsigned int GetNumVTOC(unsigned int sectors, ESectorLength seclen)
 }
 
 unsigned int Dos2xUtils::EstimateDiskSize(const char* directory, ESectorLength seclen,
-	Dos2xUtils::EPicoNameType piconametype, EBootType bootType)
+	Dos2xUtils::EPicoNameType piconametype, EBootType bootType,
+	bool limitTo65535Sectors)
 {
 	unsigned int numSectors = 0;
 	unsigned int bootFileLen = 0;
@@ -1957,7 +1958,7 @@ unsigned int Dos2xUtils::EstimateDiskSize(const char* directory, ESectorLength s
 	if (numSectors < 720) {
 		numSectors = 720;
 	}
-	if (numSectors > 65535) {
+	if (numSectors > 65535 && limitTo65535Sectors) {
 		numSectors = 65535;
 	}
 	return numSectors;

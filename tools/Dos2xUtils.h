@@ -113,7 +113,8 @@ public:
 	bool AddBootFile(EBootType type);
 
 	static unsigned int EstimateDiskSize(const char* directory, ESectorLength seclen, 
-		EPicoNameType piconametype = eNoPicoName, EBootType bootType = eBootDefault);
+		EPicoNameType piconametype = eNoPicoName, EBootType bootType = eBootDefault,
+		bool limitTo65535Sectors = true);
 
 	unsigned int GetNumberOfFreeSectors();
 	bool AllocSectors(unsigned int num, unsigned int * secnums, bool allocdir = false);
