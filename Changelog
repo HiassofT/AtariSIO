@@ -280,3 +280,7 @@ AtariSIO changelog:
   - atariserver/atarixfer: fix strict/relaxed SIO timing swapped with
     kernel driver
   - atariserver: fix issues with low pokey divisors on FTDI chips
+
+2018-12-17:
+  - dir2atr: set exit code to 1 if adding files from the directory failed
+    or if the estimated image size exceeds the 65535 sectors limit
