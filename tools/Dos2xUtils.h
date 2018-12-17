@@ -39,7 +39,7 @@ public:
 		ePicoNameWithoutExtension
 	};
 
-	void AddFiles(EPicoNameType piconametype = eNoPicoName);
+	bool AddFiles(EPicoNameType piconametype = eNoPicoName);
 
 	// DOS 2.x file access methods
 	enum EDosFormat {
@@ -277,8 +277,6 @@ private:
 	char* fOrigName[eMaxEntries];
 	char* fAtariName[eMaxEntries];
 	RCPtr<Dos2xUtils> fSubdir[eMaxEntries];
-
-	bool fDiskFull;
 
 	DiskImage* fImage;
 	VirtualImageObserver* fObserver;

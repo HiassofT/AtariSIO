@@ -154,13 +154,13 @@ Dos2xUtils::~Dos2xUtils()
 	}
 }
 
-void Dos2xUtils::AddFiles(EPicoNameType piconametype)
+bool Dos2xUtils::AddFiles(EPicoNameType piconametype)
 {
+	bool ok = true;
 	if (!fDirectory) {
 		DPRINTF("AddFiles: directory is NULL");
-		return;
+		return false;
 	}
-	fDiskFull = false;
 	RCPtr<Directory> dir = new Directory();
 	int num = dir->ReadDirectory(fDirectory, true);
 	//DPRINTF("ReadDirectory(\"%s\") returned %d", fDirectory, num);
@@ -168,26 +168,29 @@ void Dos2xUtils::AddFiles(EPicoNameType piconametype)
 	int i;
 	unsigned int entryNum;
 	unsigned int dirsec;
-	for (i=fEntryCount ; (fEntryCount < eMaxEntries) && (!fDiskFull) && i<num ; i++) {
+	for (i=fEntryCount ; (fEntryCount < eMaxEntries) && i<num ; i++) {
 		DirEntry* e = dir->Get(i);
 		//DPRINTF("AddFiles(%s): processing %s", fDirectory, e->fName);
 		switch (e->fType) {
 		case DirEntry::eFile:
-			AddFile(e->fName);
+			if (!AddFile(e->fName)) {
+				ok = false;
+			}
 			break;
 		case DirEntry::eDirectory:
 			if (recurseSubdirs) {
 				dirsec = AddDirectory(e->fName, entryNum);
-				if (dirsec != 0) {
+				if (dirsec == 0) {
+					ok = false;
+				} else {
 					char newpath[PATH_MAX];
 					snprintf(newpath, PATH_MAX-1, "%s%c%s", fDirectory, DIR_SEPARATOR, e->fName);
 					newpath[PATH_MAX-1] = 0;
 					fSubdir[entryNum] = new Dos2xUtils(fImage, newpath, fObserver, dirsec,
 						fDosFormat, fIsDos25EnhancedDensity, fUse16BitSectorLinks,
 						fNumberOfVTOCs);
-					fSubdir[entryNum]->AddFiles(piconametype);
-					if (fSubdir[entryNum]->fDiskFull) {
-						fDiskFull = true;
+					if (!fSubdir[entryNum]->AddFiles(piconametype)) {
+						ok = false;
 					}
 				}
 			} else {
@@ -204,17 +207,21 @@ void Dos2xUtils::AddFiles(EPicoNameType piconametype)
 		}
 	}
 	if ((fEntryCount == eMaxEntries) && (i<num)) {
-		AWARN("more than %d entries in \"%s\", skipping files", eMaxEntries, fDirectory);
+		AERROR("more than %d entries in \"%s\", skipping files", eMaxEntries, fDirectory);
+		ok = false;
 	}
 	if (piconametype != eNoPicoName) {
 	       	if (fEntryCount < eMaxEntries) {
 			if (!CreatePiconame(piconametype)) {
-				AWARN("adding PICONAME.TXT failed!");
+				AERROR("adding PICONAME.TXT failed!");
+				ok = false;
 			}
 		} else {
-			AWARN("cannot add PICONAME.TXT, directory full!");
+			AERROR("cannot add PICONAME.TXT, directory full!");
+			ok = false;
 		}
 	}
+	return ok;
 }
 
 bool Dos2xUtils::AddFile(const char* name)
@@ -272,7 +279,7 @@ bool Dos2xUtils::AddFile(const char* name)
 	if (filelen > 0) {
 		buffer = new uint8_t[filelen];
 		if (fread(buffer, 1, filelen, f) != (size_t) filelen) {
-			AWARN("reading file \"%s\" failed", p);
+			AERROR("reading file \"%s\" failed", p);
 			fclose(f);
 			delete[] buffer;
 			return false;
@@ -292,7 +299,6 @@ bool Dos2xUtils::AddFile(const char* name)
 		if (buffer) {
 			delete[] buffer;
 		}
-		fDiskFull = true;
 		return false;
 	}
 
@@ -315,7 +321,6 @@ bool Dos2xUtils::AddFile(const char* name)
 		if (buffer) {
 			delete[] buffer;
 		}
-		fDiskFull = true;
 		return false;
 	}
 
@@ -346,7 +351,6 @@ unsigned int Dos2xUtils::AddDirectory(const char* name, unsigned int& entryNum)
 	if ( GetNumberOfFreeSectors() < 8) {
 		AWARN("not enough space for directory \"%s\" (need: 8 free: %d)", p,
 			GetNumberOfFreeSectors());
-		fDiskFull = true;
 		return 0;
 	}
 
@@ -360,7 +364,6 @@ unsigned int Dos2xUtils::AddDirectory(const char* name, unsigned int& entryNum)
 
 	if (!AllocSectors(8, sectors, true)) {
 		//DPRINTF("allocating 8 directory sectors failed");
-		fDiskFull = true;
 		return 0;
 	}
 
@@ -391,7 +394,6 @@ bool Dos2xUtils::AddDataBlock(const char* atariname, const uint8_t* buffer, unsi
 	if ( fileSeclen > GetNumberOfFreeSectors() ) {
 		AERROR("not enough space for \"%s\" (need: %d free: %d)", atariname,
 			fileSeclen, GetNumberOfFreeSectors());
-		fDiskFull = true;
 		return false;
 	}
 
@@ -407,7 +409,6 @@ bool Dos2xUtils::AddDataBlock(const char* atariname, const uint8_t* buffer, unsi
 	if (!AllocSectors(fileSeclen, sectors, false)) {
 		delete[] sectors;
 		DPRINTF("allocating %d sectors failed", fileSeclen);
-		fDiskFull = true;
 		return false;
 	}
 
@@ -506,7 +507,7 @@ bool Dos2xUtils::SetAtariDirectory(
 bool Dos2xUtils::AddEntry(const char* longname, char*& atariname, unsigned int& entryNumber)
 {
 	if (fEntryCount == eMaxEntries) {
-		AWARN("directory full - skipping %s", longname);
+		AERROR("directory full - skipping %s", longname);
 		return false;
 	}
 	char localatariname[12];
@@ -525,7 +526,7 @@ bool Dos2xUtils::AddEntry(const char* longname, char*& atariname, unsigned int& 
 bool Dos2xUtils::AddEntry(const char* atariname, bool allowNameChange, unsigned int& entryNumber)
 {
 	if (fEntryCount == eMaxEntries) {
-		AWARN("directory full - skipping %s", atariname);
+		AERROR("directory full - skipping %s", atariname);
 		return false;
 	}
 	entryNumber = fEntryCount;
