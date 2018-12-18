@@ -172,6 +172,7 @@ RPi GPIO pin                 Atari SIO pin
 RxD  10 ----- <LS> ------+--  3  Data In
 TxD   8 ----- <LS> ---------  5  Data Out
 RTS  11 ----- <LS> ---------  7  Command
+               |
 GND   6 -------+------------  4  GND
 
 GND must also be connected to the level-shifters' ground pin.
