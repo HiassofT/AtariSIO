@@ -140,7 +140,7 @@ If you want to connect other Atari peripherals the diode is mandatory!
 Wiring (the "<LS>" blocks are the level shifters)
 
 RPi GPIO pin                  Atari SIO pin
-GND   6 -------+------------  7  GND
+GND   6 -------+------------  4  GND
                |    1N4148
 TxD   8 ----- <LS> ---|<|---  3  Data In
 RxD  10 ----- <LS> ---------  5  Data Out
@@ -172,7 +172,7 @@ RPi GPIO pin                 Atari SIO pin
 RxD  10 ----- <LS> ------+--  3  Data In
 TxD   8 ----- <LS> ---------  5  Data Out
 RTS  11 ----- <LS> ---------  7  Command
-GND   6 -------+------------  7  GND
+GND   6 -------+------------  4  GND
 
 GND must also be connected to the level-shifters' ground pin.
 Depending on your level shifter you may also need to provide 3.3V
