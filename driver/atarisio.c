@@ -926,9 +926,9 @@ static unsigned int pokey_div_to_baud_16950_921600(unsigned int pokey_div)
 	case ATARISIO_POKEY_DIVISOR_HAPPY:
 		return 52150;
 	case ATARISIO_POKEY_DIVISOR_2XSIO_XF551:
-		return 38550;
+		return 38400;
 	case ATARISIO_POKEY_DIVISOR_STANDARD:
-		return 18856;
+		return 19200;
 	default: return 0;
 	}
 }
@@ -978,9 +978,9 @@ static unsigned int pokey_div_to_baud_16950_4000000(unsigned int pokey_div)
 	case ATARISIO_POKEY_DIVISOR_HAPPY:
 		return 52083;
 	case ATARISIO_POKEY_DIVISOR_2XSIO_XF551:
-		return 38580;
+		return 38402;
 	case ATARISIO_POKEY_DIVISOR_STANDARD:
-		return 18870;
+		return 19201;
 	default:
 		return 0;
 	}
@@ -1001,7 +1001,9 @@ static unsigned int optimized_baudrate_16950_4000000(unsigned int baudrate,
 	C950_PARAM( 59073, 16,  23,  23); /* pokey divisor 8 */
 	C950_PARAM( 55407, 16,  12,  47); /* pokey divisor 9 */
 	C950_PARAM( 52083, 16,   8,  75); /* pokey divisor 10 */
+	C950_PARAM( 38402, 15,  14,  62); /* pokey divisor 16, 38400 */
 	C950_PARAM( 38580, 16,   9,  90); /* pokey divisor 16 */
+	C950_PARAM( 19201, 15,  14, 124); /* pokey divisor 40, 19200 */
 	C950_PARAM( 18870, 16,   9, 184); /* pokey divisor 40 */
 	default: return 1;
 	}
