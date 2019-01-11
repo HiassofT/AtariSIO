@@ -15,7 +15,6 @@ mkdir tmp/"${NAME}"/tools
 mkdir tmp/"${NAME}"/tools/6502
 mkdir tmp/"${NAME}"/tools/6502/mypdos
 mkdir tmp/"${NAME}"/driver
-mkdir -p tmp/"${NAME}"/contrib/gentoo
 mkdir -p tmp/"${NAME}"/contrib/lotharek
 mkdir -p tmp/"${NAME}"/contrib/rpi
 cp -a Changelog* README* INSTALL* LICENSE* Makefile \
@@ -26,13 +25,11 @@ cp -a tools/6502/Makefile tools/6502/*.src tools/6502/*.inc \
       tools/6502/remote.com tmp/"${NAME}"/tools/6502
 cp -a tools/6502/mypdos/*.c tmp/"${NAME}"/tools/6502/mypdos
 cp -a driver/Makefile driver/*.c driver/*.h tmp/"${NAME}"/driver
-cp -a contrib/gentoo/* tmp/"${NAME}"/contrib/gentoo/
 cp -a contrib/lotharek/Makefile contrib/lotharek/*.sh \
       contrib/lotharek/*.c tmp/"${NAME}"/contrib/lotharek
 cp -a contrib/rpi/Makefile contrib/rpi/*.dts \
       contrib/rpi/miniuart-ctsrts.dtbo contrib/rpi/uart-ctsrts.dtbo \
       tmp/"${NAME}"/contrib/rpi
-mv tmp/"${NAME}"/contrib/gentoo/atarisio.ebuild tmp/"${NAME}"/contrib/gentoo/atarisio-"${VER}".ebuild
 cd tmp
 tar zcf ../../dist/${NAME}.tar.gz "${NAME}"
 cp -a ../Changelog ../README ../../dist
