@@ -281,6 +281,14 @@ AtariSIO changelog:
     kernel driver
   - atariserver: fix issues with low pokey divisors on FTDI chips
 
-2018-12-17:
+2019-01-11:
   - dir2atr: set exit code to 1 if adding files from the directory failed
     or if the estimated image size exceeds the 65535 sectors limit
+
+2019-01-11:
+  - README.RPi: fix wrong SIO GND pin number and clarify connection to
+    level shifter
+  - atarisio: use 19200/38400 bit/sec on 16c950 chips instead of exact
+    pokey rates
+  - remove outdated Gentoo ebuild file
+
