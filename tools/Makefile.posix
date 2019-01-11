@@ -1,5 +1,5 @@
 # Tools-only makefile for posix systems
-# (c) 2018 by Matthias Reichl <hias@horus.com>
+# (c) 2018-2019 by Matthias Reichl <hias@horus.com>
 
 EXE = adir ataricom dir2atr
 INSTALLDIR ?= /usr/local/bin

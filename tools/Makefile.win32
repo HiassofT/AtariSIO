@@ -1,5 +1,5 @@
 # Tools-only makefile for mingw32 cross-compilation
-# (c) 2018 by Matthias Reichl <hias@horus.com>
+# (c) 2018-2019 by Matthias Reichl <hias@horus.com>
 
 EXE = adir.exe ataricom.exe dir2atr.exe
 

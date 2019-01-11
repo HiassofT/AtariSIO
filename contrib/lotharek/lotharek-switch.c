@@ -1,7 +1,7 @@
 /* lotharek-switch: configure 1050-2-PC/SIO2PC dual interface
    for 1050-2-PC or SIO2PC mode.
 
-   Copyright (C) 2018 Matthias Reichl <hias@horus.com>
+   Copyright (C) 2018-2019 Matthias Reichl <hias@horus.com>
 
    Based on bitbang_cusb example from libftdi
 

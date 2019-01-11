@@ -1,7 +1,7 @@
 /*
    ataridd - dump sector range from Atari disk to file
 
-   Copyright (C) 2004-2018 Matthias Reichl <hias@horus.com>
+   Copyright (C) 2004-2019 Matthias Reichl <hias@horus.com>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -87,7 +87,7 @@ int main(int argc, char** argv)
 
 	unsigned int start_sector = 1, end_sector=720;
 
-	printf("ataridd %s\n(c) 2002-2018 by Matthias Reichl <hias@horus.com>\n\n",VERSION_STRING);
+	printf("ataridd %s\n(c) 2002-2019 by Matthias Reichl <hias@horus.com>\n\n",VERSION_STRING);
 	while ((c = getopt(argc, argv, "pls:e:")) != -1) {
 		switch (c) {
 		case 'p':

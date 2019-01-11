@@ -4,7 +4,7 @@
 /*
    Termios2.h - defines for struct termios2 missing in glibc
 
-   Copyright (C) 2018 Matthias Reichl <hias@horus.com>
+   Copyright (C) 2018-2019 Matthias Reichl <hias@horus.com>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
