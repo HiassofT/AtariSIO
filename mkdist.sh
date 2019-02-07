@@ -27,8 +27,7 @@ cp -a tools/6502/mypdos/*.c tmp/"${NAME}"/tools/6502/mypdos
 cp -a driver/Makefile driver/*.c driver/*.h tmp/"${NAME}"/driver
 cp -a contrib/lotharek/Makefile contrib/lotharek/*.sh \
       contrib/lotharek/*.c tmp/"${NAME}"/contrib/lotharek
-cp -a contrib/rpi/Makefile contrib/rpi/*.dts \
-      contrib/rpi/miniuart-ctsrts.dtbo contrib/rpi/uart-ctsrts.dtbo \
+cp -a contrib/rpi/Makefile contrib/rpi/*.dts contrib/rpi/*.dtbo \
       tmp/"${NAME}"/contrib/rpi
 cd tmp
 tar zcf ../../dist/${NAME}.tar.gz "${NAME}"
