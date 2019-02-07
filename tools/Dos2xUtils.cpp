@@ -1423,12 +1423,10 @@ bool Dos2xUtils::WriteBootSectors(EBootType type, bool autorunMyPicoDos)
 			buf[0x000e] = 2;
 			buf[0x00c4] = 2;
 			buf[0x0011] = 0xfd;
-			buf[0x0170] = 0xfd;
 		} else {
 			buf[0x000e] = 1;
 			buf[0x00c4] = 1;
 			buf[0x0011] = 0x7d;
-			buf[0x0170] = 0x7d;
 		}
 		if (fUse16BitSectorLinks) {
 			buf[0x0034] = 0xff;
