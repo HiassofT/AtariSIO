@@ -65,6 +65,7 @@ public:
 		eBootDos25,
 		eBootMyDos4533,
 		eBootMyDos4534,
+		eBootMyDos455Beta4,
 
 		eBootTurboDos21,
 		eBootTurboDos21HS,

@@ -1419,6 +1419,7 @@ bool Dos2xUtils::WriteBootSectors(EBootType type, bool autorunMyPicoDos)
 	switch (type) {
 	case eBootMyDos4533:
 	case eBootMyDos4534:
+	case eBootMyDos455Beta4:
 		if (dd) {
 			buf[0x000e] = 2;
 			buf[0x00c4] = 2;

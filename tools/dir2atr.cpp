@@ -53,6 +53,7 @@ BOOT_ENTRY(Dos20)
 BOOT_ENTRY(Dos25)
 BOOT_ENTRY(MyDos4533)
 BOOT_ENTRY(MyDos4534)
+BOOT_ENTRY(MyDos455Beta4)
 BOOT_ENTRY(TurboDos21)
 BOOT_ENTRY(TurboDos21HS)
 BOOT_ENTRY(XDos243F)
@@ -309,7 +310,8 @@ usage:
 	printf("  -P        create PICONAME.TXT (with file extensions stripped)\n");
 	printf("  -a        enable MyPicoDos autorun mode\n");
 	printf("  -b <DOS>  create bootable disk for specified DOS\n");
-	printf("            Supported DOS are: Dos20, Dos25, MyDos4533, MyDos4534,\n");
+	printf("            Supported DOS are: Dos20, Dos25, \n");
+	printf("            MyDos4533, MyDos4534, MyDos455Beta4\n");
 	printf("            TurboDos21, TurboDos21HS, XDos243F, XDos243N,\n");
 	printf("            MyPicoDos403, MyPicoDos403HS,\n");
 	printf("            MyPicoDos404, MyPicoDos404N, MyPicoDos404R, MyPicoDos404RN,\n");
