@@ -292,3 +292,8 @@ AtariSIO changelog:
     pokey rates
   - remove outdated Gentoo ebuild file
 
+2019-02-11:
+  - include missing RPi device tree overlays
+  - dir2atr: add support for MyDOS 4.55 Beta4 and cleanup MyDOS boot sectors
+    to use a consistent configuration (only D1: configured, ramdisk on D9:)
+
