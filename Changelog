@@ -297,3 +297,6 @@ AtariSIO changelog:
   - dir2atr: add support for MyDOS 4.55 Beta4 and cleanup MyDOS boot sectors
     to use a consistent configuration (only D1: configured, ramdisk on D9:)
 
+2019-02-20:
+  - atarisio: add MMIO support
+
