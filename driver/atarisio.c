@@ -170,6 +170,10 @@
 #define UART_MCR_CLKSEL         0x80 /* Divide clock by 4 (TI16C752, EFR[4]=1) */
 #endif
 
+#ifndef __iomem
+#define __iomem
+#endif
+
 /* debug levels: */
 #define DEBUG_STANDARD 1
 #define DEBUG_NOISY 2
@@ -245,6 +249,7 @@ MODULE_DESCRIPTION("Serial Atari 8bit SIO driver");
 static int minor = ATARISIO_DEFAULT_MINOR;
 static char* port[ATARISIO_MAXDEV]       = { [0 ... ATARISIO_MAXDEV-1] = 0 };
 static int   io[ATARISIO_MAXDEV]         = { [0 ... ATARISIO_MAXDEV-1] = 0 };
+static long  mmio[ATARISIO_MAXDEV]	 = { [0 ... ATARISIO_MAXDEV-1] = 0 };
 static int   irq[ATARISIO_MAXDEV]        = { [0 ... ATARISIO_MAXDEV-1] = 0 };
 static int   baud_base[ATARISIO_MAXDEV]  = { [0 ... ATARISIO_MAXDEV-1] = 0 };
 static int   ext_16c950[ATARISIO_MAXDEV] = { [0 ... ATARISIO_MAXDEV-1] = 1 };
@@ -261,6 +266,7 @@ static int   hrtimer = 0;
 MODULE_PARM(minor,"i");
 MODULE_PARM(port,"1-" __MODULE_STRING(ATARISIO_MAXDEV) "s");
 MODULE_PARM(io,"1-" __MODULE_STRING(ATARISIO_MAXDEV) "i");
+MODULE_PARM(mmio,"1-" __MODULE_STRING(ATARISIO_MAXDEV) "l");
 MODULE_PARM(irq,"1-" __MODULE_STRING(ATARISIO_MAXDEV) "i");
 MODULE_PARM(baud_base,"1-" __MODULE_STRING(ATARISIO_MAXDEV) "i");
 MODULE_PARM(ext_16c950,"1-" __MODULE_STRING(ATARISIO_MAXDEV) "i");
@@ -271,6 +277,7 @@ MODULE_PARM(hrtimer,"i");
 module_param(minor, int, S_IRUGO);
 module_param_array(port, charp, 0, S_IRUGO);
 module_param_array(io, int, 0, S_IRUGO);
+module_param_array(mmio, long, 0, S_IRUGO);
 module_param_array(irq, int, 0, S_IRUGO);
 module_param_array(baud_base, int, 0, S_IRUGO);
 module_param_array(ext_16c950, int, 0, S_IRUGO);
@@ -282,6 +289,7 @@ module_param(hrtimer, int, S_IRUGO | S_IWUSR);
 #ifdef MODULE_PARM_DESC
 MODULE_PARM_DESC(port,"serial port (eg /dev/ttyS0, default: use supplied io/irq values)");
 MODULE_PARM_DESC(io,"io address of 16550 UART (eg 0x3f8)");
+MODULE_PARM_DESC(mmio,"mmio address of 16550 UART (eg 0xea401000)");
 MODULE_PARM_DESC(irq,"irq of 16550 UART (eg 4)");
 MODULE_PARM_DESC(baud_base,"base baudrate (default: 115200)");
 MODULE_PARM_DESC(ext_16c950,"use extended 16C950 features (default: 1)");
@@ -363,9 +371,15 @@ struct atarisio_dev {
 	int busy; /* =0; */
 	int id;
 	char* devname;
+	int use_mmio;
 	int io;
+	size_t mapbase;
+	void __iomem *membase;
 	int irq;
 	char* port; /* = 0 */
+
+	void (*serial_out)(struct atarisio_dev*, unsigned int offset, uint8_t value);
+	uint8_t (*serial_in)(struct atarisio_dev*, unsigned int offset);
 
 	/* flag if the UART is a 16C950, not a 16C550 */
 	int is_16c950;
@@ -499,38 +513,57 @@ static struct atarisio_dev* atarisio_devices[ATARISIO_MAXDEV];
 /*
  * helper functions to access the 16550
  */
-static inline void serial_out(struct atarisio_dev* dev, unsigned int offset, uint8_t value)
+static void io_serial_out(struct atarisio_dev* dev, unsigned int offset, uint8_t value)
 {
 	if (offset >=8) {
-		DBG_PRINTK(DEBUG_STANDARD, "illegal offset in serial_out\n");
+		DBG_PRINTK(DEBUG_STANDARD, "illegal offset in io_serial_out\n");
 	} else {
 		outb(value, dev->io+offset);
 	}
 }
 
-static inline uint8_t serial_in(struct atarisio_dev* dev, unsigned int offset)
+static uint8_t io_serial_in(struct atarisio_dev* dev, unsigned int offset)
 {
 	if (offset >=8) {
-		DBG_PRINTK(DEBUG_STANDARD, "illegal offset in serial_in\n");
+		DBG_PRINTK(DEBUG_STANDARD, "illegal offset in io_serial_in\n");
 		return 0;
 	} else {
 		return inb(dev->io+offset);
 	}
 }
 
+static void mem_serial_out(struct atarisio_dev* dev, unsigned int offset, uint8_t value)
+{
+	if (offset >=8) {
+		DBG_PRINTK(DEBUG_STANDARD, "illegal offset in mem_serial_out\n");
+	} else {
+		writeb(value, dev->membase+offset);
+	}
+}
+
+static uint8_t mem_serial_in(struct atarisio_dev* dev, unsigned int offset)
+{
+	if (offset >=8) {
+		DBG_PRINTK(DEBUG_STANDARD, "illegal offset in mem_serial_in\n");
+		return 0;
+	} else {
+		return readb(dev->membase+offset);
+	}
+}
+
 static void set_lcr(struct atarisio_dev* dev, uint8_t lcr)
 {
 	dev->serial_config.LCR = lcr;
-	serial_out(dev, UART_LCR, dev->serial_config.LCR);
+	dev->serial_out(dev, UART_LCR, dev->serial_config.LCR);
 }
 
 static void set_dl(struct atarisio_dev* dev, uint16_t dl)
 {
 	dev->serial_config.DL = dl;
-	serial_out(dev, UART_LCR, dev->serial_config.LCR | UART_LCR_DLAB);
-	serial_out(dev, UART_DLL, dev->serial_config.DL & 0xff);
-	serial_out(dev, UART_DLM, dev->serial_config.DL >> 8);
-	serial_out(dev, UART_LCR, dev->serial_config.LCR);
+	dev->serial_out(dev, UART_LCR, dev->serial_config.LCR | UART_LCR_DLAB);
+	dev->serial_out(dev, UART_DLL, dev->serial_config.DL & 0xff);
+	dev->serial_out(dev, UART_DLM, dev->serial_config.DL >> 8);
+	dev->serial_out(dev, UART_LCR, dev->serial_config.LCR);
 }
 
 /*
@@ -541,8 +574,8 @@ static void set_dl(struct atarisio_dev* dev, uint16_t dl)
 
 static inline void write_icr(struct atarisio_dev* dev, uint8_t index, uint8_t value)
 {
-	serial_out(dev, UART_SCR, index);
-	serial_out(dev, UART_ICR, value);
+	dev->serial_out(dev, UART_SCR, index);
+	dev->serial_out(dev, UART_ICR, value);
 }
 
 static inline uint8_t read_icr(struct atarisio_dev* dev, uint8_t index)
@@ -553,8 +586,8 @@ static inline uint8_t read_icr(struct atarisio_dev* dev, uint8_t index)
 	write_icr(dev, UART_ACR, dev->serial_config.ACR | UART_ACR_ICRRD);
 
 	/* access the ICR register */
-	serial_out(dev, UART_SCR, index);
-	ret = serial_in(dev, UART_ICR);
+	dev->serial_out(dev, UART_SCR, index);
+	ret = dev->serial_in(dev, UART_ICR);
 
 	/* disable read access to the ICRs */
 	write_icr(dev, UART_ACR, dev->serial_config.ACR);
@@ -585,9 +618,9 @@ static int detect_16c950(struct atarisio_dev* dev)
 	/* according to 8250.c of the Linux kernel enhanced mode must be enabled
 	 * for the 16C952 rev B, otherwise detection will fail
 	 */
-	serial_out(dev, UART_LCR, 0xBF);
-	serial_out(dev, UART_EFR, UART_EFR_ECB);
-	serial_out(dev, UART_LCR, 0);
+	dev->serial_out(dev, UART_LCR, 0xBF);
+	dev->serial_out(dev, UART_EFR, UART_EFR_ECB);
+	dev->serial_out(dev, UART_LCR, 0);
 
 	id1=read_icr(dev, UART_ID1);
 	id2=read_icr(dev, UART_ID2);
@@ -852,7 +885,7 @@ static int calc_16c950_baudrate(struct atarisio_dev* dev, unsigned int baudrate)
 				} else {
 					dev->serial_config.MCR &= ~UART_MCR_CLKSEL;
 				}
-				serial_out(dev, UART_MCR, dev->serial_config.MCR);
+				dev->serial_out(dev, UART_MCR, dev->serial_config.MCR);
 				write_icr(dev, UART_TCR, baudrate_table_16c950[i].tcr);
 				dev->serial_config.exact_baudrate = baudrate;
 				DBG_PRINTK(DEBUG_STANDARD, "setting baudrate %d TCR=%d, CPR=%d, divisor %d\n",
@@ -866,7 +899,7 @@ static int calc_16c950_baudrate(struct atarisio_dev* dev, unsigned int baudrate)
 	}
 
 	dev->serial_config.MCR &= ~UART_MCR_CLKSEL; /* disable clock prescaler */
-	serial_out(dev, UART_MCR, dev->serial_config.MCR);
+	dev->serial_out(dev, UART_MCR, dev->serial_config.MCR);
 
 	tcr = 4;
 	/* calculate divisor for TCR = 4 */
@@ -1110,7 +1143,7 @@ static int set_baudrate_16950(struct atarisio_dev* dev, unsigned int baudrate)
 	}
 
 	set_cpr(dev, cpr);
-	serial_out(dev, UART_MCR, dev->serial_config.MCR);
+	dev->serial_out(dev, UART_MCR, dev->serial_config.MCR);
 	set_tcr(dev, tcr);
 	set_dl(dev,div);
 
@@ -1184,7 +1217,7 @@ static int force_set_baudrate_old(struct atarisio_dev* dev, unsigned int baudrat
 	if (dev->is_16c950 && dev->use_16c950_mode) {
 		if (dev->serial_config.exact_baudrate == baudrate) {
 			dev->serial_config.MCR &= ~UART_MCR_CLKSEL; /* disable clock prescaler */
-			serial_out(dev, UART_MCR, dev->serial_config.MCR);
+			dev->serial_out(dev, UART_MCR, dev->serial_config.MCR);
 			/* configure standard mode: 16 clocks per bit */
 			write_icr(dev, UART_TCR, 0);
 			DBG_PRINTK(DEBUG_STANDARD, "setting baudrate %d TCR=16, CPR=0, divisor %d\n", baudrate, divisor);
@@ -1197,10 +1230,10 @@ static int force_set_baudrate_old(struct atarisio_dev* dev, unsigned int baudrat
 	}
 
 	if (divisor > 0) {
-		serial_out(dev, UART_LCR, dev->serial_config.LCR | UART_LCR_DLAB);
-		serial_out(dev, UART_DLL, divisor & 0xff);
-		serial_out(dev, UART_DLM, divisor >> 8);
-		serial_out(dev, UART_LCR, dev->serial_config.LCR);
+		dev->serial_out(dev, UART_LCR, dev->serial_config.LCR | UART_LCR_DLAB);
+		dev->serial_out(dev, UART_DLL, divisor & 0xff);
+		dev->serial_out(dev, UART_DLM, divisor >> 8);
+		dev->serial_out(dev, UART_LCR, dev->serial_config.LCR);
 	}
 
 	return ret;
@@ -1244,13 +1277,13 @@ static inline void reset_fifos(struct atarisio_dev* dev)
 {
 	IRQ_PRINTK(DEBUG_NOISY, "resetting 16550 fifos\n");
 
-	serial_out(dev, UART_FCR, 0);
-	serial_out(dev, UART_FCR, UART_FCR_ENABLE_FIFO | UART_FCR_CLEAR_RCVR | UART_FCR_CLEAR_XMIT);
-	serial_out(dev, UART_FCR, dev->serial_config.FCR);
+	dev->serial_out(dev, UART_FCR, 0);
+	dev->serial_out(dev, UART_FCR, UART_FCR_ENABLE_FIFO | UART_FCR_CLEAR_RCVR | UART_FCR_CLEAR_XMIT);
+	dev->serial_out(dev, UART_FCR, dev->serial_config.FCR);
 
 	/* read LSR and MSR to clear any remaining status bits */
-	(void) serial_in(dev, UART_LSR);
-	(void) serial_in(dev, UART_MSR);
+	(void) dev->serial_in(dev, UART_LSR);
+	(void) dev->serial_in(dev, UART_MSR);
 }
 
 static inline void receive_chars(struct atarisio_dev* dev)
@@ -1259,17 +1292,17 @@ static inline void receive_chars(struct atarisio_dev* dev)
 	int do_wakeup=0;
 	int first = 1;
 
-	while ( (lsr=serial_in(dev, UART_LSR)) & UART_LSR_DR ) {
+	while ( (lsr=dev->serial_in(dev, UART_LSR)) & UART_LSR_DR ) {
 		if (first && (dev->serial_config.LCR != dev->standard_lcr) ) {
 			IRQ_PRINTK(DEBUG_STANDARD, "wrong LCR in receive chars!\n");
 			dev->serial_config.LCR = dev->standard_lcr;
-			serial_out(dev, UART_LCR, dev->serial_config.LCR);
+			dev->serial_out(dev, UART_LCR, dev->serial_config.LCR);
 		}
 		first = 0;
 		if (lsr & UART_LSR_OE) {
 			IRQ_PRINTK(DEBUG_STANDARD, "overrun error\n");
 		}
-		c = serial_in(dev, UART_RX);
+		c = dev->serial_in(dev, UART_RX);
 
 		if (lsr & (UART_LSR_FE | UART_LSR_BI | UART_LSR_PE) ) {
 			if (lsr & UART_LSR_FE) {
@@ -1326,7 +1359,7 @@ static inline void send_chars(struct atarisio_dev* dev)
 	int count = 16; /* FIFO can hold 16 chars at maximum */
 	uint8_t lsr;
 
-	lsr = serial_in(dev, UART_LSR);
+	lsr = dev->serial_in(dev, UART_LSR);
 	if (lsr & UART_LSR_OE) {
 		IRQ_PRINTK(DEBUG_STANDARD, "overrun error\n");
 	}
@@ -1336,7 +1369,7 @@ static inline void send_chars(struct atarisio_dev* dev)
 		while ( (count > 0) && (dev->tx_buf.head != dev->tx_buf.tail) ) {
 			IRQ_PRINTK(DEBUG_VERY_NOISY, "transmit char 0x%02x\n",dev->tx_buf.buf[dev->tx_buf.tail]);
 
-			serial_out(dev, UART_TX, dev->tx_buf.buf[dev->tx_buf.tail]);
+			dev->serial_out(dev, UART_TX, dev->tx_buf.buf[dev->tx_buf.tail]);
 			dev->tx_buf.tail = (dev->tx_buf.tail+1) % IOBUF_LENGTH;
 			count--;
 		};
@@ -1345,7 +1378,7 @@ static inline void send_chars(struct atarisio_dev* dev)
 			/* end of TX-buffer reached, disable further TX-interrupts */
 
 			dev->serial_config.IER &= ~UART_IER_THRI;
-			serial_out(dev, UART_IER, dev->serial_config.IER);
+			dev->serial_out(dev, UART_IER, dev->serial_config.IER);
 
 			timestamp_transmission_end(dev);
 
@@ -1567,10 +1600,10 @@ static irqreturn_t atarisio_interrupt(int irq, void* dev_id)
 
 	spin_lock(&dev->lock);
 
-	while (! ((iir=serial_in(dev, UART_IIR)) & UART_IIR_NO_INT)) {
+	while (! ((iir=dev->serial_in(dev, UART_IIR)) & UART_IIR_NO_INT)) {
 		handled = 1;
 
-		msr = serial_in(dev, UART_MSR);
+		msr = dev->serial_in(dev, UART_MSR);
 		IRQ_PRINTK(DEBUG_VERY_NOISY, "atarisio_interrupt: IIR = 0x%02x MSR = 0x%02x\n", iir, msr);
 
 		check_modem_lines_before_receive(dev, msr);
@@ -1608,7 +1641,7 @@ static inline void initiate_send(struct atarisio_dev* dev)
 		DBG_PRINTK(DEBUG_VERY_NOISY, "enabling TX-interrupt\n");
 
 		dev->serial_config.IER |= UART_IER_THRI;
-		serial_out(dev, UART_IER, dev->serial_config.IER);
+		dev->serial_out(dev, UART_IER, dev->serial_config.IER);
 	}
 
 	spin_unlock_irqrestore(&dev->lock, flags);
@@ -1687,7 +1720,7 @@ static inline int wait_send(struct atarisio_dev* dev, unsigned int len, unsigned
 		/*
 		 * now wait until the transmission is completely finished
 		 */
-		while ((jiffies < max_jiffies) && ((serial_in(dev, UART_LSR) & BOTH_EMPTY) != BOTH_EMPTY)) {
+		while ((jiffies < max_jiffies) && ((dev->serial_in(dev, UART_LSR) & BOTH_EMPTY) != BOTH_EMPTY)) {
 		}
 	}
 	timestamp_uart_finished(dev);
@@ -2013,7 +2046,7 @@ static int send_block(struct atarisio_dev* dev,
 static inline void set_command_line(struct atarisio_dev* dev)
 {
 	dev->serial_config.MCR = (dev->serial_config.MCR & dev->command_line_mask) | dev->command_line_low;
-	serial_out(dev, UART_MCR, dev->serial_config.MCR);
+	dev->serial_out(dev, UART_MCR, dev->serial_config.MCR);
 }
 
 /*
@@ -2022,7 +2055,7 @@ static inline void set_command_line(struct atarisio_dev* dev)
 static inline void clear_command_line(struct atarisio_dev* dev)
 {
 	dev->serial_config.MCR = (dev->serial_config.MCR & dev->command_line_mask) | dev->command_line_high;
-	serial_out(dev, UART_MCR, dev->serial_config.MCR);
+	dev->serial_out(dev, UART_MCR, dev->serial_config.MCR);
 }
 
 static int send_command_frame(struct atarisio_dev* dev, Ext_SIO_parameters* params)
@@ -2409,7 +2442,7 @@ static int start_tape_mode(struct atarisio_dev* dev)
 
 		/* disable all but the transmitter interrupt */
 		dev->serial_config.IER &= UART_IER_THRI;
-		serial_out(dev, UART_IER, dev->serial_config.IER);
+		dev->serial_out(dev, UART_IER, dev->serial_config.IER);
 
 		/* disable autobauding and set the baudrate */
 		dev->do_autobaud = 0;
@@ -2433,7 +2466,7 @@ static int end_tape_mode(struct atarisio_dev* dev)
 		spin_lock_irqsave(&dev->lock, flags);
 
 		dev->serial_config.IER = dev->tape_old_ier;
-		serial_out(dev, UART_IER, dev->serial_config.IER);
+		dev->serial_out(dev, UART_IER, dev->serial_config.IER);
 
 		set_baudrate(dev, dev->tape_old_baudrate, 0);
 		dev->do_autobaud = dev->tape_old_autobaud;
@@ -2716,7 +2749,7 @@ static void set_1050_2_pc_mode(struct atarisio_dev* dev, int prosystem, int do_l
 	dev->do_autobaud = 0;
 	set_baudrate(dev, dev->default_baudrate, 0);
 	dev->serial_config.IER &= ~UART_IER_MSI;
-	serial_out(dev, UART_IER, dev->serial_config.IER);
+	dev->serial_out(dev, UART_IER, dev->serial_config.IER);
 
 	init_cmdframe_buf(dev);
 
@@ -2732,7 +2765,7 @@ static void set_1050_2_pc_mode(struct atarisio_dev* dev, int prosystem, int do_l
 static void clear_control_lines(struct atarisio_dev* dev)
 {
 	dev->serial_config.MCR &= ~(UART_MCR_DTR | UART_MCR_RTS);
-	serial_out(dev, UART_MCR, dev->serial_config.MCR);
+	dev->serial_out(dev, UART_MCR, dev->serial_config.MCR);
 }
 
 #define SIOSERVER_COMMAND_RI 0
@@ -2768,7 +2801,7 @@ static void set_sioserver_mode(struct atarisio_dev* dev, int command_line)
 	set_baudrate(dev, dev->default_baudrate, 0);
 	clear_control_lines(dev);
 	dev->serial_config.IER |= UART_IER_MSI;
-	serial_out(dev, UART_IER, dev->serial_config.IER);
+	dev->serial_out(dev, UART_IER, dev->serial_config.IER);
 
 	init_cmdframe_buf(dev);
 
@@ -2926,13 +2959,13 @@ static void print_status(struct atarisio_dev* dev)
 		dev->sioserver_command_line,
 		dev->sioserver_command_line_delta);
 
-	PRINTK("UART RBR = 0x%02x\n", serial_in(dev, UART_RX));
-	PRINTK("UART IER = 0x%02x\n", serial_in(dev, UART_IER));
-	PRINTK("UART IIR = 0x%02x\n", serial_in(dev, UART_IIR));
-	PRINTK("UART LCR = 0x%02x\n", serial_in(dev, UART_LCR));
-	PRINTK("UART MCR = 0x%02x\n", serial_in(dev, UART_MCR));
-	PRINTK("UART LSR = 0x%02x\n", serial_in(dev, UART_LSR));
-	PRINTK("UART MSR = 0x%02x\n", serial_in(dev, UART_MSR));
+	PRINTK("UART RBR = 0x%02x\n", dev->serial_in(dev, UART_RX));
+	PRINTK("UART IER = 0x%02x\n", dev->serial_in(dev, UART_IER));
+	PRINTK("UART IIR = 0x%02x\n", dev->serial_in(dev, UART_IIR));
+	PRINTK("UART LCR = 0x%02x\n", dev->serial_in(dev, UART_LCR));
+	PRINTK("UART MCR = 0x%02x\n", dev->serial_in(dev, UART_MCR));
+	PRINTK("UART LSR = 0x%02x\n", dev->serial_in(dev, UART_LSR));
+	PRINTK("UART MSR = 0x%02x\n", dev->serial_in(dev, UART_MSR));
 
 	spin_unlock_irqrestore(&dev->lock, flags);
 }
@@ -3273,10 +3306,10 @@ static int atarisio_open(struct inode* inode, struct file* filp)
 
 		if (dev->use_16c950_mode) {
 			/* set bit 4 of EFT to enable 16C950 mode */
-			serial_out(dev, UART_LCR, 0xbf);
-			serial_out(dev, UART_EFR, 0x10);
+			dev->serial_out(dev, UART_LCR, 0xbf);
+			dev->serial_out(dev, UART_EFR, 0x10);
 
-			serial_out(dev, UART_LCR, 0);
+			dev->serial_out(dev, UART_LCR, 0);
 
 			/* enable 16C950 FIFO trigger levels */
 			dev->serial_config.ACR = 0x20; 
@@ -3291,7 +3324,7 @@ static int atarisio_open(struct inode* inode, struct file* filp)
 
 /*
 			PRINTK("MCR = %02x CPR = %02x\n",
-				serial_in(dev, UART_MCR),
+				dev->serial_in(dev, UART_MCR),
 				read_icr(dev, UART_CPR));
 */
 
@@ -3299,7 +3332,7 @@ static int atarisio_open(struct inode* inode, struct file* filp)
 			/* set clock prescaler to 1 */
 			/*
 			dev->serial_config.MCR |= 0x80;
-			serial_out(dev, UART_MCR, dev->serial_config.MCR);
+			dev->serial_out(dev, UART_MCR, dev->serial_config.MCR);
 			write_icr(dev, UART_CPR, 8);
 			*/
 
@@ -3307,9 +3340,9 @@ static int atarisio_open(struct inode* inode, struct file* filp)
 		} else {
 			DBG_PRINTK(DEBUG_STANDARD, "disabled extended 16C950 features\n");
 			/* clear the EFR to set 16C550 mode */
-			serial_out(dev, UART_LCR, 0xbf);
-			serial_out(dev, UART_EFR, 0);
-			serial_out(dev, UART_LCR, 0);
+			dev->serial_out(dev, UART_LCR, 0xbf);
+			dev->serial_out(dev, UART_EFR, 0);
+			dev->serial_out(dev, UART_LCR, 0);
 		}
 	}
 
@@ -3323,9 +3356,9 @@ static int atarisio_open(struct inode* inode, struct file* filp)
 
 	dev->serial_config.FCR = UART_FCR_ENABLE_FIFO | UART_FCR_TRIGGER_1;
 
-	serial_out(dev, UART_IER, 0);
+	dev->serial_out(dev, UART_IER, 0);
 
-	serial_out(dev, UART_LCR, dev->serial_config.LCR);
+	dev->serial_out(dev, UART_LCR, dev->serial_config.LCR);
 
 	force_set_baudrate(dev, dev->serial_config.baudrate);
 
@@ -3336,10 +3369,10 @@ static int atarisio_open(struct inode* inode, struct file* filp)
 	/*
 	 * clear any interrupts
 	 */
-        (void)serial_in(dev, UART_LSR);
-	(void)serial_in(dev, UART_IIR);
-	(void)serial_in(dev, UART_RX);
-	(void)serial_in(dev, UART_MSR);
+        (void)dev->serial_in(dev, UART_LSR);
+	(void)dev->serial_in(dev, UART_IIR);
+	(void)dev->serial_in(dev, UART_RX);
+	(void)dev->serial_in(dev, UART_MSR);
 
 	spin_unlock_irqrestore(&dev->lock, flags);
 
@@ -3353,7 +3386,7 @@ static int atarisio_open(struct inode* inode, struct file* filp)
 	spin_lock_irqsave(&dev->lock, flags);
 
 	/* enable UART interrupts */
-	serial_out(dev, UART_IER, dev->serial_config.IER);
+	dev->serial_out(dev, UART_IER, dev->serial_config.IER);
 
 	spin_unlock_irqrestore(&dev->lock, flags);
 
@@ -3379,8 +3412,8 @@ static int atarisio_release(struct inode* inode, struct file* filp)
 
 	spin_lock_irqsave(&dev->lock, flags);
 
-	serial_out(dev, UART_MCR,0);
-	serial_out(dev, UART_IER,0);
+	dev->serial_out(dev, UART_MCR,0);
+	dev->serial_out(dev, UART_IER,0);
 
 	spin_unlock_irqrestore(&dev->lock, flags);
 
@@ -3578,12 +3611,22 @@ static int disable_serial_port(struct atarisio_dev* dev)
 				goto fail_close;
 			}
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,4,0)
+			DBG_PRINTK_NODEV(DEBUG_STANDARD, "ss.port = 0x%04x ss.iomem_base = 0x%lx ss.irq = %d ss.type = %d\n",
+				ss.port, (long) ss.iomem_base, ss.irq, ss.type);
+
+			if (dev->mapbase == 0) {
+				dev->mapbase = (size_t) ss.iomem_base;
+			}
+#else
 			DBG_PRINTK_NODEV(DEBUG_STANDARD, "ss.port = 0x%04x ss.irq = %d ss.type = %d\n",
 				ss.port, ss.irq, ss.type);
+#endif
 
 			if (dev->io == 0) {
 				dev->io = ss.port;
 			}
+
 			if (dev->irq == 0) {
 				dev->irq = ss.irq;
 			}
@@ -3634,7 +3677,6 @@ static int reenable_serial_port(struct atarisio_dev* dev)
 	mm_segment_t fs;
 	struct file* f;
 	struct dentry* de;
-	struct serial_struct ss;
 
 	if (!dev->need_reenable) {
 		DBG_PRINTK_NODEV(DEBUG_STANDARD, "unnecessary call to reenable_serial_port\n");
@@ -3665,13 +3707,7 @@ static int reenable_serial_port(struct atarisio_dev* dev)
 		de = f->f_path.dentry;
 #endif
 		if (de && de->d_inode) {
-			if (ioctl_wrapper(dev, f, TIOCGSERIAL, (unsigned long) &ss)) {
-				DBG_PRINTK_NODEV(DEBUG_STANDARD, "TIOCGSERIAL failed\n");
-				goto fail_close;
-			}
-			/* restore original values */
-			ss.type = dev->orig_serial_struct.type;
-			if (ioctl_wrapper(dev, f, TIOCSSERIAL, (unsigned long) &ss)) {
+			if (ioctl_wrapper(dev, f, TIOCSSERIAL, (unsigned long) &dev->orig_serial_struct)) {
 				DBG_PRINTK_NODEV(DEBUG_STANDARD, "TIOCSSERIAL failed\n");
 				goto fail_close;
 			}
@@ -3704,38 +3740,97 @@ fail:
 	return 1;
 }
 
+static int request_resources(struct atarisio_dev* dev)
+{
+	if (dev->use_mmio) {
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,4,0)
+		if (check_mem_region(dev->mapbase, 8)) {
+			PRINTK_NODEV("cannot access MMIO ports 0x%lx-0x%lx\n",
+				(unsigned long)dev->mapbase,
+				(unsigned long)(dev->mapbase+7));
+			return -EBUSY;
+		}
+		request_mem_region(dev->io, 8, NAME);
+#else
+		if (!request_mem_region(dev->mapbase, 8, NAME)) {
+			PRINTK_NODEV("cannot access MMIO ports 0x%lx-0x%lx\n",
+				(unsigned long)dev->mapbase,
+				(unsigned long)(dev->mapbase+7));
+			return -EBUSY;
+		}
+#endif
+
+		dev->membase = ioremap_nocache(dev->mapbase, 8);
+		if (!dev->membase) {
+			PRINTK_NODEV("cannot map MMIO ports 0x%lx-0x%lx\n",
+				(unsigned long)dev->mapbase,
+				(unsigned long)(dev->mapbase+7));
+			release_mem_region(dev->mapbase, 8);
+			return -ENOMEM;
+		}
+	} else {
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,4,0)
+		if (check_region(dev->io, 8)) {
+			PRINTK_NODEV("cannot access IO ports 0x%04x-0x%04x\n",dev->io,dev->io+7);
+			return -EBUSY;
+		}
+		request_region(dev->io, 8, NAME);
+#else
+		if (!request_region(dev->io, 8, NAME)) {
+			PRINTK_NODEV("cannot access IO ports 0x%04x-0x%04x\n",dev->io,dev->io+7);
+			return -EBUSY;
+		}
+#endif
+	}
+	return 0;
+}
+
+static void release_resources(struct atarisio_dev* dev)
+{
+	if (dev->use_mmio) {
+		iounmap(dev->membase);
+		release_mem_region(dev->mapbase, 8);
+	} else {
+		release_region(dev->io, 8);
+	}
+}
+
 static int check_register_atarisio(struct atarisio_dev* dev)
 {
-	int ret = 0;
+	int ret;
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,4,0)
-	if (check_region(dev->io,8)) {
-		PRINTK_NODEV("cannot access IO-ports 0x%04x-0x%04x\n",dev->io,dev->io+7);
+	if (dev->io) {
+		dev->use_mmio = 0;
+		dev->serial_in = io_serial_in;
+		dev->serial_out = io_serial_out;
+	} else if (dev->mapbase) {
+		dev->use_mmio = 1;
+		dev->serial_in = mem_serial_in;
+		dev->serial_out = mem_serial_out;
+	} else {
+		PRINTK_NODEV("neither IO nor MMIO ports specified\n");
 		ret = -EINVAL;
 		goto failure;
 	}
-	request_region(dev->io, 8, NAME);
-#else
-	if (request_region(dev->io, 8, NAME) == 0) {
-		PRINTK_NODEV("cannot access IO-ports 0x%04x-0x%04x\n",dev->io,dev->io+7);
-		ret = -EINVAL;
+
+	ret = request_resources(dev);
+	if (ret) {
 		goto failure;
 	}
-#endif
-	
+
 	/*
 	 * check for 16550:
 	 * this is just a very simple test using the scratch register
 	 */
-	serial_out(dev, UART_SCR,0xaa);
-	if (serial_in(dev, UART_SCR) != 0xaa) {
+	dev->serial_out(dev, UART_SCR,0xaa);
+	if (dev->serial_in(dev, UART_SCR) != 0xaa) {
 		PRINTK_NODEV("couldn't detect 16550/16C950\n");
 		ret = -ENODEV;
 		goto failure_release;
 	}
 
-	serial_out(dev, UART_SCR,0x55);
-	if (serial_in(dev, UART_SCR) != 0x55) {
+	dev->serial_out(dev, UART_SCR,0x55);
+	if (dev->serial_in(dev, UART_SCR) != 0x55) {
 		PRINTK_NODEV("couldn't detect 16550/16C950\n");
 		ret = -ENODEV;
 		goto failure_release;
@@ -3761,23 +3856,24 @@ static int check_register_atarisio(struct atarisio_dev* dev)
 	}
 
 	if (dev->port) {
-		PRINTK("minor=%d port=%s io=0x%04x irq=%d baud_base=%ld\n", dev->miscdev->minor, dev->port, dev->io, dev->irq, dev->serial_config.baud_base);
+		PRINTK("minor=%d port=%s %s=0x%lx irq=%d baud_base=%ld\n",
+		dev->miscdev->minor, dev->port,
+		dev->use_mmio ? "mmio" : "io",
+		(unsigned long) (dev->use_mmio ? dev->mapbase : dev->io),
+		dev->irq, dev->serial_config.baud_base);
 	} else {
-		PRINTK("minor=%d io=0x%04x irq=%d baud_base=%ld\n", dev->miscdev->minor, dev->io, dev->irq, dev->serial_config.baud_base);
+		PRINTK("minor=%d %s=0x%lx irq=%d baud_base=%ld\n",
+		dev->miscdev->minor,
+		dev->use_mmio ? "mmio" : "io",
+		(unsigned long) (dev->use_mmio ? dev->mapbase : dev->io),
+		dev->irq, dev->serial_config.baud_base);
 	}
 	return 0;
 
 failure_release:
-	release_region(dev->io, 8);
+	release_resources(dev);
 
 failure:
-	if (dev->need_reenable) {
-		if (reenable_serial_port(dev)) {
-			PRINTK_NODEV("error re-enabling serial port!\n");
-		} else {
-			DBG_PRINTK_NODEV(DEBUG_STANDARD, "successfully re-enabled serial port %s\n", dev->port);
-		}
-	}
 	return ret;
 }
 
@@ -3792,7 +3888,7 @@ static void atarisio_cleanup_module(void)
 		if ((dev=atarisio_devices[i])) {
 			misc_deregister(dev->miscdev);
 
-			release_region(dev->io,8);
+			release_resources(dev);
 			if (dev->need_reenable) {
 				if (reenable_serial_port(dev)) {
 					PRINTK_NODEV("error re-enabling serial port!\n");
@@ -3818,7 +3914,7 @@ static int atarisio_init_module(void)
 		ATARISIO_MAJOR_VERSION, ATARISIO_MINOR_VERSION);
 
 	for (i=0;i<ATARISIO_MAXDEV;i++) {
-		if ((port[i] && port[i][0]) || io[i] || irq[i]) {
+		if ((port[i] && port[i][0]) || io[i] || mmio[i] || irq[i]) {
 			struct atarisio_dev* dev = alloc_atarisio_dev(i);
 			numtried++;
 			if (!dev) {
@@ -3828,6 +3924,7 @@ static int atarisio_init_module(void)
 
 			dev->port = 0;
 			dev->io = io[i];
+			dev->mapbase = (size_t) mmio[i];
 			dev->irq = irq[i];
 			if (baud_base[i]) {
 				dev->serial_config.baud_base = baud_base[i];
@@ -3853,6 +3950,13 @@ static int atarisio_init_module(void)
 			}
 
 			if (check_register_atarisio(dev)) {
+				if (dev->need_reenable) {
+					if (reenable_serial_port(dev)) {
+						PRINTK_NODEV("error re-enabling serial port!\n");
+					} else {
+						DBG_PRINTK_NODEV(DEBUG_STANDARD, "successfully re-enabled serial port %s\n", dev->port);
+					}
+				}
 				free_atarisio_dev(i);
 				continue;
 			}

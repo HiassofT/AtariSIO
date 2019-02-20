@@ -89,13 +89,17 @@ AtariSIO driver and utilities V0.30 installation instructions
    the serial port when the atarisio kernel module is unloaded.
 
    If you have a non-standard setup (or if your serial ports are not
-   configured properly yet) you may still use the "io=" and "irq="
-   module parameters to override the IO/IRQ configuration obtained
+   configured properly yet) you may use the "io=" and "irq=" module
+   parameters to override the IO/IRQ configuration obtained
    from the serial driver.
+
+   UARTs with memory-mapped IO ports (MMIO) are supported as well,
+   use the "mmio=" module parameter (instead of "io=") to specify the
+   MMIO address.
 
    Please note: if you don't pass a "port=" parameter to atarisio,
    you are responsible to disable the serial driver and properly
-   set the "io=" and "irq=" parameters!
+   set the "io="/"mmio=" and "irq=" parameters!
 
    The atarisio-modprobe.conf file contains a ready-to-use configuration
    that will use the first serial port (/dev/ttyS0) plus several
