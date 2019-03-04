@@ -393,7 +393,7 @@ struct atarisio_dev {
 	volatile int current_mode; /* = MODE_1050_2_PC; */
 
 	/* timestamp at the very beginning of the IRQ */
-	struct timeval irq_timestamp;
+	uint64_t irq_timestamp;
 	
 	/* value of modem status register at the last interrupt call */
 	uint8_t last_msr; /* =0; */
@@ -643,19 +643,21 @@ static int detect_16c950(struct atarisio_dev* dev)
 }
 
 
-static inline uint64_t timeval_to_usec(struct timeval* tv)
-{
-	return (uint64_t)tv->tv_sec*1000000 + tv->tv_usec;
-}
-
 /*
  * timing / timestamp functions
  */
 static inline uint64_t get_timestamp(void)
 {
-	struct timeval tv;
-	do_gettimeofday(&tv);
-	return timeval_to_usec(&tv);
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,0,0)
+	struct timespec64 now;
+	ktime_get_real_ts64(&now);
+
+	return (uint64_t)(now.tv_sec)*1000000 + now.tv_nsec/1000;
+#else
+	struct timeval now;
+	do_gettimeofday(&now);
+	return (uint64_t)(now.tv_sec)*1000000 + now.tv_usec;
+#endif
 }
 
 static inline void timestamp_entering_ioctl(struct atarisio_dev* dev)
@@ -1428,7 +1430,7 @@ static inline void check_modem_lines_before_receive(struct atarisio_dev* dev, ui
 				}
 				reset_cmdframe_buf_data(dev);
 				dev->cmdframe_buf.receiving = 1;
-				dev->cmdframe_buf.start_reception_time = timeval_to_usec(&dev->irq_timestamp);
+				dev->cmdframe_buf.start_reception_time = dev->irq_timestamp;
 				dev->cmdframe_buf.serial_number++;
 			}
 		}
@@ -1567,7 +1569,7 @@ static inline void check_modem_lines_after_receive(struct atarisio_dev* dev, uin
 			if (validate_command_frame(dev) == 0) {
 				do_wakeup = 1;
 				dev->cmdframe_buf.is_valid = 1;
-				dev->cmdframe_buf.end_reception_time = timeval_to_usec(&dev->irq_timestamp);
+				dev->cmdframe_buf.end_reception_time = dev->irq_timestamp;
 			} else {
 				dev->cmdframe_buf.is_valid = 0;
 			}
@@ -1596,7 +1598,7 @@ static irqreturn_t atarisio_interrupt(int irq, void* dev_id)
 	uint8_t iir,msr;
 	unsigned int handled = 0;
 
-	do_gettimeofday(&dev->irq_timestamp);
+	dev->irq_timestamp = get_timestamp();
 
 	spin_lock(&dev->lock);
 
