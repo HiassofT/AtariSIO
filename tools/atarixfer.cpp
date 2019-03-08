@@ -53,6 +53,8 @@ static unsigned int highspeed_mode = ATARISIO_EXTSIO_SPEED_NORMAL;
 
 static bool xf551_format_detection = false;
 
+static bool usdoubler_format_detection = false;
+
 static bool continue_on_errors = false;
 
 /*
@@ -102,31 +104,34 @@ static int get_density(unsigned int& bytesPerSector, unsigned int& sectorsPerDis
 	}
 
 	/*
-	 * try percom get
+	 * try percom get, except for US Doubler mode which doesn't
+	 * set the percom block data after disk insertion.
 	 */
 
-	printf("get percom block ..."); fflush(stdout);
-	result = SIO->PercomGet(drive_no, buf, highspeed_mode);
-	if (result) {
-		printf(" failed ");
-		print_error(result);
-	} else {
-		printf(" OK\n");
+	if (!usdoubler_format_detection) {
+		printf("get percom block ..."); fflush(stdout);
+		result = SIO->PercomGet(drive_no, buf, highspeed_mode);
+		if (result) {
+			printf(" failed ");
+			print_error(result);
+		} else {
+			printf(" OK\n");
 
-		SIOTracer::GetInstance()->TraceDecodedPercomBlock(drive_no, buf, true, false);
-		bytesPerSector = buf[7] + 256*buf[6];
-		if (bytesPerSector != 128 && bytesPerSector != 256) {
-			return 1;
+			SIOTracer::GetInstance()->TraceDecodedPercomBlock(drive_no, buf, true, false);
+			bytesPerSector = buf[7] + 256*buf[6];
+			if (bytesPerSector != 128 && bytesPerSector != 256) {
+				return 1;
+			}
+
+			int secPerTrack = buf[3] + 256*buf[2];
+			int sides = buf[4] + 1;
+			int tracks = buf[0];
+
+			sectorsPerDisk = secPerTrack * tracks * sides;	
+
+			printf("[%d BytesPerSec, %d Sectors]\n", bytesPerSector, sectorsPerDisk);
+			return 0;
 		}
-
-		int secPerTrack = buf[3] + 256*buf[2];
-		int sides = buf[4] + 1;
-		int tracks = buf[0];
-		
-		sectorsPerDisk = secPerTrack * tracks * sides;	
-
-		printf("[%d BytesPerSec, %d Sectors]\n", bytesPerSector, sectorsPerDisk);
-		return 0;
 	}
 
 	/*
@@ -152,6 +157,22 @@ static int get_density(unsigned int& bytesPerSector, unsigned int& sectorsPerDis
 			bytesPerSector = 256;
 			sectorsPerDisk = 720;
 			return 0;
+		}
+		/*
+		 * US Doubler doesn't signal ED by bit 7, so check if sector
+		 * 1040 is readable.
+		 */
+		if (usdoubler_format_detection) {
+			printf("read sector 1040 ..."); fflush(stdout);
+			result = SIO->ReadSector(drive_no, 1040, buf, 128, highspeed_mode);
+			if (!result) {
+				printf(" OK\n");
+				bytesPerSector = 128;
+				sectorsPerDisk = 1040;
+				return 0;
+			} else {
+				printf(" failed\n");
+			}
 		}
 		bytesPerSector = 128;
 		sectorsPerDisk = 720;
@@ -651,7 +672,7 @@ int main(int argc, char** argv)
 	printf("atarixfer %s\n", VERSION_STRING);
 	printf("(c) 2002-2019 Matthias Reichl <hias@horus.com>\n");
 	while(!finished) {
-		c = getopt(argc, argv, "lprw12345678def:R:s:T:xq");
+		c = getopt(argc, argv, "lprw12345678def:R:s:T:xuq");
 		if (c == -1) {
 			break;
 		}
@@ -730,6 +751,9 @@ int main(int argc, char** argv)
 				printf("invalid sio timing mode\n");
 				goto usage;
 			}
+			break;
+		case 'u':
+			usdoubler_format_detection = true;
 			break;
 		case 'x':
 			xf551_format_detection = true;
@@ -817,6 +841,7 @@ usage:
 	printf("  -R num        retry failed sector I/O 'num' times (0..100)\n");
 	printf("  -s mode       high speed: 0 = off, 1 = XF551/Warp, 2 = Ultra/Turbo, 3 = all\n");
 	printf("  -T timing     SIO timing: s = strict, r = relaxed\n");
+	printf("  -u            enable workaround for US Doubler format detection bug\n");
 	printf("  -x            enable workaround for XF551 format detection bugs\n");
 	printf("  -q            send 'quit' command to flush buffer and stop motor\n");
 	printf("  -1 ... -8     use drive number 1...8\n");
