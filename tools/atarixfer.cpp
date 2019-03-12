@@ -158,22 +158,6 @@ static int get_density(unsigned int& bytesPerSector, unsigned int& sectorsPerDis
 			sectorsPerDisk = 720;
 			return 0;
 		}
-		/*
-		 * US Doubler doesn't signal ED by bit 7, so check if sector
-		 * 1040 is readable.
-		 */
-		if (usdoubler_format_detection) {
-			printf("read sector 1040 ..."); fflush(stdout);
-			result = SIO->ReadSector(drive_no, 1040, buf, 128, highspeed_mode);
-			if (!result) {
-				printf(" OK\n");
-				bytesPerSector = 128;
-				sectorsPerDisk = 1040;
-				return 0;
-			} else {
-				printf(" failed\n");
-			}
-		}
 		bytesPerSector = 128;
 		sectorsPerDisk = 720;
 		return 0;
@@ -325,8 +309,24 @@ static int read_image(char* filename)
 	}
 
 	if (total_sectors == 720 && sector_length == 128) {
-		printf("single density disk\n");
-		image.CreateImage(e90kDisk);
+		/*
+		 * Some US Doubler clones use a buggy ROM which doesn't
+		 * signal ED correctly.
+		 */
+		if (usdoubler_format_detection) {
+			printf("reading sector 721 ..."); fflush(stdout);
+			if (SIO->ReadSector(drive_no, 721, buf, 128, highspeed_mode) == 0) {
+				printf(" OK => enhanced density disk\n");
+				total_sectors = 1040;
+				image.CreateImage(e130kDisk);
+			} else {
+				printf(" ERROR => single density disk\n");
+				image.CreateImage(e90kDisk);
+			}
+		} else {
+			printf("single density disk\n");
+			image.CreateImage(e90kDisk);
+		}
 	} else if (total_sectors == 1040 && sector_length == 128) {
 		printf("enhanced density disk\n");
 		image.CreateImage(e130kDisk);
