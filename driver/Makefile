@@ -38,12 +38,12 @@ else
 PWD=$(shell pwd)
 
 default:
-	make -C $(KDIR) SUBDIRS=$(PWD) modules
+	make -C $(KDIR) M=$(PWD) modules
 
 allclean: clean
 
 clean:
-	make -C $(KDIR) SUBDIRS=$(PWD) clean
+	make -C $(KDIR) M=$(PWD) clean
 
 dep: # do nothing
 
