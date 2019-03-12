@@ -195,6 +195,7 @@ Several other options are available to tweak operation mode:
 -T timing     SIO timing: s = strict, r = relaxed
               Default is strict timing on AtariSIO kernel driver
               and relaxed timing on standard Linux serial drivers.
+-u            enable workaround for US Doubler format detection bugs
 -x            enable workaround for XF551 format detection bugs
 -1 ... -8     use drive number 1...8 (default is 1)
 
