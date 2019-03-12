@@ -841,7 +841,7 @@ usage:
 	printf("  -R num        retry failed sector I/O 'num' times (0..100)\n");
 	printf("  -s mode       high speed: 0 = off, 1 = XF551/Warp, 2 = Ultra/Turbo, 3 = all\n");
 	printf("  -T timing     SIO timing: s = strict, r = relaxed\n");
-	printf("  -u            enable workaround for US Doubler format detection bug\n");
+	printf("  -u            enable workaround for US Doubler format detection bugs\n");
 	printf("  -x            enable workaround for XF551 format detection bugs\n");
 	printf("  -q            send 'quit' command to flush buffer and stop motor\n");
 	printf("  -1 ... -8     use drive number 1...8\n");
