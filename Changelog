@@ -300,3 +300,7 @@ AtariSIO changelog:
 2019-02-20:
   - atarisio: add MMIO support
 
+2019-03-13:
+  - atarisio: fix compilation on kernel 5.0
+  - atarixfer: add option to work around US Doubler format detection issues
+
