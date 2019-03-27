@@ -51,6 +51,9 @@
 
 #include <linux/fs.h>
 #include <linux/serial.h>
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,0)
+#include <linux/serial_core.h>
+#endif
 
 #include <linux/module.h>
 #include <linux/types.h>
