@@ -3571,7 +3571,7 @@ static int disable_serial_port(struct atarisio_dev* dev)
 	my_lock_kernel();
 
 	fs = get_fs();
-	set_fs(get_ds());
+	set_fs(KERNEL_DS);
 
 	f = filp_open(dev->port,O_RDWR | O_NONBLOCK,0);
 	if (IS_ERR(f)) {
@@ -3690,7 +3690,7 @@ static int reenable_serial_port(struct atarisio_dev* dev)
 
 	my_lock_kernel();
 	fs = get_fs();
-	set_fs(get_ds());
+	set_fs(KERNEL_DS);
 
 	f = filp_open(dev->port,O_RDWR,0);
 	if (IS_ERR(f)) {
