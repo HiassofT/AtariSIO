@@ -304,3 +304,6 @@ AtariSIO changelog:
   - atarisio: fix compilation on kernel 5.0
   - atarixfer: add option to work around US Doubler format detection issues
 
+2019-07-10:
+  - atarisio: fix compilation on kernel 5.1
+
