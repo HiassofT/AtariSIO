@@ -245,7 +245,7 @@ int main(int argc, char**argv)
 			mydos = true;
 		}
 
-		sectors = Dos2xUtils::EstimateDiskSize(directory, seclen, piconametype, bootType);
+		sectors = Dos2xUtils::EstimateDiskSize(directory, seclen, piconametype, bootType, false);
 		if (sectors > 65535) {
 			printf("error: calculated disk size %d is larger than maximum of 65535\n",
 				sectors);
