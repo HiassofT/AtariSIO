@@ -123,12 +123,12 @@ int main(int argc, char**argv)
 	bool mydos = false;
 	bool autorun = false;
 	Dos2xUtils::EPicoNameType piconametype = Dos2xUtils::eNoPicoName;
-	bool autoSectors = false;
-	int sectors;
+	int sectors = 0;
 	char* directory;
 	char* atrfilename;
 	ESectorLength seclen;
 	unsigned int idx;
+	FILE* bootfile;
 
 	struct stat statbuf;
 
@@ -139,7 +139,7 @@ int main(int argc, char**argv)
 	int ret = 0;
 
 	int c;
-	while ( (c = getopt(argc, argv, "admpPb:B:")) != -1) {
+	while ( (c = getopt(argc, argv, "admpPb:B:SEDQ")) != -1) {
 		switch(c) {
 		case 'a': autorun = true; break;
 		case 'd': dd = true; printf("using double density sectors\n"); break;
@@ -159,7 +159,7 @@ int main(int argc, char**argv)
 			}
 			break;
 		case 'B':
-			FILE* bootfile = fopen(optarg, "rb");
+			bootfile = fopen(optarg, "rb");
 			if (bootfile == NULL) {
 				printf("error: cannot open boot sector file \"%s\"\n", optarg);
 				goto usage;
@@ -173,6 +173,27 @@ int main(int argc, char**argv)
 			}
 			fclose(bootfile);
 			userDefBoot = true;
+			break;
+		case 'S':
+			dd = false;
+			sectors = 720;
+			printf("creating standard SD/90k image\n");
+			break;
+		case 'E':
+			dd = false;
+			sectors = 1040;
+			printf("creating standard ED/130k image\n");
+			break;
+		case 'D':
+			dd = true;
+			sectors = 720;
+			printf("creating standard DD/180k image\n");
+			break;
+		case 'Q':
+			dd = true;
+			sectors = 1440;
+			mydos = true;
+			printf("creating standard QD/360k image in MyDOS format\n");
 			break;
 		}
 	}
@@ -193,18 +214,16 @@ int main(int argc, char**argv)
 		seclen = e128BytesPerSector;
 	}
 
-	if (argc == optind+2) {
-		autoSectors = true;
-	} else if (argc != optind+3) {
-		goto usage;
-	}
-
-	if (!autoSectors) {
+	if ((sectors == 0) && (argc == optind+3)) {
 		sectors = atoi(argv[optind++]);
 		if (sectors < 720 || sectors > 65535) {
 			printf("error: illegal number of sectors - must be 720..65535\n");
 			return 1;
 		}
+	}
+
+	if (argc != optind+2) {
+		goto usage;
 	}
 
 	atrfilename=argv[optind++];
@@ -220,7 +239,7 @@ int main(int argc, char**argv)
 		return 1;
 	}
 
-	if (autoSectors) {
+	if (sectors == 0) {
 		if (!mydos) {
 			printf("number of sectors not specified - using MyDOS format\n");
 			mydos = true;
@@ -303,9 +322,10 @@ int main(int argc, char**argv)
 usage:
 	printf("dir2atr %s\n", VERSION_STRING);
 	printf("(c) 2004-2019 Matthias Reichl <hias@horus.com>\n");
-	printf("usage: dir2atr [-admpP] [-b <DOS>] [-B file] [sectors] atrfile directory\n");
+	printf("usage: dir2atr [-admpSDEPQ] [-b <DOS>] [-B file] [sectors] atrfile directory\n");
 	printf("  -d        create double density image (default: single density)\n");
 	printf("  -m        create MyDOS image (default: DOS 2.x)\n");
+	printf("  -S/E/D/Q  create standard SD/ED/DD/QD image\n");
 	printf("  -p        create PICONAME.TXT (long filename description)\n");
 	printf("  -P        create PICONAME.TXT (with file extensions stripped)\n");
 	printf("  -a        enable MyPicoDos autorun mode\n");
