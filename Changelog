@@ -307,3 +307,7 @@ AtariSIO changelog:
 2019-07-10:
   - atarisio: fix compilation on kernel 5.1
 
+2019-08-08:
+  - dir2atr: add -S/-E/-D/-Q options to create standard SD/ED/DD/QD images
+  - dir2atr: fix estimated image size check to properly detect if the
+    image would exceed the 65535 sectors limit
