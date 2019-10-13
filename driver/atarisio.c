@@ -3748,6 +3748,7 @@ fail:
 static int request_resources(struct atarisio_dev* dev)
 {
 	if (dev->use_mmio) {
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,2,20)
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,4,0)
 		if (check_mem_region(dev->mapbase, 8)) {
 			PRINTK_NODEV("cannot access MMIO ports 0x%lx-0x%lx\n",
@@ -3764,13 +3765,16 @@ static int request_resources(struct atarisio_dev* dev)
 			return -EBUSY;
 		}
 #endif
+#endif
 
 		dev->membase = ioremap_nocache(dev->mapbase, 8);
 		if (!dev->membase) {
 			PRINTK_NODEV("cannot map MMIO ports 0x%lx-0x%lx\n",
 				(unsigned long)dev->mapbase,
 				(unsigned long)(dev->mapbase+7));
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,2,20)
 			release_mem_region(dev->mapbase, 8);
+#endif
 			return -ENOMEM;
 		}
 	} else {
@@ -3794,7 +3798,9 @@ static void release_resources(struct atarisio_dev* dev)
 {
 	if (dev->use_mmio) {
 		iounmap(dev->membase);
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,2,20)
 		release_mem_region(dev->mapbase, 8);
+#endif
 	} else {
 		release_region(dev->io, 8);
 	}
