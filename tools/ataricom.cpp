@@ -32,6 +32,11 @@
 
 static bool offsetsInDecimal = true;
 
+struct Range {
+	unsigned int start;
+	unsigned int end;
+};
+
 static long parse_int(const char* str)
 {
 	int base = 10;
@@ -70,7 +75,7 @@ static bool get_list(const char* str, const char* delim, std::vector<unsigned in
 	return ok;
 }
 
-static bool get_range(const char* str, unsigned int& start, unsigned int& end, bool accept_single = false)
+static bool get_range(const char* str, struct Range& range, bool accept_single = false)
 {
 	long v1, v2;
 	char* tmp = strdup(str);
@@ -82,8 +87,8 @@ static bool get_range(const char* str, unsigned int& start, unsigned int& end, b
 			if (v1 < 0) {
 				return false;
 			}
-			start = v1;
-			end = v1;
+			range.start = v1;
+			range.end = v1;
 			return true;
 		}
 		return false;
@@ -93,15 +98,15 @@ static bool get_range(const char* str, unsigned int& start, unsigned int& end, b
 	if (*(p+1)) {
 		v2 = parse_int(p+1);
 	} else {
-		v2 = LONG_MAX;
+		v2 = INT_MAX;
 	}
 	free(tmp);
 
 	if (v1 <= 0 || v2 <= 0 || v2 < v1) {
 		return false;
 	} else {
-		start = v1;
-		end = v2;
+		range.start = v1;
+		range.end = v2;
 		return true;
 	}
 }
@@ -166,14 +171,10 @@ int main(int argc, char** argv)
 	int tmp_address;
 
 	bool merge_mode = false;
-	std::vector<unsigned int> merge_start;
-	std::vector<unsigned int> merge_end;
-	unsigned int merge_count = 0;
+	std::vector<struct Range> merge_range;
 	unsigned int merge_idx = 0;
 
-	std::vector<unsigned int> block_start;
-	std::vector<unsigned int> block_end;
-	unsigned int block_count = 0;
+	std::vector<struct Range> block_range;
 	unsigned int block_idx = 0;
 
 	std::vector< std::vector<unsigned int> > split_list;
@@ -197,7 +198,7 @@ int main(int argc, char** argv)
 
 	for (idx = 1; idx < argc; idx++) {
 		char * arg = argv[idx];
-		unsigned int start, end;
+		struct Range range;
 		if (*arg == '-') {
 			switch (arg[1]) {
 			case 'm': // merge mode
@@ -212,19 +213,17 @@ int main(int argc, char** argv)
 				if (idx >= argc) {
 					goto usage;
 				}
-				if (!get_range(argv[idx], start, end, true)) {
+				if (!get_range(argv[idx], range, true)) {
 					std::cout << "invalid range " << argv[idx] << std::endl;
 					goto usage;
 				}
-				if (merge_count) {
-					if (start <= merge_end[merge_count-1]) {
+				if (merge_range.size()) {
+					if (range.start <= merge_range.back().end) {
 						std::cout << "merge blocks must be in ascending order!" << std::endl;
 						goto usage;
 					}
 				}
-				merge_start.push_back(start);
-				merge_end.push_back(end);
-				merge_count++;
+				merge_range.push_back(range);
 				break;
 			case 'x': // exclude blocks
 			case 'b': // copy blocks
@@ -250,19 +249,17 @@ int main(int argc, char** argv)
 				if (idx >= argc) {
 					goto usage;
 				}
-				if (!get_range(argv[idx], start, end, true)) {
+				if (!get_range(argv[idx], range, true)) {
 					std::cout << "invalid range " << argv[idx] << std::endl;
 					goto usage;
 				}
-				if (block_count) {
-					if (start <= block_end[block_count-1]) {
+				if (block_range.size()) {
+					if (range.start <= block_range.back().end) {
 						std::cout << "blocks must be in ascending order!" << std::endl;
 						goto usage;
 					}
 				}
-				block_start.push_back(start);
-				block_end.push_back(end);
-				block_count++;
+				block_range.push_back(range);
 				break;
 			case 'n': // raw write mode
 				if (mode == eModeCreate) {
@@ -521,12 +518,12 @@ int main(int argc, char** argv)
 						break;
 					}
 
-					if (block_idx < block_count) {
+					if (block_idx < block_range.size()) {
 						switch (block_mode) {
 						case eIncludeBlocks:
-							if (iblk >= block_start[block_idx] && iblk <= block_end[block_idx]) {
+							if (iblk >= block_range[block_idx].start && iblk <= block_range[block_idx].end) {
 								process_block = true;
-								if (iblk == block_end[block_idx]) {
+								if (iblk == block_range[block_idx].end) {
 									block_idx ++;
 								}
 							} else {
@@ -534,9 +531,9 @@ int main(int argc, char** argv)
 							}
 							break;
 						case eExcludeBlocks:
-							if (iblk >= block_start[block_idx] && iblk <= block_end[block_idx]) {
+							if (iblk >= block_range[block_idx].start && iblk <= block_range[block_idx].end) {
 								process_block = false;
-								if (iblk == block_end[block_idx]) {
+								if (iblk == block_range[block_idx].end) {
 									block_idx ++;
 								}
 							} else {
@@ -551,10 +548,10 @@ int main(int argc, char** argv)
 
 
 					// check if we need to merge blocks
-					if (merge_idx < merge_count) {
-						if (iblk >= merge_start[merge_idx] && iblk <= merge_end[merge_idx]) {
+					if (merge_idx < merge_range.size()) {
+						if (iblk >= merge_range[merge_idx].start && iblk <= merge_range[merge_idx].end) {
 							merge_block = true;
-							if (iblk == merge_end[merge_idx]) {
+							if (iblk == merge_range[merge_idx].end) {
 								write_merged_memory = true;
 								merge_idx++;
 							}
