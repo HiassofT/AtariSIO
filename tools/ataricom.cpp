@@ -463,11 +463,11 @@ int main(int argc, char** argv)
 			try {
 				block = new ComBlock(f);
 			}
-			catch (EOFError) {
+			catch (EOFError&) {
 				//std::cout << "got end of file" << std::endl;
 				done = true;
 			}
-			catch (ReadError) {
+			catch (ReadError&) {
 				std::cout << "error reading file " << filename << ", terminating" << std::endl;
 				done = true;
 			}
