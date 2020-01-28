@@ -170,7 +170,6 @@ int main(int argc, char** argv)
 	int init_address = -1;
 	int tmp_address;
 
-	bool merge_mode = false;
 	std::vector<struct Range> merge_range;
 	unsigned int merge_idx = 0;
 
@@ -208,7 +207,6 @@ int main(int argc, char** argv)
 				}
 				mode = eModeProcess;
 
-				merge_mode = true;
 				idx++;
 				if (idx >= argc) {
 					goto usage;
@@ -430,7 +428,7 @@ int main(int argc, char** argv)
 		}
 	}
 
-	if (merge_mode) {
+	if (merge_range.size()) {
 		memory = new AtariComMemory();
 	}
 
@@ -663,7 +661,7 @@ int main(int argc, char** argv)
 				iblk++;
 			}
 		}
-		if (merge_mode) {
+		if (merge_range.size()) {
 			if (memory->ContainsData()) {
 				//std::cout << "warning: EOF reached but merged data to write" << std::endl;
 				RCPtr<ComBlock> mblock = memory->AsComBlock();
