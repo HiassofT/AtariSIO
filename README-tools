@@ -1,6 +1,6 @@
 AtariSIO tools V0.30
 
-Copyright (C) 2003-2019 Matthias Reichl <hias@horus.com>
+Copyright (C) 2003-2020 Matthias Reichl <hias@horus.com>
 
 This program is proteced under the terms of the GNU General Public
 License, version 2. Please read LICENSE for further details.
@@ -235,13 +235,21 @@ specified a copy of the input file will be created. This file
 is identical to the input file, only additional "$FF, $FF" block
 within the input file will be skipped.
 
-All other modes ("create", "process") require an output file.
+All other modes ("create", "process", "extract") require an output file.
 
 Options:
 
 -c address      create a COM file from the raw 'infile' data starting
                 at the specified address. Options '-r' and '-i' may
                 also be used together with this option.
+
+-e              extract blocks into separate files with 4-digit decimal
+                block number and the extension ".obj" or ".bin" (if raw mode
+                is selected) appended.
+
+-E              same as above but in addition to the block number also
+                the hexadecimal start and end address are included in the
+                filename.
 
 -r address      add a "RUN" ($02E0/$02E1) block with specified address
                 at the end of the file. Can not be used together with '-n'.
@@ -292,3 +300,5 @@ the first from the beginning of block 1 up to $0FFF, then one from
 $1000-$1FFF and one from $2000 to the end of the first block.
 Additionaly a "RUN $A000" block is added to the end of the file.
 
+ataricom -E input.com out
+Extract the blocks into separate files named outBBBB_SSSS_EEEE.obj
