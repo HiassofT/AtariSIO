@@ -2,7 +2,7 @@
    atariserver.cpp - implementation of an Atari SIO server, using
    a curses frontend
 
-   Copyright (C) 2003-2019 Matthias Reichl <hias@horus.com>
+   Copyright (C) 2003-2020 Matthias Reichl <hias@horus.com>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -362,7 +362,7 @@ static void SetDefaultTraceLevels(const RCPtr<AbstractTracer>& tracer)
 void usage()
 {
 	printf("atariserver %s\n", VERSION_STRING);
-	printf("(c) 2002-2019 Matthias Reichl <hias@horus.com>\n");
+	printf("(c) 2002-2020 Matthias Reichl <hias@horus.com>\n");
 	printf("usage: [-f device] [options...]\n");
 	printf("-h            display help\n");
 	printf("-f device     use alternative AtariSIO device (default: /dev/atarisio0)\n");
