@@ -57,6 +57,7 @@ public:
 	const uint8_t* GetRawData() const;
 
 	std::string GetDescription(bool offsetInDecimal = true) const;
+	std::string GetShortDescription() const;
 
 private:
 	void SetData(uint8_t* data, unsigned int len, unsigned int start_address);

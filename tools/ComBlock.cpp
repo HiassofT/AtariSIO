@@ -150,3 +150,12 @@ std::string ComBlock::GetDescription(bool offsetInDecimal) const
 	}
 	return tmpstr;
 }
+
+std::string ComBlock::GetShortDescription() const
+{
+	char tmpstr[80];
+
+	snprintf(tmpstr, 80, "%04x-%04x", fStartAddress, fStartAddress + fLen - 1);
+
+	return tmpstr;
+}

@@ -205,7 +205,9 @@ int main(int argc, char** argv)
 	enum EOperationMode {
 		eModeList,
 		eModeProcess,
-		eModeCreate
+		eModeCreate,
+		eModeExtract,
+		eModeExtractWithAddress
 	};
 
 	EOperationMode mode = eModeList;
@@ -377,6 +379,12 @@ int main(int argc, char** argv)
 			case 'X': // print file offset in hex
 				offsetsInDecimal = false;
 				break;
+			case 'e':
+				mode = eModeExtract;
+				break;
+			case 'E':
+				mode = eModeExtractWithAddress;
+				break;
 			default:
 				goto usage;
 			}
@@ -414,6 +422,12 @@ int main(int argc, char** argv)
 			goto usage;
 		}
 		break;
+	case eModeExtract:
+	case eModeExtractWithAddress:
+		if (split_list.size() || merge_range.size() || run_address >= 0 || init_address >= 0) {
+			std::cout << "error: -e/-E and -i/-m/-r/-s cannot be used together" << std::endl;
+			goto usage;
+		}
 	default:
 		break;
 	}
@@ -443,7 +457,7 @@ int main(int argc, char** argv)
 
 	done = false;
 
-	if (mode != eModeList) {
+	if (mode == eModeCreate || mode == eModeProcess) {
 		of = new StdFileIO;
 		if (!of->OpenWrite(out_filename)) {
 			std::cout << "error: cannot create output file " << out_filename << std::endl;
@@ -505,7 +519,13 @@ int main(int argc, char** argv)
 				done = true;
 			}
 			if (!done) {
-				if (mode == eModeList) {
+				bool process_block = false;
+				bool merge_block = false;
+				bool split_block = false;
+				bool write_merged_memory = false;
+
+				switch (mode) {
+				case eModeList:
 					std::cout << "block "
 						<< std::setw(4) << iblk
 						<< ": "
@@ -529,11 +549,9 @@ int main(int argc, char** argv)
 							<< std::endl
 						;
 					}
-				} else {
-					bool process_block = check_process_block(iblk);
-					bool merge_block = false;
-					bool split_block = false;
-					bool write_merged_memory = false;
+					break;
+				case eModeProcess:
+					process_block = check_process_block(iblk);
 
 					// check if we need to merge blocks
 					if (merge_idx < merge_range.size()) {
@@ -647,6 +665,65 @@ int main(int argc, char** argv)
 					if (split_block) {
 						split_idx++;
 					}
+					break;
+				case eModeExtract:
+				case eModeExtractWithAddress:
+					if (check_process_block(iblk)) {
+						char outname[PATH_MAX];
+						const char* ext;
+						if (raw_mode) {
+							ext = "bin";
+						} else {
+							ext = "obj";
+						}
+						if (mode == eModeExtract) {
+							snprintf(outname, PATH_MAX, "%s%04d.%s", out_filename, iblk, ext);
+						} else {
+							snprintf(outname, PATH_MAX, "%s%04d_%04X_%04X.%s", out_filename, iblk,
+								 block->GetStartAddress(), block->GetEndAddress(), ext);
+						}
+						outname[PATH_MAX-1] = 0;
+
+						of = new StdFileIO;
+						if (!of->OpenWrite(outname)) {
+							std::cout << "error: cannot create output file " << outname << std::endl;
+							of->Close();
+							of.SetToNull();
+							done = true;
+							continue;
+						}
+						bool ok;
+						if (raw_mode) {
+							ok = block->WriteRawToFile(of);
+						} else {
+							ok = block->WriteToFile(of, true);
+						}
+						if (!ok) {
+							std::cout << "error: cannot write block to " << outname << std::endl;
+							of->Close();
+							of->Unlink(outname);
+							of.SetToNull();
+							done = true;
+							continue;
+						}
+						of->Close();
+						of.SetToNull();
+						std::cout << "write block "
+							<< std::setw(4) << iblk
+							<< " " << block->GetShortDescription()
+							<< " to " << outname
+							<< std::endl
+						;
+					} else {
+						std::cout << " skip block "
+							<< std::setw(4) << iblk
+							<< " " << block->GetShortDescription()
+							<< std::endl
+						;
+					}
+					break;
+				default:
+					break;
 				}
 				iblk++;
 			}
@@ -712,6 +789,8 @@ int main(int argc, char** argv)
 usage:
 	std::cout << "usage: ataricom [options]... file [outfile]" << std::endl
 		<<   "  -c address      create COM file from raw data file" << std::endl
+		<<   "  -e              extract blocks to outfileBBBB.ext" << std::endl
+		<<   "  -E              extract blocks to outfileBBBB_SADR_EADR.ext" << std::endl
 		<<   "  -r address      add RUN block with specified address at end of file" << std::endl
 		<<   "  -i address      add INIT block with specified address at end of file" << std::endl
 		<<   "  -b start[-end]  only process specified blocks" << std::endl
