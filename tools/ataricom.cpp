@@ -415,6 +415,13 @@ int main(int argc, char** argv)
 
 	if (mode == eModeCreate) {
 		unsigned int len = f->GetFileLength();
+		if (!len) {
+			std::cout << "error: input file is empty" << std::endl;
+			f->Close();
+			of->Close();
+			of->Unlink(out_filename);
+			return 1;
+		}
 		if (create_address + len > 65536) {
 			std::cout << "warning: input file too big, truncating to end address $FFFF" << std::endl;
 			len = 65536 - create_address;
