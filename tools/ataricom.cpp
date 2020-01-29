@@ -37,6 +37,60 @@ struct Range {
 	unsigned int end;
 };
 
+static std::vector<struct Range> block_range;
+static unsigned int block_idx = 0;
+
+enum EBlockMode {
+	eNoBlockProcessing,
+	eIncludeBlocks,
+	eExcludeBlocks
+};
+
+static EBlockMode block_mode = eNoBlockProcessing;
+
+bool check_process_block(unsigned int iblk)
+{
+	bool process_block = false;
+
+	switch (block_mode) {
+	case eNoBlockProcessing:
+		return true;
+	case eIncludeBlocks:
+		break;
+	case eExcludeBlocks:
+		process_block = true;
+		break;
+	}
+
+	if (block_idx < block_range.size()) {
+		switch (block_mode) {
+		case eIncludeBlocks:
+			if (iblk >= block_range[block_idx].start && iblk <= block_range[block_idx].end) {
+				process_block = true;
+				if (iblk == block_range[block_idx].end) {
+					block_idx ++;
+				}
+			} else {
+				process_block = false;
+			}
+			break;
+		case eExcludeBlocks:
+			if (iblk >= block_range[block_idx].start && iblk <= block_range[block_idx].end) {
+				process_block = false;
+				if (iblk == block_range[block_idx].end) {
+					block_idx ++;
+				}
+			} else {
+				process_block = true;
+			}
+			break;
+		default:
+			break;
+		}
+	}
+	return process_block;
+}
+
 static long parse_int(const char* str)
 {
 	int base = 10;
@@ -173,19 +227,8 @@ int main(int argc, char** argv)
 	std::vector<struct Range> merge_range;
 	unsigned int merge_idx = 0;
 
-	std::vector<struct Range> block_range;
-	unsigned int block_idx = 0;
-
 	std::vector< std::vector<unsigned int> > split_list;
 	unsigned int split_idx = 0;
-
-	enum EBlockMode {
-		eNoBlockProcessing,
-		eIncludeBlocks,
-		eExcludeBlocks
-	};
-
-	EBlockMode block_mode = eNoBlockProcessing;
 
 	int idx = 1;
 
@@ -487,51 +530,10 @@ int main(int argc, char** argv)
 						;
 					}
 				} else {
-					bool process_block = true;
+					bool process_block = check_process_block(iblk);
 					bool merge_block = false;
 					bool split_block = false;
 					bool write_merged_memory = false;
-
-					// check if we need to process this block
-
-					switch (block_mode) {
-					case eIncludeBlocks:
-						process_block = false;
-						break;
-					case eExcludeBlocks:
-					case eNoBlockProcessing:
-						process_block = true;
-						break;
-					}
-
-					if (block_idx < block_range.size()) {
-						switch (block_mode) {
-						case eIncludeBlocks:
-							if (iblk >= block_range[block_idx].start && iblk <= block_range[block_idx].end) {
-								process_block = true;
-								if (iblk == block_range[block_idx].end) {
-									block_idx ++;
-								}
-							} else {
-								process_block = false;
-							}
-							break;
-						case eExcludeBlocks:
-							if (iblk >= block_range[block_idx].start && iblk <= block_range[block_idx].end) {
-								process_block = false;
-								if (iblk == block_range[block_idx].end) {
-									block_idx ++;
-								}
-							} else {
-								process_block = true;
-							}
-							break;
-						case eNoBlockProcessing:
-							process_block = true;
-							break;
-						}
-					}
-
 
 					// check if we need to merge blocks
 					if (merge_idx < merge_range.size()) {
