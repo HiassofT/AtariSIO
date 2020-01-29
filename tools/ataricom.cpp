@@ -177,7 +177,6 @@ int main(int argc, char** argv)
 	unsigned int block_idx = 0;
 
 	std::vector< std::vector<unsigned int> > split_list;
-	unsigned int split_count = 0;
 	unsigned int split_idx = 0;
 
 	enum EBlockMode {
@@ -201,12 +200,6 @@ int main(int argc, char** argv)
 		if (*arg == '-') {
 			switch (arg[1]) {
 			case 'm': // merge mode
-				if (mode == eModeCreate) {
-					std::cout << "error: -m and -c cannot be used together" << std::endl;
-					goto usage;
-				}
-				mode = eModeProcess;
-
 				idx++;
 				if (idx >= argc) {
 					goto usage;
@@ -225,11 +218,6 @@ int main(int argc, char** argv)
 				break;
 			case 'x': // exclude blocks
 			case 'b': // copy blocks
-				if (mode == eModeCreate) {
-					std::cout << "error: -b/-x and -c cannot be used together" << std::endl;
-					goto usage;
-				}
-				mode = eModeProcess;
 				if (arg[1] == 'x') {
 					if (block_mode == eIncludeBlocks) {
 						std::cout << "-b and -x are mutually exclusive!" << std::endl;
@@ -260,27 +248,9 @@ int main(int argc, char** argv)
 				block_range.push_back(range);
 				break;
 			case 'n': // raw write mode
-				if (mode == eModeCreate) {
-					std::cout << "error: -n and -c cannot be used together" << std::endl;
-					goto usage;
-				}
-				if ( (run_address >= 0) || (init_address >= 0)) {
-					std::cout << "error: -r/-i and -n cannot be used together" << std::endl;
-					goto usage;
-				}
-				mode = eModeProcess;
-				std::cout << "writing file in raw mode" << std::endl;
 				raw_mode = true;
 				break;
 			case 'c': // create mode
-				if (raw_mode) {
-					std::cout << "error: -n and -c cannot be used together" << std::endl;
-					goto usage;
-				}
-				if (mode == eModeProcess) {
-					std::cout << "error: -b/-x/-m and -c cannot be used together" << std::endl;
-					goto usage;
-				}
 				mode = eModeCreate;
 				idx++;
 				if (idx >= argc) {
@@ -295,10 +265,6 @@ int main(int argc, char** argv)
 				break;
 			case 'r':
 			case 'i':
-				if (raw_mode) {
-					std::cout << "error: -r/-i and -n cannot be used together" << std::endl;
-					goto usage;
-				}
 				idx++;
 				if (idx >= argc) {
 					goto usage;
@@ -332,10 +298,6 @@ int main(int argc, char** argv)
 				}
 				break;
 			case 's': // split block mode
-				if (raw_mode) {
-					std::cout << "error: -s and -n cannot be used together" << std::endl;
-					goto usage;
-				}
 				idx++;
 				if (idx >= argc) {
 					goto usage;
@@ -346,8 +308,8 @@ int main(int argc, char** argv)
 						std::cout << "error in split block spec \"" << argv[idx] << "\"" << std::endl;
 						goto usage;
 					}
-					if (split_count > 0) {
-						if (tmplist[0] <= split_list[split_count-1][0]) {
+					if (split_list.size()) {
+						if (tmplist[0] <= split_list[split_list.size()-1][0]) {
 							std::cout << "split blocks must be in ascending order!" << std::endl;
 							goto usage;
 						}
@@ -367,7 +329,6 @@ int main(int argc, char** argv)
 						}
 					}
 					split_list.push_back(tmplist);
-					split_count++;
 				}
 				break;
 			case 'X': // print file offset in hex
@@ -391,11 +352,31 @@ int main(int argc, char** argv)
 		goto usage;
 	}
 
-	if (mode == eModeList && ( run_address >= 0 || init_address >= 0 || split_count > 0 )) {
+	if (mode == eModeList &&
+            (run_address >= 0 || init_address >= 0 || merge_range.size() ||
+             split_list.size() || block_mode != eNoBlockProcessing || out_filename)) {
 		mode = eModeProcess;
 	}
 
+	if (raw_mode &&
+            (run_address >= 0 || init_address >= 0 || split_list.size() || mode == eModeCreate)) {
+		std::cout << "error: -n and -c/-n/-r/-s cannot be used together" << std::endl;
+		goto usage;
+	}
+
+	switch (mode) {
+	case eModeCreate:
+		if (split_list.size() || merge_range.size() || block_mode != eNoBlockProcessing || raw_mode) {
+			std::cout << "error: -c and -b/-x/-m/-n/-s cannot be used together" << std::endl;
+			goto usage;
+		}
+		break;
+	default:
+		break;
+	}
+
 	if ((mode != eModeList) && (!out_filename)) {
+		std::cout << "error: output filename missing" << std::endl;
 		goto usage;
 	}
 
@@ -556,7 +537,7 @@ int main(int argc, char** argv)
 						}
 					}
 
-					if (split_idx < split_count) {
+					if (split_idx < split_list.size()) {
 						if (split_list[split_idx][0] == iblk) {
 							split_block = true;
 						}
