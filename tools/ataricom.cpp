@@ -809,9 +809,9 @@ usage:
 		<<   "  -E              extract blocks to outfileBBBB_SADR_EADR.ext" << std::endl
 		<<   "  -r address      add RUN block with specified address at end of file" << std::endl
 		<<   "  -i address      add INIT block with specified address at end of file" << std::endl
-		<<   "  -b start[-end]  only process specified blocks" << std::endl
-		<<   "  -x start[-end]  exclude specified blocks" << std::endl
-		<<   "  -m start-end    merge specified blocks" << std::endl
+		<<   "  -b range[,...]  only process specified blocks" << std::endl
+		<<   "  -x range[,...]  exclude specified blocks" << std::endl
+		<<   "  -m range[,...]  merge specified blocks" << std::endl
 		<<   "  -s block,adr... split block at given addresses" << std::endl
 		<<   "  -n              write raw data blocks (no COM headers)" << std::endl
 		<<   "  -X              show block length and file offset in hex" << std::endl
