@@ -257,17 +257,22 @@ Options:
 -i address      add an "INIT" ($02E2/$02E3) block with specified address
                 at the end of the file. Can not be used together with '-n'.
 
--b start[-end]  Only process the specified block numbers. '-end' is
-                optional, may be used multiple times, but not together
-                with '-x'.
+-b range[,...]  Only process the specified block numbers.
+                range may be a single block number or a range in the form
+                "start-end". The end block number is optional, eg "start-"
+                means all blocks from start up to the last one.
+                Multiple ranges can be specified, separated by a comma, or
+                by using this option multiple times.
+                Note: this option can not be used together with '-x'.
 
--x start[-end]  Process all blocks except the specified block numbers.
-                '-end' is optional, may be used multiple times, but not
-                together with '-b'.
+-x range[,...]  Process all blocks except the specified block numbers.
+                range syntax is the same as in the '-b' option.
+                Note: this option can not be used together with '-b'.
 
--m start-end    Merge the data parts of the blocks into a single
-                large block. If '-b' or '-x' are used, only the
-                selected blocks will be processed.
+-m range[,...]  Merge the data parts of the blocks into a single block.
+		range has to be specified in the form "start-end", end
+                may be omitted but contrary to '-b' or '-x' options single
+                block numbers are not allowed.
 
 -s block,adr... Split a block into multiple blocks at the specified
                 address(es). Multiple addresses may be given in the
@@ -288,6 +293,9 @@ ataricom -b 2 -n in.com out.raw
 write the data part of block 2 to out.raw.
 
 ataricom -x 1-10 -x 12-20 in.com out.com
+ataricom -x 1-10,12-20 in.com out.com
+ataricom -b 11 -b 21- in.com out.com
+ataricom -b 11,21- in.com out.com
 write all blocks except 1-10 and 12-20 (i.e. only blocks 11 and 21 upwards)
 to out.com.
 
