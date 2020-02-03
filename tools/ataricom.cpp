@@ -165,6 +165,39 @@ static bool get_range(const char* str, struct Range& range, bool accept_single =
 	}
 }
 
+static bool get_ranges(const char* str, std::vector<struct Range>& ranges, bool accept_single = false)
+{
+	if (!*str) {
+		return false;
+	}
+
+	char* tmpstr = strdup(str);
+	char *s;
+	struct Range range;
+
+	for ((s = strtok(tmpstr, ",")); s; (s = strtok(NULL, ","))) {
+		if (!*s) {
+			free(tmpstr);
+			return false;
+		}
+		if (!get_range(s, range, accept_single)) {
+			std::cout << "invalid range " << s << std::endl;
+			free(tmpstr);
+			return false;
+		}
+		if (ranges.size()) {
+			if (range.start <= ranges.back().end) {
+				std::cout << "blocks must be in ascending order!" << std::endl;
+				free(tmpstr);
+				return false;
+			}
+		}
+		ranges.push_back(range);
+	}
+	free(tmpstr);
+	return true;
+}
+
 static bool write_block(RCPtr<ComBlock>& block, RCPtr<FileIO>& f,
 		bool raw, bool with_ffff,
 		const char* infotxt,
@@ -241,7 +274,6 @@ int main(int argc, char** argv)
 
 	for (idx = 1; idx < argc; idx++) {
 		char * arg = argv[idx];
-		struct Range range;
 		if (*arg == '-') {
 			switch (arg[1]) {
 			case 'm': // merge mode
@@ -249,17 +281,9 @@ int main(int argc, char** argv)
 				if (idx >= argc) {
 					goto usage;
 				}
-				if (!get_range(argv[idx], range, true)) {
-					std::cout << "invalid range " << argv[idx] << std::endl;
+				if (!get_ranges(argv[idx], merge_range, false)) {
 					goto usage;
 				}
-				if (merge_range.size()) {
-					if (range.start <= merge_range.back().end) {
-						std::cout << "merge blocks must be in ascending order!" << std::endl;
-						goto usage;
-					}
-				}
-				merge_range.push_back(range);
 				break;
 			case 'x': // exclude blocks
 			case 'b': // copy blocks
@@ -280,17 +304,9 @@ int main(int argc, char** argv)
 				if (idx >= argc) {
 					goto usage;
 				}
-				if (!get_range(argv[idx], range, true)) {
-					std::cout << "invalid range " << argv[idx] << std::endl;
+				if (!get_ranges(argv[idx], block_range, true)) {
 					goto usage;
 				}
-				if (block_range.size()) {
-					if (range.start <= block_range.back().end) {
-						std::cout << "blocks must be in ascending order!" << std::endl;
-						goto usage;
-					}
-				}
-				block_range.push_back(range);
 				break;
 			case 'n': // raw write mode
 				raw_mode = true;
