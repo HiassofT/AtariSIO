@@ -3767,7 +3767,11 @@ static int request_resources(struct atarisio_dev* dev)
 #endif
 #endif
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,4,0)
+		dev->membase = ioremap(dev->mapbase, 8);
+#else
 		dev->membase = ioremap_nocache(dev->mapbase, 8);
+#endif
 		if (!dev->membase) {
 			PRINTK_NODEV("cannot map MMIO ports 0x%lx-0x%lx\n",
 				(unsigned long)dev->mapbase,
