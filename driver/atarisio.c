@@ -233,11 +233,18 @@ MODULE_DESCRIPTION("Serial Atari 8bit SIO driver");
 #endif
 
 /* 
- * currently we use major 10, minor 240, which is a reserved local
- * number within the miscdevice block
+ * Use dynamic minor allocation on kernel 4 and newer which
+ * are likely to run with udev.
+ * This avoids a number clash since kernel 4.4 and up started
+ * allocating fixed minors at 240 and above.
+ * For older kernels default to fixed 240 as before.
  */
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,0,0)
 #define ATARISIO_DEFAULT_MINOR 240
+#else
+#define ATARISIO_DEFAULT_MINOR MISC_DYNAMIC_MINOR
+#endif
 
 /* maximum number of devices */
 #define ATARISIO_MAXDEV 4
@@ -290,13 +297,17 @@ module_param(hrtimer, int, S_IRUGO | S_IWUSR);
 #endif
 
 #ifdef MODULE_PARM_DESC
+
+#define ATARISIO_STR_HELPER(x) #x
+#define ATARISIO_STR(x) ATARISIO_STR_HELPER(x)
+
 MODULE_PARM_DESC(port,"serial port (eg /dev/ttyS0, default: use supplied io/irq values)");
 MODULE_PARM_DESC(io,"io address of 16550 UART (eg 0x3f8)");
 MODULE_PARM_DESC(mmio,"mmio address of 16550 UART (eg 0xea401000)");
 MODULE_PARM_DESC(irq,"irq of 16550 UART (eg 4)");
 MODULE_PARM_DESC(baud_base,"base baudrate (default: 115200)");
 MODULE_PARM_DESC(ext_16c950,"use extended 16C950 features (default: 1)");
-MODULE_PARM_DESC(minor,"minor device number (default: 240)");
+MODULE_PARM_DESC(minor,"minor device number (255=dynamic, default: " ATARISIO_STR(ATARISIO_DEFAULT_MINOR) ")");
 MODULE_PARM_DESC(debug,"debug level (default: 0)");
 MODULE_PARM_DESC(debug_irq,"interrupt debug level (default: 0)");
 MODULE_PARM_DESC(hrtimer,"use high resolution timers (default: 1, if available)");
@@ -3260,23 +3271,21 @@ static int atarisio_open(struct inode* inode, struct file* filp)
 	unsigned long flags;
 	struct atarisio_dev* dev = 0;
 	int ret = 0;
+	int i;
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,4,0)
        	MOD_INC_USE_COUNT;
 #endif
-	if (MINOR(inode->i_rdev) < minor) {
-		ret = -ENOTTY;
-		goto exit_open;
+	for (i = 0; i < ATARISIO_MAXDEV; i++) {
+		if (atarisio_devices[i] && atarisio_devices[i]->miscdev &&
+		    atarisio_devices[i]->miscdev->minor == MINOR(inode->i_rdev)) {
+			dev = atarisio_devices[i];
+			break;
+		}
 	}
-	if (MINOR(inode->i_rdev) >= minor + ATARISIO_MAXDEV) {
-		ret = -ENOTTY;
-		goto exit_open;
-	}
-
-	dev = atarisio_devices[MINOR(inode->i_rdev) - minor];
-
 	if (!dev) {
-		PRINTK_NODEV("cannot get device information!\n");
+		PRINTK_NODEV("cannot find atarisio device with minor %d!\n",
+			MINOR(inode->i_rdev));
 		ret = -ENOTTY;
 		goto exit_open;
 	}
@@ -3515,7 +3524,11 @@ struct atarisio_dev* alloc_atarisio_dev(unsigned int id)
 
 	dev->miscdev->name = dev->devname;
 	dev->miscdev->fops = &atarisio_fops;
-	dev->miscdev->minor = minor + dev->id;
+
+	if (minor == MISC_DYNAMIC_MINOR)
+		dev->miscdev->minor = minor;
+	else
+		dev->miscdev->minor = minor + dev->id;
 
 	return dev;
 
