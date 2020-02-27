@@ -662,11 +662,8 @@ static int detect_16c950(struct atarisio_dev* dev)
  */
 static inline uint64_t get_timestamp(void)
 {
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,0,0)
-	struct timespec64 now;
-	ktime_get_real_ts64(&now);
-
-	return (uint64_t)(now.tv_sec)*1000000 + now.tv_nsec/1000;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,0,0)
+	return ktime_to_us(ktime_get_real());
 #else
 	struct timeval now;
 	do_gettimeofday(&now);
@@ -2595,11 +2592,17 @@ static int perform_send_fsk_data_hrtimer(struct atarisio_dev* dev, uint16_t* fsk
 	unsigned long flags;
 	uint8_t lcr;
 	uint64_t delay;
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,0,0)
 	struct timespec ts;
+#endif
 	ktime_t kt;
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,0,0)
 	ktime_get_ts(&ts);
 	kt = timespec_to_ktime(ts);
+#else
+	kt = ktime_get();
+#endif
 
 	PRINT_TIMESTAMP("start of send_fsk_data_hrtimer\n");
 
@@ -2646,8 +2649,12 @@ static int perform_send_fsk_data_hrtimer(struct atarisio_dev* dev, uint16_t* fsk
 	set_lcr(dev, dev->serial_config.LCR & (~UART_LCR_SBC));
 	spin_unlock_irqrestore(&dev->lock, flags);
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,0,0)
 	ktime_get_ts(&ts);
 	kt = timespec_to_ktime(ts);
+#else
+	kt = ktime_get();
+#endif
 
 	PRINT_TIMESTAMP("end of send_fsk_data_hrtimer\n");
 
