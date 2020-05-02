@@ -63,6 +63,9 @@ public:
 		eBootAtariSIOMyPicoDos,
 		eBootDos20,
 		eBootDos25,
+
+		eBootDosXL230,
+
 		eBootMyDos4533,
 		eBootMyDos4534,
 		eBootMyDos455Beta4,

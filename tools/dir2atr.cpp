@@ -51,6 +51,7 @@ struct BootEntry {
 struct BootEntry BootTypeTable[] = {
 BOOT_ENTRY(Dos20)
 BOOT_ENTRY(Dos25)
+BOOT_ENTRY(DosXL230)
 BOOT_ENTRY(MyDos4533)
 BOOT_ENTRY(MyDos4534)
 BOOT_ENTRY(MyDos455Beta4)
@@ -330,7 +331,7 @@ usage:
 	printf("  -P        create PICONAME.TXT (with file extensions stripped)\n");
 	printf("  -a        enable MyPicoDos autorun mode\n");
 	printf("  -b <DOS>  create bootable disk for specified DOS\n");
-	printf("            Supported DOS are: Dos20, Dos25, \n");
+	printf("            Supported DOS are: Dos20, Dos25, DosXL230\n");
 	printf("            MyDos4533, MyDos4534, MyDos455Beta4\n");
 	printf("            TurboDos21, TurboDos21HS, XDos243F, XDos243N,\n");
 	printf("            MyPicoDos403, MyPicoDos403HS,\n");
