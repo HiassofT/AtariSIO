@@ -64,6 +64,7 @@ public:
 		eBootDos20,
 		eBootDos25,
 
+		eBootOSAplus210,
 		eBootDosXL230,
 
 		eBootMyDos4533,
