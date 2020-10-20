@@ -50,6 +50,11 @@
 #endif
 
 #include <linux/fs.h>
+
+#if !defined(HAVE_UNLOCKED_IOCTL) && (LINUX_VERSION_CODE > KERNEL_VERSION(5,8,0))
+#define HAVE_UNLOCKED_IOCTL
+#endif
+
 #include <linux/serial.h>
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,0)
 #include <linux/serial_core.h>
