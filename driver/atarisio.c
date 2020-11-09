@@ -49,7 +49,12 @@
 #include <linux/ktime.h>
 #endif
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,10,0)
+#define ATARISIO_USE_KERNEL_TTY
+#include <linux/tty.h>
+#else
 #include <linux/fs.h>
+#endif
 
 #if !defined(HAVE_UNLOCKED_IOCTL) && (LINUX_VERSION_CODE > KERNEL_VERSION(5,8,0))
 #define HAVE_UNLOCKED_IOCTL
@@ -3571,6 +3576,133 @@ int free_atarisio_dev(unsigned int id)
 	return 0;
 }
 
+#ifdef ATARISIO_USE_KERNEL_TTY
+
+static struct tty_struct* check_open_serial_port(struct atarisio_dev* dev)
+{
+	int ret = 0;
+	struct tty_struct *tty;
+	dev_t ttydev;
+
+	if (strncmp(dev->port, "/dev/", 5))
+		ret = tty_dev_name_to_number(dev->port, &ttydev);
+	else
+		ret = tty_dev_name_to_number(dev->port + 5, &ttydev);
+
+	if (ret) {
+		DBG_PRINTK_NODEV(DEBUG_STANDARD, "cannot find tty device %s\n", dev->port);
+		return ERR_PTR(-ENODEV);
+	}
+
+	tty = tty_kopen(ttydev);
+	if (IS_ERR(tty)) {
+		DBG_PRINTK_NODEV(DEBUG_STANDARD, "error opening %s: %ld\n", dev->port, PTR_ERR(tty));
+		return tty;
+	}
+
+	if (!tty->ops || !tty->ops->get_serial || !tty->ops->set_serial) {
+		DBG_PRINTK_NODEV(DEBUG_STANDARD, "device %s doesn't provide tty operations\n", dev->port);
+		tty_unlock(tty);
+		tty_kclose(tty);
+		return ERR_PTR(-ENOTSUPP);
+	}
+	return tty;
+}
+
+static int disable_serial_port(struct atarisio_dev* dev)
+{
+	int ret = 0;
+	struct serial_struct ss;
+	struct tty_struct *tty;
+
+	tty = check_open_serial_port(dev);
+	if (IS_ERR(tty)) {
+		return PTR_ERR(tty);
+	}
+
+	ret = tty->ops->get_serial(tty, &ss);
+	if (ret) {
+		DBG_PRINTK_NODEV(DEBUG_STANDARD, "get_serial(%s) failed: %d\n", dev->port, ret);
+		goto out_close;
+	}
+
+	ret = tty->ops->get_serial(tty, &dev->orig_serial_struct);
+	if (ret) {
+		DBG_PRINTK_NODEV(DEBUG_STANDARD, "get_serial(%s) failed: %d\n", dev->port, ret);
+		goto out_close;
+	}
+
+	switch (ss.type) {
+	case PORT_16550:
+	case PORT_16550A:
+	case PORT_NS16550A:
+	case PORT_16C950:
+		break;
+	default:
+		PRINTK_NODEV("illegal port type %d - only 16550(A) and 16C950 are supported\n", ss.type);
+		ret = -ENOTSUPP;
+		goto out_close;
+	}
+
+	DBG_PRINTK_NODEV(DEBUG_STANDARD, "ss.port = 0x%04x ss.iomem_base = 0x%lx ss.irq = %d ss.type = %d\n",
+		ss.port, (long) ss.iomem_base, ss.irq, ss.type);
+
+	if (dev->mapbase == 0) {
+		dev->mapbase = (size_t) ss.iomem_base;
+	}
+	if (dev->io == 0) {
+		dev->io = ss.port;
+	}
+	if (dev->irq == 0) {
+		dev->irq = ss.irq;
+	}
+	if (dev->serial_config.baud_base == 0) {
+		dev->serial_config.baud_base = ss.baud_base;
+	}
+
+	/* disable serial driver by setting the uart type to none */
+	ss.type = PORT_UNKNOWN;
+
+	ret = tty->ops->set_serial(tty, &ss);
+	if (ret) {
+		DBG_PRINTK_NODEV(DEBUG_STANDARD, "set_serial(%s) failed: %d\n", dev->port, ret);
+		goto out_close;
+	}
+
+	dev->need_reenable = 1;
+
+out_close:
+	tty_unlock(tty);
+	tty_kclose(tty);
+	return ret;
+}
+
+static int reenable_serial_port(struct atarisio_dev* dev) {
+	int ret = 0;
+	struct tty_struct *tty;
+
+	if (!dev->need_reenable) {
+		DBG_PRINTK_NODEV(DEBUG_STANDARD, "unnecessary call to reenable_serial_port\n");
+		return 0;
+	}
+
+	tty = check_open_serial_port(dev);
+	if (IS_ERR(tty)) {
+		return PTR_ERR(tty);
+	}
+
+	ret = tty->ops->set_serial(tty, &dev->orig_serial_struct);
+	if (ret)
+		DBG_PRINTK_NODEV(DEBUG_STANDARD, "set_serial(%s) failed: %d\n", dev->port, ret);
+
+	tty_unlock(tty);
+	tty_kclose(tty);
+
+	return ret;
+}
+
+#else /* ATARISIO_USE_KERNEL_TTY */
+
 static long ioctl_wrapper(struct atarisio_dev* dev, struct file* f, unsigned int cmd, unsigned long arg)
 {
 #ifdef HAVE_UNLOCKED_IOCTL
@@ -3769,6 +3901,7 @@ fail:
 	my_unlock_kernel();
 	return 1;
 }
+#endif /* ATARISIO_USE_KERNEL_TTY */
 
 static int request_resources(struct atarisio_dev* dev)
 {
