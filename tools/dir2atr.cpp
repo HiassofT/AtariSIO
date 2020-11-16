@@ -30,6 +30,7 @@
 #include "AtrMemoryImage.h"
 #include "SIOTracer.h"
 #include "FileTracer.h"
+#include "FileIO.h"
 #include "Dos2xUtils.h"
 #include "VirtualImageObserver.h"
 #include "Version.h"
@@ -130,13 +131,12 @@ int main(int argc, char**argv)
 	char* atrfilename;
 	ESectorLength seclen;
 	unsigned int idx;
-	FILE* bootfile;
 
 	struct stat statbuf;
 
 	Dos2xUtils::EBootType bootType = Dos2xUtils::eBootDefault;
-	bool userDefBoot = false;
-	unsigned char userDefBootData[384];
+	unsigned char* userDefBootData = NULL;
+	off_t userDefBootDataLen;
 
 	int ret = 0;
 
@@ -161,20 +161,33 @@ int main(int argc, char**argv)
 			}
 			break;
 		case 'B':
-			bootfile = fopen(optarg, "rb");
-			if (bootfile == NULL) {
-				printf("error: cannot open boot sector file \"%s\"\n", optarg);
-				goto usage;
+			{
+				StdFileIO fileio;
+				if (!fileio.OpenRead(optarg)) {
+					printf("error: cannot open boot sector file \"%s\"\n", optarg);
+					goto usage;
+				}
+				userDefBootDataLen = fileio.GetFileLength();
+				if (userDefBootDataLen < 384) {
+					printf("error: boot sector data file \"%s\" is too short\n", optarg);
+					fileio.Close();
+					return 1;
+				}
+				// max allowed: sectors 4..359
+				if (userDefBootDataLen > 356*256) {
+					printf("error: sector data file \"%s\" exceeds maximum limit of %d bytes\n",
+						optarg, 356*256);
+					fileio.Close();
+					return 1;
+				}
+				userDefBootData = new unsigned char[userDefBootDataLen];
+				if (fileio.ReadBlock(userDefBootData, userDefBootDataLen) != userDefBootDataLen) {
+					printf("error reading boot sector data from \"%s\"\n", optarg);
+					fileio.Close();
+					return 1;
+				}
+				fileio.Close();
 			}
-			if (fread(userDefBootData, 1, 384, bootfile) != 384) {
-				printf("error reading boot sector data from \"%s\"\n", optarg);
-				fclose(bootfile);
-				goto usage;
-			} else {
-				printf("loaded boot sector data from \"%s\"\n", optarg);
-			}
-			fclose(bootfile);
-			userDefBoot = true;
 			break;
 		case 'S':
 			dd = false;
@@ -289,6 +302,33 @@ int main(int argc, char**argv)
 		return 1;
 	}
 
+	if (userDefBootDataLen > 384) {
+		if ((userDefBootDataLen - 384) % seclen) {
+			printf("error: extended boot sector data not a multiple of sector size\n");
+			goto usage;
+		} else {
+			unsigned int secs = (userDefBootDataLen - 384) / seclen;
+			unsigned int *secnums = new unsigned int[secs];
+			if (!dos2xutils->AllocSectors(secs, secnums)) {
+				printf("error: cannot allocate %u sectors for extended boot data\n", secs);
+			}
+			for (unsigned int i=0; i<secs; i++) {
+				if (secnums[i] != 4+i) {
+					printf("error: failed to allocate contiguous block for extended boot sectors\n");
+					delete[] secnums;
+					return 1;
+				}
+				if (!image->WriteSector(secnums[i], userDefBootData + 384 + i*seclen, seclen)) {
+					printf("error writing extended boot data sector %u\n", secnums[i]);
+					delete[] secnums;
+					return 1;
+				}
+			}
+			printf("wrote %d sectors of extended boot data\n", secs);
+			delete[] secnums;
+		}
+	}
+
 	if (!dos2xutils->AddBootFile(bootType)) {
 		printf("error: adding boot file failed\n");
 		return 1;
@@ -298,7 +338,7 @@ int main(int argc, char**argv)
 		ret = 1;
 	}
 
-	if (userDefBoot) {
+	if (userDefBootData) {
 		for (int i = 0; i < 3; i++) {
 			image->WriteSector(i+1, userDefBootData+i*128, 128);
 		}
