@@ -317,3 +317,6 @@ AtariSIO changelog:
   - dir2atr: add support for writing OS/A+ 2.10 and DOS XL 2.30 boot sectors
   - ataricom: add support for exctracting blocks into separate files and
     specifying multiple ranges
+
+2020-12-14:
+  - atarisio: fix compilation on kernel 5.10
