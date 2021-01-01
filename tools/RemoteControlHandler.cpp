@@ -427,7 +427,7 @@ lo_usage:
 			}
 		default:
 			{
-				arg++; EatSpace(arg);
+				EatSpace(arg);
 				char* nextarg;
 				unsigned int sectors = strtol(arg, &nextarg, 10);
 				if (!nextarg) {
