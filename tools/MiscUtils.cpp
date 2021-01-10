@@ -209,9 +209,13 @@ bool MiscUtils::set_realtime_scheduling(int priority)
 	myPid = getpid();
 
 	old_sched_policy = sched_getscheduler(myPid);
+	if (old_sched_policy < 0) {
+		AWARN("sched_getscheduler failed: %d - cannot set realtime scheduling", errno);
+		return false;
+	}
 	if (sched_getparam(myPid, &sp) != 0) {
-		printf("cannot get scheduler parameters\n");
-		exit(1);
+		AWARN("sched_getparam failed: %d - cannot set realtime scheduling", errno);
+		return false;
 	}
 	old_sched_priority = sp.sched_priority;
 
