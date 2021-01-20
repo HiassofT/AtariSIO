@@ -110,6 +110,14 @@ KERNEL_CC ?= $(CC)
 #ENABLE_ATP=1
 
 ########################################################################
+# Use SYS_sched_XXX syscalls instead of libc functions
+# Enable this if you are using musl libc to work around it's broken
+# sched_XXX libc implementations which just return ENOSYS
+########################################################################
+
+#SCHED_SYSCALLS=1
+
+########################################################################
 # don't change anything below here
 ########################################################################
 
@@ -124,7 +132,7 @@ LDFLAGS = -g
 
 export KERNEL_CC MODFLAGS KDIR MDIR USE_KBUILD
 export CC CXX CFLAGS CXXFLAGS LDFLAGS STRIP
-export INST_DIR DEFAULT_DEVICE
+export INST_DIR DEFAULT_DEVICE SCHED_SYSCALLS
 export ENABLE_ATP ALL_IN_ONE
 export ZLIB_CFLAGS ZLIB_LDFLAGS
 export NCURSES_CFLAGS NCURSES_LDFLAGS

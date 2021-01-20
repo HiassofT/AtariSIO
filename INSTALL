@@ -71,6 +71,10 @@ AtariSIO driver and utilities V0.30 installation instructions
    KERNEL_CC: compiler to use for kernel 2.2/2.4 compilation
    Default is to use gcc.
 
+   SCHED_SYSCALLS: Set this to 1 to use SYS_sched_XXX syscalls
+   instead of libc functions. This is needed eg when using musl libc
+   as it's sched_XXX libc implementations just return ENOSYS
+
 4. Activate the kernel driver
 
    Due to the design of the linux kernel, the serial port chip can

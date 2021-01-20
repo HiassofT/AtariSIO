@@ -48,6 +48,10 @@ endif
 CFLAGS += $(ZLIB_CFLAGS) $(NCURSES_CFLAGS)
 CXXFLAGS += $(ZLIB_CFLAGS) $(NCURSES_CFLAGS)
 
+ifeq ($(SCHED_SYSCALLS),1)
+CXXFLAGS += -DUSE_SCHED_SYSCALLS
+endif
+
 COMMON_OBJS = DiskImage.o FileIO.o SIOTracer.o FileTracer.o Error.o
 
 ATRIMAGE_OBJS = AtrImage.o AtrMemoryImage.o DCMCodec.o \

@@ -38,6 +38,9 @@
 #include <sys/mman.h>
 #include <sys/param.h>
 #include <time.h>
+#ifdef USE_SCHED_SYSCALLS
+#include <sys/syscall.h>
+#endif
 #endif
 
 #include "winver.h"
@@ -188,6 +191,62 @@ static bool realtime_sched_set = false;
 static int old_sched_policy;
 static int old_sched_priority;
 
+static int local_sched_getscheduler(pid_t pid)
+{
+#ifdef USE_SCHED_SYSCALLS
+#ifdef SYS_sched_getscheduler
+	return syscall(SYS_sched_getscheduler, pid);
+#else
+	errno = ENOSYS;
+	return -1;
+#endif
+#else
+	return sched_getscheduler(pid);
+#endif
+}
+
+static int local_sched_setscheduler(pid_t pid, int policy, const struct sched_param *param)
+{
+#ifdef USE_SCHED_SYSCALLS
+#ifdef SYS_sched_setscheduler
+	return syscall(SYS_sched_setscheduler, pid, policy, param);
+#else
+	errno = ENOSYS;
+	return -1;
+#endif
+#else
+	return sched_setscheduler(pid, policy, param);
+#endif
+}
+
+static int local_sched_getparam(pid_t pid, struct sched_param *param)
+{
+#ifdef USE_SCHED_SYSCALLS
+#ifdef SYS_sched_getparam
+	return syscall(SYS_sched_getparam, pid, param);
+#else
+	errno = ENOSYS;
+	return -1;
+#endif
+#else
+	return sched_getparam(pid, param);
+#endif
+}
+
+static int local_sched_get_priority_max(int policy)
+{
+#ifdef USE_SCHED_SYSCALLS
+#ifdef SYS_sched_get_priority_max
+	return syscall(SYS_sched_get_priority_max, policy);
+#else
+	errno = ENOSYS;
+	return -1;
+#endif
+#else
+	return sched_get_priority_max(policy);
+#endif
+}
+
 bool MiscUtils::set_realtime_scheduling(int priority)
 {
 	struct sched_param sp;
@@ -208,21 +267,27 @@ bool MiscUtils::set_realtime_scheduling(int priority)
 
 	myPid = getpid();
 
-	old_sched_policy = sched_getscheduler(myPid);
+	old_sched_policy = local_sched_getscheduler(myPid);
 	if (old_sched_policy < 0) {
 		AWARN("sched_getscheduler failed: %d - cannot set realtime scheduling", errno);
 		return false;
 	}
-	if (sched_getparam(myPid, &sp) != 0) {
+	if (local_sched_getparam(myPid, &sp) != 0) {
 		AWARN("sched_getparam failed: %d - cannot set realtime scheduling", errno);
 		return false;
 	}
+	int maxPrio = local_sched_get_priority_max(SCHED_RR);
+	if (maxPrio < 0) {
+		AWARN("sched_get_priority_max failed: %d - cannot set realtime scheduling", errno);
+		return false;
+	}
+
 	old_sched_priority = sp.sched_priority;
 
 	memset(&sp, 0, sizeof(struct sched_param));
-	sp.sched_priority = sched_get_priority_max(SCHED_RR) - priority;
+	sp.sched_priority = maxPrio - priority;
 
-	if (sched_setscheduler(myPid, SCHED_RR, &sp) == 0) {
+	if (local_sched_setscheduler(myPid, SCHED_RR, &sp) == 0) {
 		realtime_sched_set = true;
 		ret = true;
 		ALOG("activated realtime scheduling");
@@ -273,7 +338,7 @@ bool MiscUtils::drop_realtime_scheduling()
 		memset(&sp, 0, sizeof(struct sched_param));
 		sp.sched_priority = old_sched_priority;
 
-		if (sched_setscheduler(myPid, SCHED_OTHER, &sp)) {
+		if (local_sched_setscheduler(myPid, SCHED_OTHER, &sp)) {
 			printf("error setting back standard scheduler\n");
 			return false;
 		}
