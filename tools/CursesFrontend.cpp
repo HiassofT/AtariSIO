@@ -1208,10 +1208,12 @@ DeviceManager::EDriveNumber CursesFrontend::InputDriveNumber(EDriveInputType typ
 			if ((ch == 'a') || (ch == 'A')) {
 				return DeviceManager::eAllDrives;
 			}
+			break;
 		case eDriveInputStandardPlusCassette:
 			if ((ch == 'c') || (ch == 'C')) {
 				return DeviceManager::eCassette;
 			}
+			break;
 		default:
 			break;
 		}

@@ -98,7 +98,7 @@ char* MiscUtils::ShortenFilename(const char* filename, unsigned int maxlen, bool
 	// TODO: correctly display directories with trailing slash
 
 	if ((pd != NULL) && (pd != tmpstr+len-1) ) {
-		strncpy(s, "...", 3);
+		memcpy(s, "...", 3);
 		strncpy(s + 3, pd, maxlen - 2);
 		free(tmpstr);
 		return s;

@@ -192,7 +192,7 @@ bool AtrMemoryImage::ReadImageFromFile(const char* filename, bool beQuiet)
 				AERROR("realpath(\"%s\") failed", filename);
 				return false;
 			}
-			strncat(p, ".atr", PATH_MAX);
+			strncat(p, ".atr", PATH_MAX-1);
 			p[PATH_MAX-1] = 0;
 			SetFilename(p);
 			unsigned int sectors = Dos2xUtils::EstimateDiskSize(filename, e128BytesPerSector, Dos2xUtils::ePicoName);

@@ -246,9 +246,9 @@ StringInput::ECompletionResult FileInput::TryComplete(bool lastActionWasAlsoComp
 				matchString[NAME_MAX-1] = 0;
 				first = false;
 
-				char fullPath[PATH_MAX];
-				snprintf(fullPath, PATH_MAX-1, "%s%c%s", fPath, DIR_SEPARATOR, e->fName);
-				fullPath[PATH_MAX-1] = 0;
+				char fullPath[PATH_MAX+2];
+				snprintf(fullPath, PATH_MAX+1, "%s%c%s", fPath, DIR_SEPARATOR, e->fName);
+				fullPath[PATH_MAX+1] = 0;
 
 				struct stat statbuf;
 				if (stat(fullPath, &statbuf) == 0) {

@@ -1821,7 +1821,7 @@ static void EstimateDirectorySize(const char* in_directory, ESectorLength seclen
 	int maxEntries = 64;
 	unsigned int filesize;
 	unsigned int picosize = 0;
-	char fullpath[PATH_MAX];
+	char fullpath[PATH_MAX+2];
 	char directory[PATH_MAX];
 	char* shortstring;
 
@@ -1890,8 +1890,8 @@ static void EstimateDirectorySize(const char* in_directory, ESectorLength seclen
 
 	for (i=0;(count < maxEntries) && (i<num);i++) {
 		DirEntry* e = dir->Get(i);
-		snprintf(fullpath, PATH_MAX-1, "%s%c%s", directory, DIR_SEPARATOR, e->fName);
-		fullpath[PATH_MAX-1] = 0;
+		snprintf(fullpath, PATH_MAX+1, "%s%c%s", directory, DIR_SEPARATOR, e->fName);
+		fullpath[PATH_MAX+1] = 0;
 		switch (e->fType) {
 		case DirEntry::eFile:
 			filesize = (e->fByteSize+seclen-4)/(seclen-3);
