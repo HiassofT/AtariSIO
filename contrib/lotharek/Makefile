@@ -26,7 +26,7 @@ lotharek-switch: lotharek-switch.o
 
 install: $(EXECUTABLES)
 	install -o root -g root -m 0755 -d $(INST_DIR)/bin
-	install -o root -g root -m 0755 $(EXECUTABLES) $(INST_DIR)/bin
+	install -o root -g root -m 4755 $(EXECUTABLES) $(INST_DIR)/bin
 
 .phony: clean
 clean:
