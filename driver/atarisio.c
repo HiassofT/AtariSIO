@@ -3594,7 +3594,11 @@ static struct tty_struct* check_open_serial_port(struct atarisio_dev* dev)
 		return ERR_PTR(-ENODEV);
 	}
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,12,0)
+	tty = tty_kopen_exclusive(ttydev);
+#else
 	tty = tty_kopen(ttydev);
+#endif
 	if (IS_ERR(tty)) {
 		DBG_PRINTK_NODEV(DEBUG_STANDARD, "error opening %s: %ld\n", dev->port, PTR_ERR(tty));
 		return tty;
