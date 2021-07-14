@@ -1706,7 +1706,11 @@ static inline int wait_send(struct atarisio_dev* dev, unsigned int len, unsigned
 
 	add_wait_queue(&dev->tx_queue, &wait);
 	while (1) {
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,14,0)
+		WRITE_ONCE(current->__state, TASK_INTERRUPTIBLE);
+#else
 		current->state = TASK_INTERRUPTIBLE;
+#endif
 		if (dev->tx_buf.head == dev->tx_buf.tail) {
 			break;
 		}
@@ -1715,12 +1719,20 @@ static inline int wait_send(struct atarisio_dev* dev, unsigned int len, unsigned
 			break;
 		}
 		if (signal_pending(current)) {
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,14,0)
+			WRITE_ONCE(current->__state, TASK_RUNNING);
+#else
 			current->state=TASK_RUNNING;
+#endif
 			remove_wait_queue(&dev->tx_queue, &wait);
 			return -EINTR;
 		}
 	}
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,14,0)
+	WRITE_ONCE(current->__state, TASK_RUNNING);
+#else
 	current->state=TASK_RUNNING;
+#endif
 	remove_wait_queue(&dev->tx_queue, &wait);
 
 	if ( dev->tx_buf.head != dev->tx_buf.tail ) {
@@ -1806,7 +1818,11 @@ static int wait_receive(struct atarisio_dev* dev, int len, int additional_timeou
 	dev->rx_buf.wakeup_len = len;
 	add_wait_queue(&dev->rx_queue, &wait);
 	while (1) {
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,14,0)
+		WRITE_ONCE(current->__state, TASK_INTERRUPTIBLE);
+#else
 		current->state = TASK_INTERRUPTIBLE;
+#endif
 
 		spin_lock_irqsave(&dev->lock, flags);
 		no_received_chars=(dev->rx_buf.head+IOBUF_LENGTH - dev->rx_buf.tail) % IOBUF_LENGTH;
@@ -1820,12 +1836,20 @@ static int wait_receive(struct atarisio_dev* dev, int len, int additional_timeou
 			break;
 		}
 		if (signal_pending(current)) {
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,14,0)
+			WRITE_ONCE(current->__state, TASK_RUNNING);
+#else
 			current->state=TASK_RUNNING;
+#endif
 			remove_wait_queue(&dev->rx_queue, &wait);
 			return -EINTR;
 		}
 	}
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,14,0)
+	WRITE_ONCE(current->__state, TASK_RUNNING);
+#else
 	current->state=TASK_RUNNING;
+#endif
 	remove_wait_queue(&dev->rx_queue, &wait);
 
 	dev->rx_buf.wakeup_len=-1;
@@ -2568,14 +2592,26 @@ static int perform_send_fsk_data_busywait(struct atarisio_dev* dev, uint16_t* fs
 				long expire = (delay - 20 * 1000) * HZ / 1000000;
 				PRINT_TIMESTAMP("send_fsk: using schedule_timeout(%ld) since delay is %ld\n", expire, delay);
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,14,0)
+				WRITE_ONCE(current->__state, TASK_INTERRUPTIBLE);
+#else
 				current->state = TASK_INTERRUPTIBLE;
+#endif
 				expire = schedule_timeout(expire);
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,14,0)
+				WRITE_ONCE(current->__state, TASK_RUNNING);
+#else
 				current->state=TASK_RUNNING;
+#endif
 
 				PRINT_TIMESTAMP("send_fsk: schedule_timeout() returned %ld\n", expire);
 
 				if (signal_pending(current)) {
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,14,0)
+					WRITE_ONCE(current->__state, TASK_RUNNING);
+#else
 					current->state=TASK_RUNNING;
+#endif
 					ret = -EINTR;
 					goto exit_fsk;
 				}
@@ -2637,14 +2673,22 @@ static int perform_send_fsk_data_hrtimer(struct atarisio_dev* dev, uint16_t* fsk
 		*/
 
 		while (1) {
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,14,0)
+			WRITE_ONCE(current->__state, TASK_INTERRUPTIBLE);
+#else
 			current->state = TASK_INTERRUPTIBLE;
+#endif
 			ret = schedule_hrtimeout(&kt, HRTIMER_MODE_ABS);
 			if (ret == 0) {
 				break;
 			}
 			DBG_PRINTK(DEBUG_STANDARD, "send_fsk_data_hrtimer: schedule_hrtimeout returned %d\n", ret);
 			if (signal_pending(current)) {
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,14,0)
+				WRITE_ONCE(current->__state, TASK_RUNNING);
+#else
 				current->state=TASK_RUNNING;
+#endif
 				ret = -EINTR;
 				break;
 			}
@@ -2885,7 +2929,11 @@ again:
 
 	add_wait_queue(&dev->cmdframe_queue, &wait);
 	while (1) {
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,14,0)
+		WRITE_ONCE(current->__state, TASK_INTERRUPTIBLE);
+#else
 		current->state = TASK_INTERRUPTIBLE;
+#endif
 		if ( dev->cmdframe_buf.is_valid ) {
 			PRINT_TIMESTAMP("found valid command frame\n");
 			DBG_PRINTK(DEBUG_NOISY, "found valid command frame\n");
@@ -2896,13 +2944,21 @@ again:
 			break;
 		}
 		if (signal_pending(current)) {
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,14,0)
+			WRITE_ONCE(current->__state, TASK_RUNNING);
+#else
 			current->state=TASK_RUNNING;
+#endif
 			remove_wait_queue(&dev->cmdframe_queue, &wait);
 			DBG_PRINTK(DEBUG_STANDARD, "got signal while waiting for command frame\n");
 			return -EINTR;
 		}
 	}
-	current->state=TASK_RUNNING;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,14,0)
+			WRITE_ONCE(current->__state, TASK_RUNNING);
+#else
+			current->state=TASK_RUNNING;
+#endif
 	remove_wait_queue(&dev->cmdframe_queue, &wait);
 
 	spin_lock_irqsave(&dev->lock, flags);
