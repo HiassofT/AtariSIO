@@ -22,7 +22,7 @@
 */
 
 //#define VERSION_STRING "0.30-pre3"
-#define VERSION_STRING "0.30-210122"
+#define VERSION_STRING "0.30-210714"
 #define CURRENT_YEAR 2021
 
 #endif

@@ -320,3 +320,11 @@ AtariSIO changelog:
 
 2020-12-14:
   - atarisio: fix compilation on kernel 5.10
+
+2021-07-14:
+  - atariserver: fix sector number parsing in remote control handler
+    load virtual drive function
+  - atariserver, atarixfer: add workaround for borked
+    sched_getscheduler/sched_getparam functions on musl libc
+  - contrib/lotharek: install lotharek-switch SUID root
+  - atarisio: fix compilation on kernel 5.12 and 5.14
