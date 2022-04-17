@@ -187,6 +187,10 @@
 #define __iomem
 #endif
 
+#ifndef fallthrough
+#define fallthrough	do {} while (0)  /* fallthrough */
+#endif
+
 /* debug levels: */
 #define DEBUG_STANDARD 1
 #define DEBUG_NOISY 2
@@ -1122,7 +1126,7 @@ static int set_baudrate_16950(struct atarisio_dev* dev, unsigned int baudrate)
 	case 4000000:
 		/* PCIe cards actually have 62.5MHz/16 base clock */
 		baud_base = 3906250;
-		/* fallthrough */
+		fallthrough;
 	case 3906250:
 		got_optimized = optimized_baudrate_16950_4000000(baudrate, &tcr, &cpr, &div);
 		break;
