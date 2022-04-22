@@ -24,7 +24,7 @@ cp -a tools/6502/Makefile tools/6502/*.src tools/6502/*.inc \
       tools/6502/*.c tools/6502/*.h tools/6502/*.bin \
       tools/6502/remote.com tmp/"${NAME}"/tools/6502
 cp -a tools/6502/mypdos/*.c tmp/"${NAME}"/tools/6502/mypdos
-cp -a driver/Makefile driver/*.c driver/*.h tmp/"${NAME}"/driver
+cp -a driver/Makefile driver/atarisio.c driver/atarisio.h tmp/"${NAME}"/driver
 cp -a contrib/lotharek/Makefile contrib/lotharek/*.sh \
       contrib/lotharek/*.c tmp/"${NAME}"/contrib/lotharek
 cp -a contrib/rpi/Makefile contrib/rpi/*.dts contrib/rpi/*.dtbo \
