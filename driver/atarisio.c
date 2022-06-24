@@ -1012,7 +1012,7 @@ static unsigned int optimized_baudrate_16950_921600(unsigned int baudrate,
 	}
 }
 
-static unsigned int pokey_div_to_baud_16950_4000000(unsigned int pokey_div)
+static unsigned int pokey_div_to_baud_16950_3906250(unsigned int pokey_div)
 {
 	switch (pokey_div) {
 	case 0:
@@ -1046,7 +1046,7 @@ static unsigned int pokey_div_to_baud_16950_4000000(unsigned int pokey_div)
 	}
 }
 
-static unsigned int optimized_baudrate_16950_4000000(unsigned int baudrate,
+static unsigned int optimized_baudrate_16950_3906250(unsigned int baudrate,
 	uint8_t* tcr, uint8_t* cpr, uint16_t* div)
 {
 	switch(baudrate) {
@@ -1077,8 +1077,9 @@ static unsigned int pokey_div_to_baud_16950(struct atarisio_dev* dev, unsigned i
 	case 921600:
 		baudrate = pokey_div_to_baud_16950_921600(pokey_div);
 		break;
+	case 3906250:
 	case 4000000:
-		baudrate = pokey_div_to_baud_16950_4000000(pokey_div);
+		baudrate = pokey_div_to_baud_16950_3906250(pokey_div);
 		break;
 	default:
 		break;
@@ -1128,7 +1129,7 @@ static int set_baudrate_16950(struct atarisio_dev* dev, unsigned int baudrate)
 		baud_base = 3906250;
 		fallthrough;
 	case 3906250:
-		got_optimized = optimized_baudrate_16950_4000000(baudrate, &tcr, &cpr, &div);
+		got_optimized = optimized_baudrate_16950_3906250(baudrate, &tcr, &cpr, &div);
 		break;
 	default:
 		break;
