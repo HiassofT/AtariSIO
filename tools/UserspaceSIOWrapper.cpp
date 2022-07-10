@@ -236,7 +236,7 @@ int UserspaceSIOWrapper::Set1050CableType(E1050CableType type)
 		fCommandLineLow  = TIOCM_RTS | TIOCM_DTR;
 		fCommandLineHigh = TIOCM_RTS;
 		break;
-	case eLotharekSwitchable:
+	case eEarlyRevLotharek:
 		fCommandLineLow  = 0;
 		fCommandLineHigh = TIOCM_RTS;
 

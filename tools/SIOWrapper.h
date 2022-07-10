@@ -46,7 +46,7 @@ public:
 	enum E1050CableType {
 		e1050_2_PC,		// command on RTS
 		eApeProsystem,		// command on DTR
-		eLotharekSwitchable	// command on RTS, inverted
+		eEarlyRevLotharek	// command on RTS, inverted
 	};
 
 	virtual int Set1050CableType(E1050CableType type) = 0;

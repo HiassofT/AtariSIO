@@ -95,8 +95,8 @@ int main(int argc, char** argv)
 			cable_desc = "APE prosystem";
 			break;
 		case 'l':
-			cable_type = SIOWrapper::eLotharekSwitchable;
-			cable_desc = "Lotharek 1050-2-PC USB";
+			cable_type = SIOWrapper::eEarlyRevLotharek;
+			cable_desc = "Early rev Lotharek 1050-2-PC USB";
 			break;
 		case 's':
 			start_sector = (unsigned int) atoi(optarg);
@@ -178,6 +178,6 @@ int main(int argc, char** argv)
 usage:
 	printf("usage: [-pl] [-s start_sector] [-e end_sector] imagefile\n\n");
 	printf("  -p           use APE prosystem cable (default: 1050-2-PC cable)\n");
-	printf("  -l           use Lotharek 1050-2-PC USB cable");
+	printf("  -l           use early rev Lotharek 1050-2-PC USB cable");
 	return 1;
 }

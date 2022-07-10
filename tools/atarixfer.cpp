@@ -696,8 +696,8 @@ int main(int argc, char** argv)
 			cable_desc = "APE prosystem";
 			break;
 		case 'l':
-			cable_type = SIOWrapper::eLotharekSwitchable;
-			cable_desc = "Lotharek 1050-2-PC USB";
+			cable_type = SIOWrapper::eEarlyRevLotharek;
+			cable_desc = "Early rev Lotharek 1050-2-PC USB";
 			break;
 		case 'd':
 			debugging=1;
@@ -837,7 +837,7 @@ usage:
 	printf("  -d            enable debugging\n");
 	printf("  -e            continue on errors\n");
 	printf("  -p            use APE prosystem cable (default: 1050-2-PC cable)\n");
-	printf("  -l            use Lotharek 1050-2-PC USB cable\n");
+	printf("  -l            use early rev Lotharek 1050-2-PC USB cable\n");
 	printf("  -R num        retry failed sector I/O 'num' times (0..100)\n");
 	printf("  -s mode       high speed: 0 = off, 1 = XF551/Warp, 2 = Ultra/Turbo, 3 = all\n");
 	printf("  -T timing     SIO timing: s = strict, r = relaxed\n");
