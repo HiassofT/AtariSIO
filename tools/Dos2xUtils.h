@@ -265,6 +265,9 @@ private:
 
 	char* GetOrigName(unsigned int entryNum, const char* atariname);
 
+	inline bool HaveFreeDirEntry() {
+		return fEntryCount < eMaxEntries;
+	};
 
 	bool CheckNameUnique(unsigned int entryNum);
 

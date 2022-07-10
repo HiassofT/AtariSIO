@@ -206,12 +206,12 @@ bool Dos2xUtils::AddFiles(EPicoNameType piconametype)
 			break;
 		}
 	}
-	if ((fEntryCount == eMaxEntries) && (i<num)) {
+	if (!HaveFreeDirEntry() && (i<num)) {
 		AERROR("more than %d entries in \"%s\", skipping files", eMaxEntries, fDirectory);
 		ok = false;
 	}
 	if (piconametype != eNoPicoName) {
-	       	if (fEntryCount < eMaxEntries) {
+	       	if (HaveFreeDirEntry()) {
 			if (!CreatePiconame(piconametype)) {
 				AERROR("adding PICONAME.TXT failed!");
 				ok = false;
@@ -506,7 +506,7 @@ bool Dos2xUtils::SetAtariDirectory(
 
 bool Dos2xUtils::AddEntry(const char* longname, char*& atariname, unsigned int& entryNumber)
 {
-	if (fEntryCount == eMaxEntries) {
+	if (!HaveFreeDirEntry()) {
 		AERROR("directory full - skipping %s", longname);
 		return false;
 	}
@@ -525,7 +525,7 @@ bool Dos2xUtils::AddEntry(const char* longname, char*& atariname, unsigned int& 
 
 bool Dos2xUtils::AddEntry(const char* atariname, bool allowNameChange, unsigned int& entryNumber)
 {
-	if (fEntryCount == eMaxEntries) {
+	if (!HaveFreeDirEntry()) {
 		AERROR("directory full - skipping %s", atariname);
 		return false;
 	}
