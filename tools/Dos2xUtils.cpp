@@ -1966,6 +1966,10 @@ unsigned int Dos2xUtils::EstimateDiskSize(const char* directory, ESectorLength s
 	numVTOC = GetNumVTOC(numSectors+numVTOC, seclen);
 	numSectors += numVTOC;
 
+	// ensure disk size is X*8-1 so we can allocate a directory if it's the
+	// last entry to add
+	numSectors |= 7;
+
 	if (numSectors < 720) {
 		numSectors = 720;
 	}
