@@ -377,6 +377,8 @@ unsigned int Dos2xUtils::AddDirectory(const char* name, unsigned int& entryNum)
 
 	SetAtariDirectory(entryNum, atariname, false, true, sectors[0], 8);
 
+	ALOG("Added directory \"%s\"", p);
+
 	return sectors[0];
 }
 
