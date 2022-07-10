@@ -348,8 +348,15 @@ unsigned int Dos2xUtils::AddDirectory(const char* name, unsigned int& entryNum)
 
 	//DPRINTF("add directory \"%s\"", p);
 
-	if ( GetNumberOfFreeSectors() < 8) {
-		AWARN("not enough space for directory \"%s\" (need: 8 free: %d)", p,
+	if (!HaveFreeDirEntry()) {
+		AERROR("directory full - skipping directory %s", name);
+		return 0;
+	}
+
+	unsigned int sectors[8];
+
+	if (!AllocSectors(8, sectors, true)) {
+		AERROR("not enough space for directory \"%s\" (need: 8 free: %d)", p,
 			GetNumberOfFreeSectors());
 		return 0;
 	}
@@ -357,16 +364,9 @@ unsigned int Dos2xUtils::AddDirectory(const char* name, unsigned int& entryNum)
 	char* atariname;
 
 	if (!AddEntry(name, atariname, entryNum)) {
+		AERROR("adding entry for %s failed", name);
 		return 0;
 	}
-
-	unsigned int sectors[8];
-
-	if (!AllocSectors(8, sectors, true)) {
-		//DPRINTF("allocating 8 directory sectors failed");
-		return 0;
-	}
-
 
 	int i;
 	uint8_t buf[256];
