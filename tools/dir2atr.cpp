@@ -1,7 +1,7 @@
 /*
    dir2atr - create ATR image from directory
 
-   Copyright (C) 2004-2021 Matthias Reichl <hias@horus.com>
+   Copyright (C) 2004-2022 Matthias Reichl <hias@horus.com>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
