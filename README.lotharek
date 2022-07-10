@@ -6,15 +6,6 @@ atariserver.
 To use the interface with atarixfer it has to be manually switched
 to 1050-2-PC mode.
 
-Note: you also have to use the '-l' option of atarixfer as the
-command-line signalling is inverted compared to the original
-serial 1050-2-PC interface.
-
-Note: as of late 2018 the interface doesn't work out of the box
-with Atari 1050 drives as it doesn't provide +5V on SIO pin 10
-and so the 1050 won't react to any commands. As a workaround
-apply +5V on SIO pin 10 from an external source.
-
 A tool to perform the switch is available in contrib/lotharek.
 
 To compile it you need the libftdi1 and libusb-1.0 libraries and
@@ -39,4 +30,14 @@ To switch the interface back to SIO2PC mode either unplug the
 interface and plug it back in or run the tool with the "sio" paramter. eg:
 
 lotharek-switch sio
+
+Note: Versions sold before 2019-08-15 have inverted command-line
+signalling in 1050-2-PC mode. You either need to use the '-l' option
+of atarixfer or reprogram the FTDI eeprom as described in the FAQ section
+on Lotharek's website.
+
+In addition to that versions sold before 2019-04-28 don't provide +5V
+on SIO pin 10 and thus won't work in 1050-2-PC mode with Atari 1050 drives.
+You have to modify the interface according to the instructions in Lotharek's
+FAQ section.
 
