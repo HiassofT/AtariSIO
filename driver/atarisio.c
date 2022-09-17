@@ -1125,6 +1125,7 @@ static int set_baudrate_16950(struct atarisio_dev* dev, unsigned int baudrate)
 		got_optimized = optimized_baudrate_16950_921600(baudrate, &tcr, &cpr, &div);
 		break;
 	case 4000000:
+	case 15625000:
 		/* PCIe cards actually have 62.5MHz/16 base clock */
 		baud_base = 3906250;
 		fallthrough;
