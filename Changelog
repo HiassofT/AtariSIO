@@ -328,3 +328,10 @@ AtariSIO changelog:
     sched_getscheduler/sched_getparam functions on musl libc
   - contrib/lotharek: install lotharek-switch SUID root
   - atarisio: fix compilation on kernel 5.12 and 5.14
+
+2022-10-09:
+  - atarisio: fix OxSemi PCIe baud_base issues on recent 5.15-6.0 kernels
+  - atariserver, dir2atr: fix image size estimation to ensure we have enough
+    space to add a directory as one of the last entries
+  - README.lotharek: document that current SIO2PC/1050-2-PC USB include fixes
+    for +5V and inverted command issues present in first revisions
