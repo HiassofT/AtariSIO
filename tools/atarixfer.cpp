@@ -780,9 +780,13 @@ int main(int argc, char** argv)
 		}
 		catch (ErrorObject& err) {
 			std::cerr << err.AsString() << std::endl;
-			exit (1);
+			exit(1);
 		}
-        	if (MiscUtils:: set_realtime_scheduling(0)) {
+		if (!MiscUtils::drop_root_privileges()) {
+			std::cerr << "error dropping root privileges" << std::endl;
+			exit(1);
+		}
+        	if (MiscUtils::set_realtime_scheduling(0)) {
 /*
 #ifdef ATARISIO_DEBUG
 			ALOG("the server will automatically terminate in 5 minutes!");
