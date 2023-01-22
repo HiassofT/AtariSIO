@@ -2,7 +2,7 @@
    atarisio V1.07
    a kernel module for handling the Atari 8bit SIO protocol
 
-   Copyright (C) 2002-2022 Matthias Reichl <hias@horus.com>
+   Copyright (C) 2002-2023 Matthias Reichl <hias@horus.com>
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -105,6 +105,10 @@
 #endif
 #include <asm/io.h>
 #include <asm/ioctls.h>
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,10,0)
+#include <linux/pm_qos.h>
+#endif
 
 #include "atarisio.h"
 
@@ -532,6 +536,11 @@ struct atarisio_dev {
 	/* serial port state */
 	struct serial_struct orig_serial_struct;
 	int need_reenable; /* = 0; */
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,10,0)
+	struct pm_qos_request qos_request;
+	int qos_set;
+#endif
 
 	struct miscdevice* miscdev;
 };
@@ -3476,6 +3485,11 @@ static int atarisio_open(struct inode* inode, struct file* filp)
 		goto exit_open;
 	}
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,10,0)
+	cpu_latency_qos_add_request(&dev->qos_request, 50);
+	dev->qos_set = 1;
+#endif
+
 	spin_lock_irqsave(&dev->lock, flags);
 
 	/* enable UART interrupts */
@@ -3514,6 +3528,13 @@ static int atarisio_release(struct inode* inode, struct file* filp)
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,4,0)
         MOD_DEC_USE_COUNT;
+#endif
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,10,0)
+	if (dev->qos_set) {
+		cpu_latency_qos_remove_request(&dev->qos_request);
+		dev->qos_set = 0;
+	}
 #endif
 
 	dev->busy=0;
@@ -4149,7 +4170,7 @@ static int atarisio_init_module(void)
 	int numtried = 0;
 	atarisio_is_initialized = 0;
 
-	printk("AtariSIO kernel driver V%d.%02d (c) 2002-2022 Matthias Reichl\n",
+	printk("AtariSIO kernel driver V%d.%02d (c) 2002-2023 Matthias Reichl\n",
 		ATARISIO_MAJOR_VERSION, ATARISIO_MINOR_VERSION);
 
 	for (i=0;i<ATARISIO_MAXDEV;i++) {
