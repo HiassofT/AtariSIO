@@ -1088,6 +1088,7 @@ static unsigned int pokey_div_to_baud_16950(struct atarisio_dev* dev, unsigned i
 		break;
 	case 3906250:
 	case 4000000:
+	case 15625000:
 		baudrate = pokey_div_to_baud_16950_3906250(pokey_div);
 		break;
 	default:
