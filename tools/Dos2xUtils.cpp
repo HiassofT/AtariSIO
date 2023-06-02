@@ -947,8 +947,9 @@ char* Dos2xUtils::GetOrigName(unsigned int entryNum, const char* atariname)
 		}
 		fOrigName[entryNum][pos] = 0;
 	}
-	char* name = new char[strlen(fDirectory) + strlen(fOrigName[entryNum]) + 2];
-	sprintf(name, "%s%c%s", fDirectory, DIR_SEPARATOR, fOrigName[entryNum]);
+	int slen = strlen(fDirectory) + strlen(fOrigName[entryNum]) + 2;
+	char* name = new char[slen];
+	snprintf(name, slen, "%s%c%s", fDirectory, DIR_SEPARATOR, fOrigName[entryNum]);
 	return name;
 }
 

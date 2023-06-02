@@ -3579,7 +3579,7 @@ struct atarisio_dev* alloc_atarisio_dev(unsigned int id)
 		kfree(dev);
 		goto alloc_fail;
 	}
-	sprintf(dev->devname,"%s%d",NAME, id);
+	snprintf(dev->devname, 20, "%s%d", NAME, id);
 
 	dev->miscdev = kmalloc(sizeof(struct miscdevice), GFP_KERNEL);
 	if (!dev->miscdev) {

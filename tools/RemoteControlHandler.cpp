@@ -676,7 +676,7 @@ cd_usage:
 		for (i=DeviceManager::eMinDriveNumber; i <= DeviceManager::eMaxDriveNumber; i++) {
 			DeviceManager::EDriveNumber driveno = DeviceManager::EDriveNumber(i);
 
-			sprintf(tmp,"D%d: ", driveno);
+			snprintf(tmp, 100, "D%d: ", driveno);
 			fResult->AppendString(tmp);
 			if (fDeviceManager->DriveInUse(driveno)) {
 				char stat_w;
@@ -703,7 +703,7 @@ cd_usage:
 					dens='D';
 				}
 				sectors=fDeviceManager->GetConstDiskImage(driveno)->GetNumberOfSectors();
-				sprintf(tmp,"%5d%c %c%c ", sectors, dens, stat_w, stat_c);
+				snprintf(tmp, 100, "%5d%c %c%c ", sectors, dens, stat_w, stat_c);
 				fResult->AppendString(tmp);
 
 				const char* filename = fDeviceManager->GetImageFilename(driveno);

@@ -144,8 +144,9 @@ int Directory::ReadDirectory(const char* path, bool sortDir, bool alwaysStatFile
 	while ( (de = readdir(dir)) != NULL) {
 		if (   (strcmp(de->d_name,".") != 0)
 		    && (strcmp(de->d_name,"..") != 0) ) {
-			char * str = new char[plen + strlen(de->d_name) + 2];
-			sprintf(str,"%s%c%s", path, DIR_SEPARATOR, de->d_name);
+			int slen = plen + strlen(de->d_name) + 2;
+			char *str = new char[slen];
+			snprintf(str, slen, "%s%c%s", path, DIR_SEPARATOR, de->d_name);
 			if (sortDir || alwaysStatFiles) {
 /*
 #ifdef WINVER
