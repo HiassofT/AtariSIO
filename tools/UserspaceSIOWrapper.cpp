@@ -84,6 +84,10 @@
 	if (UTRACE_MASK & 0x400) \
 		DPRINTF(x)
 
+#define UTRACE_TRANSMIT_BUF(x...) \
+	if (UTRACE_MASK & 0x800) \
+		DPRINTF(x)
+
 #define CMD_BUF_TRACE \
 	"[ %02x %02x %02x %02x %02x ]", \
 		fCmdBuf[0], fCmdBuf[1], fCmdBuf[2], fCmdBuf[3], fCmdBuf[4]
@@ -699,19 +703,19 @@ int UserspaceSIOWrapper::TransmitBuf(uint8_t* buf, unsigned int length, bool wai
 		FD_SET(fDeviceFileNo, &write_set);
 		now = MiscUtils::GetCurrentTime();
 		if (now >= endTime) {
-			// DPRINTF("timeout in TransmitBuf(%d)", length);
+			UTRACE_TRANSMIT_BUF("timeout in TransmitBuf: wrote %d of %d bytes", pos, length);
 			return EATARISIO_COMMAND_TIMEOUT;
 		}
 		MiscUtils::TimestampToTimeval(endTime - now, tv);
 		sel = select(fDeviceFileNo + 1, NULL, &write_set, NULL, &tv);
 		if (sel < 0) {
-			// DPRINTF("select failed in TransmitBuf(%d): ", length, errno);
+			UTRACE_TRANSMIT_BUF("select failed in TransmitBuf(%d): %d", length, errno);
 			return EATARISIO_UNKNOWN_ERROR;
 		}
 		if (sel == 1) {
 			cnt = write(fDeviceFileNo, buf + pos, length - pos);
 			if (cnt < 0) {
-				// DPRINTF("write failed in TransmitBuf(%d): ", length, errno);
+				UTRACE_TRANSMIT_BUF("write failed in TransmitBuf(%d): %d", length, errno);
 				return EATARISIO_UNKNOWN_ERROR;
 			}
 			pos += cnt;
@@ -759,18 +763,19 @@ int UserspaceSIOWrapper::ReceiveBuf(uint8_t* buf, unsigned int length, unsigned 
 		FD_SET(fDeviceFileNo, &read_set);
 		now = MiscUtils::GetCurrentTime();
 		if (now >= endTime) {
-			UTRACE_RECEIVE_BUF("receive timeout, got %d of %d bytes",
-				pos, length);
+			UTRACE_RECEIVE_BUF("timeout in ReceiveBuf: got %d of %d bytes", pos, length);
 			return EATARISIO_COMMAND_TIMEOUT;
 		}
 		MiscUtils::TimestampToTimeval(endTime - now, tv);
 		sel = select(fDeviceFileNo + 1, &read_set, NULL, NULL, &tv);
 		if (sel < 0) {
+			UTRACE_RECEIVE_BUF("select failed in ReceiveBuf(%d): %d", length, errno);
 			return EATARISIO_UNKNOWN_ERROR;
 		}
 		if (sel == 1) {
 			cnt = read(fDeviceFileNo, buf + pos, length - pos);
 			if (cnt < 0) {
+				UTRACE_RECEIVE_BUF("read failed in ReceiveBuf(%d): %d", length, errno);
 				return EATARISIO_UNKNOWN_ERROR;
 			}
 			pos += cnt;
@@ -1249,7 +1254,7 @@ int UserspaceSIOWrapper::SendCommandFrame(Ext_SIO_parameters& params)
 
 		ret = ReceiveByte(eDelayT2Max);
 		if (ret < 0) {
-			UTRACE_CMD_ERROR("waiting for command ACK returned %d\n", ret);
+			UTRACE_CMD_ERROR("waiting for command ACK returned %d", ret);
 			ret = -ret;
 			goto next_retry;
 		}
@@ -1272,6 +1277,7 @@ int UserspaceSIOWrapper::SendCommandFrame(Ext_SIO_parameters& params)
 		if (ret == cNakByte) {
 			ret = EATARISIO_COMMAND_NAK;
 		} else {
+			UTRACE_CMD_ERROR("got %02x instead of command ACK/NAK", ret);
 			ret = EATARISIO_UNKNOWN_ERROR;
 		}
 
