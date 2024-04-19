@@ -57,6 +57,10 @@ static bool usdoubler_format_detection = false;
 
 static bool continue_on_errors = false;
 
+static EDiskFormat force_disk_format = eNoDisk;
+static unsigned int force_sector_length = 0;
+static unsigned int force_number_of_sectors = 0;
+
 /*
 static void my_sig_handler(int sig)
 {
@@ -87,6 +91,12 @@ static int get_density(unsigned int& bytesPerSector, unsigned int& sectorsPerDis
 	uint8_t buf[256];
 	int result;
 
+	if (force_disk_format != eNoDisk) {
+		bytesPerSector = force_sector_length;
+		sectorsPerDisk = force_number_of_sectors;
+		printf("[forced %d BytesPerSec, %d Sectors]\n", bytesPerSector, sectorsPerDisk);
+		return 0;
+	}
 
 	if (xf551_format_detection) {
 		printf("reading sector 4 ..."); fflush(stdout);
@@ -447,6 +457,25 @@ static int write_image(char *filename)
 	diskFormat = image.GetDiskFormat();
 	total_sectors = image.GetNumberOfSectors();
 
+	if (force_disk_format != eNoDisk) {
+		if (force_sector_length != SectorLength(diskFormat)) {
+			printf("error: forced %d bytes per sector is incompatible with %d bytes per sector image\n",
+				force_sector_length,
+				SectorLength(diskFormat));
+			return 1;
+		}
+		diskFormat = force_disk_format;
+
+		if (force_number_of_sectors < total_sectors) {
+			printf("forced format is smaller (%d sectors) than image (%d sectors)\n",
+				force_number_of_sectors, total_sectors);
+			total_sectors = force_number_of_sectors;
+		} else if (force_number_of_sectors > total_sectors) {
+			printf("forced format is larger (%d sectors) than image (%d sectors)\n",
+				force_number_of_sectors, total_sectors);
+		}
+	}
+
 	if (format_disk(diskFormat)) {
 		goto failure;
 	}
@@ -672,7 +701,7 @@ int main(int argc, char** argv)
 	printf("atarixfer %s\n", VERSION_STRING);
 	printf("(c) 2002-%d Matthias Reichl <hias@horus.com>\n", CURRENT_YEAR);
 	while(!finished) {
-		c = getopt(argc, argv, "lprw12345678def:R:s:T:xuq");
+		c = getopt(argc, argv, "lprw12345678def:F:R:s:T:xuq");
 		if (c == -1) {
 			break;
 		}
@@ -707,6 +736,27 @@ int main(int argc, char** argv)
 			break;
 		case 'f':
 			atarisioDevName = optarg;
+			break;
+		case 'F':
+			switch (optarg[0]) {
+			case 's':
+				force_disk_format = e90kDisk;
+				break;
+			case 'e':
+				force_disk_format = e130kDisk;
+				break;
+			case 'd':
+				force_disk_format = e180kDisk;
+				break;
+			case 'q':
+				force_disk_format = e360kDisk;
+				break;
+			default:
+				printf("unsupported disk format %s\n", optarg);
+				goto usage;
+			}
+			force_sector_length = SectorLength(force_disk_format);
+			force_number_of_sectors = NumberOfSectors(force_disk_format);
 			break;
 		case '1':
 		case '2':
@@ -842,6 +892,7 @@ usage:
 	printf("  -e            continue on errors\n");
 	printf("  -p            use APE prosystem cable (default: 1050-2-PC cable)\n");
 	printf("  -l            use early rev Lotharek 1050-2-PC USB cable\n");
+	printf("  -F s|e|d|q    force SD/ED/DD/QD disk format\n");
 	printf("  -R num        retry failed sector I/O 'num' times (0..100)\n");
 	printf("  -s mode       high speed: 0 = off, 1 = XF551/Warp, 2 = Ultra/Turbo, 3 = all\n");
 	printf("  -T timing     SIO timing: s = strict, r = relaxed\n");

@@ -41,6 +41,39 @@ typedef enum {
 
 inline ESectorLength SectorLength(bool isDD) { if (isDD) { return e256BytesPerSector; } else { return e128BytesPerSector; } }
 
+inline unsigned int SectorLength(EDiskFormat format)
+{
+	switch(format) {
+	case e90kDisk:
+	case e130kDisk:
+		return 128;
+	case e180kDisk:
+	case e360kDisk:
+		return 256;
+	case eNoDisk:
+	case eUserDefDisk:
+	default:
+		return 0; // unknown
+	}
+}
+
+inline unsigned int NumberOfSectors(EDiskFormat format)
+{
+	switch(format) {
+	case e90kDisk:
+	case e180kDisk:
+		return 720;
+	case e130kDisk:
+		return 1040;
+	case e360kDisk:
+		return 1440;
+	case eNoDisk:
+	case eUserDefDisk:
+	default:
+		return 0; // unknown
+	}
+}
+
 class DiskImage : public RefCounted {
 public:
 
