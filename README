@@ -180,6 +180,18 @@ Several other options are available to tweak operation mode:
 -e            continue on errors
               The default is to abort on errors
 -p            use APE prosystem cable (default: 1050-2-PC cable)
+-l            use early rev Lotharek 1050-2-PC USB cable
+              Versions sold before 2019-08-15 have inverted command-line
+              signalling. See also README.lotharek
+-F s|e|d|q    force SD/ED/DD/QD disk format
+              When reading a disk this bypasses density detection and
+              uses the specified format instead. Use it to work around
+              density detection issues or fix up wrongly copied disks (eg
+              SD image written to ED disk).
+              When writing a disk sectors not present in the input image
+              or the forced format will either be padded with zeroes (if the
+              forced format is larger) or skipped (if the forced format
+              is smaller than the image)
 -R num        retry failed sector I/O 'num' times (0..100)
               Default is no retry on errors
 -s mode       high speed: 0 = off, 1 = XF551/Warp, 2 = Ultra/Turbo, 3 = all
