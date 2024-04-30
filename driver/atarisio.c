@@ -3556,7 +3556,7 @@ static struct file_operations atarisio_fops = {
 	release:	atarisio_release
 };
 
-struct atarisio_dev* alloc_atarisio_dev(unsigned int id)
+static struct atarisio_dev* alloc_atarisio_dev(unsigned int id)
 {
 	struct atarisio_dev* dev;
 	if (id >= ATARISIO_MAXDEV) {
@@ -3638,7 +3638,7 @@ alloc_fail:
 	return 0;
 }
 
-int free_atarisio_dev(unsigned int id)
+static int free_atarisio_dev(unsigned int id)
 {
 	struct atarisio_dev* dev;
 	if (id >= ATARISIO_MAXDEV) {
